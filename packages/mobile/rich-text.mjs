@@ -52,6 +52,19 @@ export function editRichText(editor,command){
  const commands={bold:'bold',italic:'italic',strike:'strikeThrough',list:'insertUnorderedList',undo:'undo',redo:'redo'};
  doc.execCommand('styleWithCSS',false,false);
  if(commands[command])doc.execCommand(commands[command],false);
+ else if(command==='clear'){
+  // A collapsed caret means the whole document; explicit ranges stay scoped.
+  // Native removeFormat alone leaves headings, links and lists behind.
+  if(range.collapsed){range.selectNodeContents(editor);selection.removeAllRanges();selection.addRange(range);}
+  const fragment=range.cloneContents(),blocks=new Set(['P','DIV','H1','H2','H3','H4','H5','H6','BLOCKQUOTE','LI','PRE']);
+  const plain=node=>node.nodeType===3?node.nodeValue:node.nodeType===11?[...node.childNodes].map(plain).join(''):node.nodeType!==1?'':node.tagName==='BR'?'\n':['SCRIPT','STYLE','IFRAME','OBJECT'].includes(node.tagName)?'':(blocks.has(node.tagName)?'\n':'')+[...node.childNodes].map(plain).join('')+(blocks.has(node.tagName)?'\n':'');
+  const text=plain(fragment).replace(/\n{3,}/g,'\n\n').replace(/^\n|\n$/g,'').replace(/^[☐☑]\s*/gm,'');
+  const whole=range.startContainer===editor&&range.startOffset===0&&range.endContainer===editor&&range.endOffset===editor.childNodes.length;
+  // insertHTML is one undoable edit; formatBlock normalizes enclosing headings
+  // for a full document while partial selections keep unselected text intact.
+  if(whole)doc.execCommand('insertHTML',false,text.split(/\n\n/).map(p=>'<p>'+escapeText(p).replaceAll('\n','<br>')+'</p>').join('')||'<p><br></p>');
+  else {doc.execCommand('removeFormat',false);doc.execCommand('unlink',false);doc.execCommand('insertHTML',false,escapeText(text).replaceAll('\n','<br>'));}
+ }
  else if(command==='heading'||command==='quote')doc.execCommand('formatBlock',false,command==='heading'?'h2':'blockquote');
  else if(command==='task')doc.execCommand('insertHTML',false,'<ul><li data-task="false">☐ '+escapeText(range.toString()||'待办事项')+'</li></ul>');
  else if(command==='code')doc.execCommand('insertHTML',false,'<code>'+escapeText(range.toString()||'代码')+'</code>');

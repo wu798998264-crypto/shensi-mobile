@@ -13,6 +13,6 @@ export function nativeFetchAdapter(http){
   if(result.url&&result.url!==url)throw Error('服务返回了不同地址');
   const text=typeof result.data==='string'?result.data:JSON.stringify(result.data);
   if(new TextEncoder().encode(text).length>4*1024*1024)throw Error('服务响应超过安全大小');
-  return new Response(text,{status:result.status,headers:result.headers});
+  return new Response([204,205,304].includes(result.status)?null:text,{status:result.status,headers:result.headers});
  };
 }

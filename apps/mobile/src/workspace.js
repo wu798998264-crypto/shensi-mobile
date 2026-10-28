@@ -1,4 +1,5 @@
 import {renderMarkdown,editorMarkdown,editRichText,bindRichText} from '../../../packages/mobile/rich-text.mjs';
+import {mobileEditorTools,editorIcon} from '../../../packages/mobile/editor-icons.mjs';
 import {mountServicePanels} from './service-panels.js';
 const element=(tag,text,attrs={})=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;for(const [key,value] of Object.entries(attrs))e.setAttribute(key,value);return e;};
 const uid=prefix=>prefix+'-'+crypto.randomUUID();
@@ -24,7 +25,7 @@ export async function mountFoundation(root,{documents,account,nutstore,marketpla
   const draft=current.state.mobileDrafts?.[documentId];draftRevision=draft?.draftRevision||0;
   if(editing){
    const tools=element('nav',undefined,{class:'editor-tools','aria-label':'文本编辑工具栏'});
-   for(const [command,label] of [['undo','撤销'],['redo','重做'],['heading','标题'],['bold','加粗'],['italic','斜体'],['strike','删除线'],['list','列表'],['task','待办'],['quote','引用'],['link','链接'],['code','代码']]){const button=element('button',label,{type:'button'});button.onpointerdown=e=>e.preventDefault();button.onclick=()=>editRichText(textarea,command);tools.append(button);}
+   for(const [command,label] of mobileEditorTools){const button=element('button','',{type:'button','aria-label':label,title:label});button.innerHTML=editorIcon(command);button.onpointerdown=e=>e.preventDefault();button.onclick=()=>editRichText(textarea,command);tools.append(button);}
    content.insertBefore(tools,content.querySelector('h1'));
    textarea=element('article',undefined,{'aria-label':'文档正文',contenteditable:'true',spellcheck:'false'});textarea.innerHTML=renderMarkdown(draft?.markdown??doc.markdown);content.append(textarea);bindRichText(textarea,saveDraft);
   }
