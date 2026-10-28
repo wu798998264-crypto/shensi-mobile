@@ -1,0 +1,9 @@
+node_modules/
+www/
+build/
+.gradle/
+local.properties
+*.keystore
+*.jks
+apps/mobile/android/app/src/main/assets/
+apps/mobile/android/capacitor-cordova-android-plugins/

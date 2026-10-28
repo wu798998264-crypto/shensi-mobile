@@ -1,0 +1,8 @@
+{
+  "appId": "studio.hexing.shensi.mobile",
+  "appName": "神思笔记",
+  "webDir": "www",
+  "server": { "hostname": "localhost", "androidScheme": "https", "cleartext": false },
+  "android": { "allowMixedContent": false, "webContentsDebuggingEnabled": false, "minWebViewVersion": 120 },
+  "loggingBehavior": "none"
+}

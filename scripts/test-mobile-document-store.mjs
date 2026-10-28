@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {createMobileDocumentStore} from '../packages/mobile/document-store.mjs';
+import {checkpoint,assertVersion,snapshotDocument} from '../packages/core/src/history.mjs';
+const rows=new Map(),checks=[];
+const storage={
+ async read(key){return structuredClone(rows.get(key)||{revision:0,value:null});},
+ async list(){return [...rows.keys()];},
+ async compareAndSwap(key,revision,value){const old=rows.get(key)||{revision:0};if(old.revision!==revision)throw Object.assign(Error('资料已变化'),{code:'WORKSPACE_STATE_CONFLICT'});const next={revision:revision+1,value};rows.set(key,next);return structuredClone(next);}
+};
+const pass=name=>{checks.push(name);console.log('PASS '+name);};
+let service=createMobileDocumentStore({storage});
+assert.throws(()=>createMobileDocumentStore(),/原生事务/);
+let current=await service.createNotebook({id:'notebook-test',title:'合成验收'});
+assert.equal(current.revision,1);
+current=await service.createDocument('notebook-test',{documentId:'note-test',title:'第一章',markdown:'原文',expectedRevision:1,operationId:'create-test'});
+assert.equal(current.state.histories['note-test']?.length||0,0);
+current=await service.saveDocument('notebook-test',{documentId:'note-test',markdown:'原文',expectedRevision:current.revision,operationId:'initial-save'});
+const baseline=current,desktop={documents:{'note-test':structuredClone(current.state.documents['note-test'])},histories:{}};
+checkpoint(desktop,'note-test');
+assert.deepEqual(snapshotDocument(desktop.histories['note-test'][0].document),snapshotDocument(current.state.histories['note-test'][0].document));
+assert.equal(desktop.histories['note-test'][0].contentHash,current.state.histories['note-test'][0].contentHash);
+pass('新文档不隐式建历史；显式保存使用桌面同一历史快照与完整性算法');
+let draft=await service.saveDraft('notebook-test',{documentId:'note-test',markdown:'未保存草稿',draftRevision:2,baseRevision:current.revision});
+await service.saveDraft('notebook-test',{documentId:'note-test',markdown:'较旧草稿',draftRevision:1,baseRevision:current.revision});
+service=createMobileDocumentStore({storage});current=await service.load('notebook-test');
+assert.equal(current.state.documents['note-test'].markdown,'原文');assert.equal(current.state.mobileDrafts['note-test'].markdown,'未保存草稿');
+assert.equal(current.state.histories['note-test'].length,1);pass('草稿独立保存，较旧草稿不覆盖，重建可回读，不伪造历史');
+const save={documentId:'note-test',markdown:'正式修改',expectedRevision:current.revision,operationId:'save-test',draftRevision:2};
+current=await service.saveDocument('notebook-test',save);assert.equal(current.state.documents['note-test'].markdown,'正式修改');assert(!current.state.mobileDrafts['note-test']);
+assert.equal(current.state.histories['note-test'].length,2);current.state.histories['note-test'].forEach(assertVersion);
+const replay=await service.saveDocument('notebook-test',save);assert.equal(replay.replayed,true);assert.equal(replay.revision,current.revision);
+await assert.rejects(service.saveDocument('notebook-test',{...save,markdown:'不同内容'}),e=>e.code==='OPERATION_CONFLICT');
+pass('编辑切阅读保存正文与历史，同一操作不重复，操作身份冲突拒绝');
+await assert.rejects(service.saveDocument('notebook-test',{...save,expectedRevision:baseline.revision,operationId:'stale',markdown:'旧页覆盖'}),e=>e.code==='WORKSPACE_STATE_CONFLICT');
+assert.equal((await service.load('notebook-test')).state.documents['note-test'].markdown,'正式修改');pass('旧版本保存拒绝，不覆盖后台新版本');
+const before=current;const concurrent=await Promise.allSettled([service.saveDocument('notebook-test',{documentId:'note-test',markdown:'并发A',expectedRevision:before.revision,operationId:'concurrent-a'}),createMobileDocumentStore({storage}).saveDocument('notebook-test',{documentId:'note-test',markdown:'并发B',expectedRevision:before.revision,operationId:'concurrent-b'})]);
+assert.equal(concurrent.filter(r=>r.status==='fulfilled').length,1);assert.equal(concurrent.filter(r=>r.status==='rejected'&&r.reason.code==='WORKSPACE_STATE_CONFLICT').length,1);pass('两个客户端并发CAS只接受一份，不盲目重试');
+current=await service.load('notebook-test');const versionId=current.state.histories['note-test'].at(-1).id;
+current=await service.restoreVersion('notebook-test',{documentId:'note-test',versionId,expectedRevision:current.revision,operationId:'restore-test'});
+assert.equal(current.state.documents['note-test'].markdown,'原文');assert(current.state.coreRestoreLog.length);assert(current.state.histories['note-test'].some(v=>v.document.markdown.startsWith('并发')));
+pass('恢复历史保留此前正文和恢复日志');
+const row=rows.get('notebook-test'),state=JSON.parse(row.value);state.documents['note-test'].locked=true;row.value=JSON.stringify(state);
+await assert.rejects(service.saveDocument('notebook-test',{documentId:'note-test',markdown:'不能修改',expectedRevision:row.revision,operationId:'locked'}),e=>e.code==='DOCUMENT_LOCKED');
+state.documents['note-test'].locked=false;state.histories['note-test'][0].document.markdown='损坏';row.value=JSON.stringify(state);
+await assert.rejects(service.restoreVersion('notebook-test',{documentId:'note-test',versionId:state.histories['note-test'][0].id,expectedRevision:row.revision,operationId:'damaged'}),/校验失败/);
+await assert.rejects(service.load('../escape'));pass('锁定拒写、损坏历史拒绝恢复、非法笔记本身份拒绝');
+const failStore={...storage,compareAndSwap:async()=>{throw Error('模拟磁盘写入失败');}};
+const old=rows.get('notebook-test').value;
+await assert.rejects(createMobileDocumentStore({storage:failStore}).saveDocument('notebook-test',{documentId:'note-test',markdown:'不可丢原文',expectedRevision:row.revision,operationId:'disk-failed'}),/磁盘/);
+assert.equal(rows.get('notebook-test').value,old);pass('底层提交失败不先清草稿或返回成功');
+await mkdir('docs/migration/evidence/mobile-android-foundation',{recursive:true});await writeFile('docs/migration/evidence/mobile-android-foundation/documents.json',JSON.stringify({passed:true,checks,nativeStorage:false,productionData:false},null,2));

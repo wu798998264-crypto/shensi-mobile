@@ -1,0 +1,10 @@
+import {build} from 'esbuild';
+import {mkdir,copyFile,writeFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {dirname,join} from 'node:path';
+const root=dirname(fileURLToPath(import.meta.url)),preview=process.argv.includes('--preview'),out=join(root,preview?'preview-www':'www');
+await mkdir(out,{recursive:true});
+const result=await build({entryPoints:[join(root,preview?'src/preview.js':'src/main.js')],bundle:true,format:'esm',platform:'browser',target:'chrome120',outfile:join(out,'main.js'),metafile:true,legalComments:'linked',sourcemap:false});
+for(const name of ['index.html','app.css'])await copyFile(join(root,'src',name),join(out,name));
+await writeFile(join(out,'build-manifest.json'),JSON.stringify({schema:1,kind:'android-foundation-not-full-app',inputs:Object.keys(result.metafile.inputs),productionDataIncluded:false},null,2));
+console.log('Mobile web assets built; this does not compile or verify an Android APK.');
