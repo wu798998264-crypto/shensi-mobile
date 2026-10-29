@@ -1,0 +1,44 @@
+name: Public backend read-only diagnostics
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  network:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: DNS, verified TLS and SSH banner only (no credentials)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import socket,ssl,json,concurrent.futures
+          host='api.hexing.studio'
+          try:
+            print(json.dumps({'dns':sorted(set(x[4][0] for x in socket.getaddrinfo(host,443,type=socket.SOCK_STREAM)))}))
+          except Exception as e:
+            print(json.dumps({'dnsError':type(e).__name__}))
+          def probe(port):
+            result={'ip':'8.136.179.56','port':port}
+            try:
+              with socket.create_connection(('8.136.179.56',port),8) as s:
+                s.settimeout(8)
+                result['connected']=True
+                if port==22:
+                  result['sshBannerReceived']=s.recv(512).startswith(b'SSH-')
+                elif port==443:
+                  with ssl.create_default_context().wrap_socket(s,server_hostname=host) as tls:
+                    result['verifiedTLS']=True
+                    tls.sendall(b'GET /skill/health HTTP/1.1\r\nHost: api.hexing.studio\r\nConnection: close\r\n\r\n')
+                    result['httpStatusLine']=tls.recv(2048).split(b'\r\n')[0].decode('ascii','replace')
+                else:
+                  s.sendall(b'HEAD /skill/health HTTP/1.1\r\nHost: api.hexing.studio\r\nConnection: close\r\n\r\n')
+                  result['httpStatusLine']=s.recv(2048).split(b'\r\n')[0].decode('ascii','replace')
+            except Exception as e:
+              result['error']=type(e).__name__
+              result['errno']=getattr(e,'errno',None)
+              if isinstance(e,ssl.SSLCertVerificationError):result['verifyCode']=e.verify_code
+            return result
+          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            for result in pool.map(probe,[22,80,443]):print(json.dumps(result))
+          PY
