@@ -1,0 +1,22 @@
+/* Full-screen phone shell for the packaged MOBILE / 07 preview. */
+:root{color-scheme:light}
+html,body,#app{width:100%;height:100%;min-height:100%;margin:0;overflow:hidden}
+body{background:#fafaf8}
+#app>.intro,#app>.mobile-stage>.mobile-guide,#app>.mobile-stage>.mobile-rules{display:none!important}
+#app>.mobile-stage{display:block!important;width:100%;height:100%;margin:0!important;padding:0!important}
+#app .phone-stage{display:block;width:100%;height:100%;padding:0!important}
+#app .m3-phone{width:100%!important;height:100%!important;max-width:none;border:0!important;border-radius:0!important;box-shadow:none!important}
+#app .phone-status{display:none}
+#app .m3-phone{padding-top:env(safe-area-inset-top)}
+#app .m3-phone .m3-directory,#app .m3-phone .m3-plugin{padding-top:max(14px,env(safe-area-inset-top));padding-bottom:max(12px,env(safe-area-inset-bottom))}
+#app .m3-phone .phone-content{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+#app .m3-phone .m3-nav{bottom:calc(26px + env(safe-area-inset-bottom))}
+#app .m3-phone .home-indicator{display:none}
+#app .mobile-brand-title{display:flex;align-items:center;gap:8px;min-width:0}
+#app .phone-head>.mobile-brand-title{flex:1;margin-inline:6px;justify-content:center;overflow:hidden}
+#app .mobile-brand-title>span{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+#app .mobile-brand-logo{width:28px;height:28px;object-fit:contain;border-radius:8px;flex:none}
+#app .m6-account-avatar{background:transparent}
+#app .m6-account-avatar>.mobile-brand-logo{width:64px;height:64px;border-radius:18px}
+#preview-toast{position:fixed;z-index:100;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);margin:0;padding:10px 16px;border-radius:12px;background:#292c2a;color:#fff;font:12px/1.5 sans-serif;box-shadow:0 8px 24px #0003}
+#preview-toast[hidden]{display:none}

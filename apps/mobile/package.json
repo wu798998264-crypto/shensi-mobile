@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "build:preview-ui": "node build.mjs --preview-ui",
     "sync:android": "npm run build && cap sync android",
+    "sync:android:preview-ui": "npm run build:preview-ui && cap sync android",
     "check:environment": "node ../../scripts/check-mobile-android-environment.mjs"
   },
   "dependencies": {

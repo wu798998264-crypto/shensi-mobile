@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+def approvedPreview = System.getenv("SHENSI_MOBILE_UI") == "approved-preview"
 
 android {
     namespace = "studio.hexing.shensi.mobile"
@@ -7,8 +8,9 @@ android {
         applicationId "studio.hexing.shensi.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "0.0.2-test"
+        versionCode 3
+        versionName approvedPreview ? "0.0.2-preview.3" : "0.0.2-test.3"
+        resValue "string", "build_app_name", approvedPreview ? "神思笔记·界面预览" : "神思笔记"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -28,7 +30,7 @@ android {
     }
     buildTypes {
         debug {
-            applicationIdSuffix ".test"
+            applicationIdSuffix approvedPreview ? ".preview" : ".test"
             if (System.getenv("SHENSI_TEST_KEYSTORE")) signingConfig signingConfigs.mobileTest
         }
         release {
@@ -57,6 +59,15 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+
+tasks.register('verifyMobileWebVariant') {
+    doLast {
+        def manifest = new groovy.json.JsonSlurper().parse(file('src/main/assets/public/build-manifest.json'))
+        def expected = approvedPreview ? 'mobile-approved-preview-ui' : 'android-foundation'
+        if (manifest.kind != expected) throw new GradleException("Mobile web/native UI mismatch: ${manifest.kind} vs ${expected}")
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifyMobileWebVariant' }
 
 try {
     def servicesJSON = file('google-services.json')

@@ -1,12 +1,23 @@
 name: Android debug
 on:
   workflow_dispatch:
+    inputs:
+      ui:
+        description: UI target (preview is isolated; foundation retains connected services)
+        required: true
+        default: approved-preview
+        type: choice
+        options:
+          - approved-preview
+          - foundation
 permissions:
   contents: read
 jobs:
   android:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      SHENSI_MOBILE_UI: ${{ inputs.ui }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -21,7 +32,15 @@ jobs:
         run: npm ci
       - name: Build and sync native resources
         working-directory: apps/mobile
-        run: npm run sync:android
+        run: |
+          if [ "$SHENSI_MOBILE_UI" = "approved-preview" ]; then
+            npm run sync:android:preview-ui
+          else
+            npm run sync:android
+          fi
+      - name: Verify approved preview resources
+        if: inputs.ui == 'approved-preview'
+        run: node scripts/test-mobile-approved-package.mjs
       - name: Verify shared document contracts
         run: node scripts/test-mobile-document-store.mjs
       - name: Restore persistent test-only signing identity
@@ -47,7 +66,7 @@ jobs:
         run: sha256sum apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk > apk-sha256.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: shensi-mobile-debug
+          name: shensi-mobile-${{ inputs.ui }}
           path: |
             apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
             apk-sha256.txt
