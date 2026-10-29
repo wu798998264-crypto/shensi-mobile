@@ -20,10 +20,10 @@ for(const name of ['drawable-nodpi/shensi_logo.png','mipmap-nodpi/shensi_launche
 assert((await readFile('apps/mobile/android/app/src/main/AndroidManifest.xml','utf8')).includes('@mipmap/shensi_launcher'));
 assert((await readFile(join(res,'values/styles.xml'),'utf8')).includes('@drawable/shensi_logo'));
 const bundle=await readFile(join(base,'main.js'),'utf8');
-assert(bundle.includes('mobile-brand-logo'));assert(bundle.includes('shensi-mobile-preview-v3'));
+assert(!bundle.includes('mobile-brand-logo'));assert(!bundle.includes('m6-account-avatar'));assert(bundle.includes('shensi-mobile-preview-v3'));
 assert(!bundle.includes('mountFoundation'));
-assert(!/sk-[A-Za-z0-9_-]{16,}|798998264@qq\.com|E:[\\/](?:ShensiNotes|微信)|C:[\\/]Users[\\/]/i.test(bundle));
+assert(!/sk-[A-Za-z0-9_-]{16,}|\b[0-9]{5,12}@qq\.com|E:[\\/](?:ShensiNotes|微信)|C:[\\/]Users[\\/]/i.test(bundle));
 const allowed=new Set([...Object.keys(manifest.files),'main.js.LEGAL.txt','build-manifest.json']);
 async function walk(dir,prefix=''){for(const item of await readdir(dir,{withFileTypes:true})){assert(!item.isSymbolicLink());const rel=prefix+item.name;if(item.isDirectory()){assert.equal(rel,'assets');await walk(join(dir,item.name),rel+'/');}else assert(allowed.has(rel),'Unexpected packaged web resource: '+rel);}}
 await walk(base);
-console.log('PASS approved UI entry, fullscreen stylesheet, desktop-identical logo, launcher/splash bindings, hashes and public resource allowlist');
+console.log('PASS approved UI entry without page logos, fullscreen stylesheet, desktop-identical native launcher/splash, hashes and public resource allowlist');

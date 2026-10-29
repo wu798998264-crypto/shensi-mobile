@@ -8,8 +8,8 @@ android {
         applicationId "studio.hexing.shensi.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName approvedPreview ? "0.0.2-preview.3" : "0.0.2-test.3"
+        versionCode 4
+        versionName approvedPreview ? "0.0.2-preview.4" : "0.0.2-test.4"
         resValue "string", "build_app_name", approvedPreview ? "神思笔记·界面预览" : "神思笔记"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -67,7 +67,21 @@ tasks.register('verifyMobileWebVariant') {
         if (manifest.kind != expected) throw new GradleException("Mobile web/native UI mismatch: ${manifest.kind} vs ${expected}")
     }
 }
-tasks.named('preBuild').configure { dependsOn 'verifyMobileWebVariant' }
+tasks.register('verifyMobileSigningIdentity') {
+    doLast {
+        // Never silently fall back to a new debug key: that would make an
+        // installed test APK impossible to update without uninstalling data.
+        def signingPath = System.getenv("SHENSI_TEST_KEYSTORE")
+        if (!signingPath || !file(signingPath).isFile()) throw new GradleException("Persistent mobile test signing key is required; do not uninstall the existing app")
+        def keystore = java.security.KeyStore.getInstance(file(signingPath), "android".toCharArray())
+        def certificate = keystore.getCertificate("shensi-mobile-test")
+        if (certificate == null) throw new GradleException("Mobile test signing alias is missing")
+        def fingerprint = java.security.MessageDigest.getInstance("SHA-256").digest(certificate.getEncoded()).encodeHex().toString()
+        if (fingerprint != "470fc88db925ccb1b38ce4c8676d5f85b9bc9b05b808efdc349ca24454d6ea30") throw new GradleException("Mobile signing identity differs from the previous APK; build stopped")
+    }
+}
+
+tasks.named('preBuild').configure { dependsOn 'verifyMobileWebVariant', 'verifyMobileSigningIdentity' }
 
 try {
     def servicesJSON = file('google-services.json')

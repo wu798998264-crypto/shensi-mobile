@@ -55,6 +55,21 @@ export function createMobileDocumentStore({storage}={}){
    const markdown=text(request.markdown??'');state.documents[request.documentId]={id:request.documentId,title:title(request.title),documentKind:'markdown',markdown,html:plainHtml(markdown)};
    // Desktop user-created documents do not implicitly create history.
   }),
+  setDocumentFlag:(key,request)=>mutate(key,request,'document-flag',state=>{
+   id(request.documentId);const doc=state.documents[request.documentId];
+   if(!doc||doc.deleted)throw fail('文档不存在或已在回收站');
+   if(!['favorite','locked'].includes(request.field)||typeof request.value!=='boolean')throw fail('无效文档标记');
+   if(request.field==='favorite'){
+    const token='document:'+request.documentId;
+    state.coreFavorites=(state.coreFavorites||[]).filter(value=>value!==token);
+    if(request.value)state.coreFavorites.push(token);
+   }else{
+    // A local user lock can be lifted; upstream/read-only locks cannot.
+    if(doc.readOnly||doc.coreLocked)throw fail('文档受外部只读保护，不能在此解除','DOCUMENT_LOCKED');
+    doc.locked=request.value;
+   }
+   // Metadata only: never checkpoint, discard a draft or rewrite document text.
+  }),
   saveDocument:(key,request)=>mutate(key,request,'save',state=>{
    const doc=document(state,request.documentId),markdown=text(request.markdown);
    doc.markdown=markdown;doc.html=plainHtml(markdown);

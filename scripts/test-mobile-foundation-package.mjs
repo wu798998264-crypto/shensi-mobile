@@ -1,0 +1,27 @@
+// Public native artifact gate. This tests what will enter the APK, not a demo UI.
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {join,resolve} from 'node:path';
+const base=resolve(process.argv.find(a=>a.startsWith('--base='))?.slice(7)||'apps/mobile/www'),hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+const manifest=JSON.parse(await readFile(join(base,'build-manifest.json'),'utf8'));
+assert.equal(manifest.kind,'android-foundation');assert.equal(manifest.entry,'src/main.js');
+assert.equal(manifest.productionServiceAdaptersIncluded,true);assert.equal(manifest.productionDataIncluded,false);assert.equal(manifest.isolatedPreviewData,false);
+const allowed=new Set([...Object.keys(manifest.files),'build-manifest.json','main.js.LEGAL.txt']);
+async function walk(dir,prefix=''){for(const item of await readdir(dir,{withFileTypes:true})){assert(!item.isSymbolicLink());const rel=prefix+item.name;if(item.isDirectory()){assert.equal(rel,'assets');await walk(join(dir,item.name),rel+'/');}else assert(allowed.has(rel),'Unexpected native resource: '+rel);}}
+await walk(base);
+for(const [name,file]of Object.entries(manifest.files))assert.equal(hash(await readFile(join(base,name))),file.sha256,name);
+const bundle=await readFile(join(base,'main.js'),'utf8'),css=await readFile(join(base,'mobile-shell.css'),'utf8'),html=await readFile(join(base,'index.html'),'utf8');
+for(const component of ['mountFoundation','createMobileAccountClient','createMobileMarketplaceClient','createCloudNotebookSync','mountAccountAuth','m6-directory-label','m7-document-menu','m4-plugin-switch','coreFavorites'])assert(bundle.includes(component),'Missing connected component: '+component);
+assert(!/shensi-mobile-preview-v3|createMobileV3|localStorage|node:fs|node:crypto|eval\(/.test(bundle),'Demo or incompatible runtime code in native entry');
+assert(!/sk-[A-Za-z0-9_-]{16,}|\b[0-9]{5,12}@qq\.com|E:[\\/](?:ShensiNotes|微信)|C:[\\/]Users[\\/]/i.test(bundle),'Personal material must not be packaged');
+assert(!css.includes('shensi-mobile-preview'),'Desktop preview frame must not enter native package');
+for(const name of ['app.css','design-preview.css','mobile-preview.css','mobile-shell.css','account.css','account-controls.css'])assert(html.includes(`href="${name}"`));
+assert(html.includes("frame-src 'none'"));
+const res='apps/mobile/android/app/src/main/res',brand=hash(await readFile('packages/ui/tray-icon.png'));
+for(const name of ['drawable-nodpi/shensi_logo.png','mipmap-nodpi/shensi_launcher.png'])assert.equal(hash(await readFile(join(res,name))),brand);
+assert.equal(hash(await readFile(join(base,'assets/shensi-logo.png'))),hash(await readFile('packages/ui/logo.png')));
+const gradle=await readFile('apps/mobile/android/app/build.gradle','utf8'),workflow=await readFile('apps/mobile/android-build.yml','utf8');
+assert(gradle.includes('verifyMobileSigningIdentity'));assert(gradle.includes('470fc88db925ccb1b38ce4c8676d5f85b9bc9b05b808efdc349ca24454d6ea30'));
+assert.match(gradle,/versionCode 4/);assert(gradle.includes('0.0.2-test.4'));assert.match(workflow,/default: foundation/);
+console.log('PASS connected native package: approved UI + real adapters, no demo/private data, hashes and launcher correct, fixed signing gate and versionCode4');

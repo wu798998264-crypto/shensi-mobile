@@ -12,11 +12,5 @@ body{background:#fafaf8}
 #app .m3-phone .phone-content{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
 #app .m3-phone .m3-nav{bottom:calc(26px + env(safe-area-inset-bottom))}
 #app .m3-phone .home-indicator{display:none}
-#app .mobile-brand-title{display:flex;align-items:center;gap:8px;min-width:0}
-#app .phone-head>.mobile-brand-title{flex:1;margin-inline:6px;justify-content:center;overflow:hidden}
-#app .mobile-brand-title>span{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
-#app .mobile-brand-logo{width:28px;height:28px;object-fit:contain;border-radius:8px;flex:none}
-#app .m6-account-avatar{background:transparent}
-#app .m6-account-avatar>.mobile-brand-logo{width:64px;height:64px;border-radius:18px}
 #preview-toast{position:fixed;z-index:100;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);margin:0;padding:10px 16px;border-radius:12px;background:#292c2a;color:#fff;font:12px/1.5 sans-serif;box-shadow:0 8px 24px #0003}
 #preview-toast[hidden]{display:none}

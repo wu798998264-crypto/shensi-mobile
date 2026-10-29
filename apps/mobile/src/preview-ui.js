@@ -6,12 +6,6 @@ import {createMobileV3} from '../../../docs/previews/creative-suite-20261027/mob
 const root=document.querySelector('#app');
 function renderPhone(){
   root.innerHTML=preview.page();
-  const logo=()=>{const img=document.createElement('img');img.src='assets/shensi-logo.png';img.alt='神思笔记';img.className='mobile-brand-logo';return img;};
-  const title=root.querySelector('.phone-head>strong');
-  if(title){const text=document.createElement('span');text.textContent=title.textContent;title.replaceChildren(logo(),text);title.classList.add('mobile-brand-title');}
-  const settings=root.querySelector('.m7-settings>h2');
-  if(settings){settings.prepend(logo());settings.classList.add('mobile-brand-title');}
-  root.querySelectorAll('.m6-account-avatar').forEach(node=>node.replaceChildren(logo()));
   preview.mount(root);
 }
 let toastTimer;

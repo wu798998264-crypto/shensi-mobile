@@ -1,26 +1,21 @@
+import {mountMobileAccountPanel} from './account-panel.js';
+import {mobileShellIcon} from './shell-icons.js';
 const el=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 export function mountServicePanels(root,{account,nutstore,marketplace,cloud,documents,currentNotebook,canTransfer=()=>true,refreshWorkspace=async()=>{}}){
  const bar=el('nav');bar.className='service-tools';root.append(bar);
  const dialog=(title)=>{const d=el('dialog'),head=el('header'),h=el('h2',title),close=el('button','×'),status=el('p');d.className='service-dialog';head.className='service-heading';close.setAttribute('aria-label','关闭');status.setAttribute('role','status');close.onclick=()=>{d.close();d.remove();};d.addEventListener('close',()=>d.remove());head.append(h,close);d.append(head,status);root.append(d);d.showModal();let busy=false;return {d,status,run:async fn=>{if(busy)return;busy=true;d.setAttribute('aria-busy','true');status.textContent='正在连接…';try{await fn();}catch(e){status.textContent=e.message||'操作失败';}finally{busy=false;d.removeAttribute('aria-busy');}}};};
  const button=(text,action)=>{const b=el('button',text);b.onclick=action;bar.append(b);};
- button('账户设置',()=>{
-  const {d,status,run}=dialog('神思账户'),form=el('form'),name=el('input'),password=el('input'),login=el('button','登录');name.placeholder='账号';name.autocomplete='username';name.setAttribute('aria-label','账号');password.placeholder='密码';password.type='password';password.autocomplete='current-password';password.setAttribute('aria-label','密码');login.type='submit';form.append(name,password,login);d.append(form);
-  const refresh=el('button','核验账号与权益'),logout=el('button','退出登录'),vip=el('p','购买算力套餐 / VIP：暂未开放，不能支付。'),rights=el('p');d.append(refresh,logout,rights,vip);
-  const show=s=>{status.textContent=s.status==='verified'?'已登录：'+(s.user.displayName||s.user.account):s.status==='verification_required'?'已保存登录，请联网核验':'未登录';form.hidden=s.status==='verified';logout.hidden=s.status==='signed_out';};
-  form.onsubmit=e=>{e.preventDefault();run(async()=>{login.disabled=true;try{show(await account.login({account:name.value,password:password.value}));password.value='';}finally{login.disabled=false;}});};
-  const emailMode=el('details'),summary=el('summary','邮箱验证码登录'),emailForm=el('form'),email=el('input'),code=el('input'),send=el('button','获取验证码'),submit=el('button','验证码登录');email.type='email';email.required=true;email.placeholder='登录邮箱';email.setAttribute('aria-label','登录邮箱');code.placeholder='验证码';code.setAttribute('aria-label','验证码');code.autocomplete='one-time-code';send.type='button';submit.type='submit';emailForm.append(email,send,code,submit);emailMode.append(summary,emailForm);d.insertBefore(emailMode,refresh);let challenge;
-  send.onclick=()=>run(async()=>{if(!email.reportValidity())return;const cfg=await account.emailConfig();if(cfg.enabled!==true&&cfg.available!==true)throw Error('邮箱服务暂不可用，请用账号密码登录');const r=await account.sendEmailCode({email:email.value.trim()});challenge={email:email.value.trim(),id:r.challengeId,until:Date.now()+(r.expiresInSeconds||300)*1000};status.textContent='验证码已发送，请查收。';});
-  emailForm.onsubmit=e=>{e.preventDefault();run(async()=>{if(!challenge||challenge.email!==email.value.trim()||Date.now()>challenge.until)throw Error('请先为当前邮箱获取验证码');show(await account.emailLogin({email:challenge.email,challengeId:challenge.id,code:code.value.trim()}));code.value='';emailMode.open=false;});};
-  refresh.onclick=()=>run(async()=>{const r=await account.entitlements();show(r);const m=r.membership.membership||r.membership;rights.textContent=(m.entitled?'会员：'+(m.expiresAt?new Date(m.expiresAt).toLocaleDateString()+' 到期':'永久有效'):'尚无有效会员')+' · 可用积分 '+r.quota.available+' · 预留 '+r.quota.reserved;});logout.onclick=()=>run(async()=>{show(await account.logout());rights.textContent='';});run(async()=>show(await account.status()));
- });
+ button('账户设置',()=>mountMobileAccountPanel(dialog('神思账户'),account));
  button('坚果云',()=>{
-  const {d,status,run}=dialog('坚果云同步'),form=el('form'),name=el('input'),password=el('input'),connect=el('button','连接并保存');name.placeholder='坚果云账号';name.setAttribute('aria-label','坚果云账号');password.placeholder='第三方应用密码（非登录密码）';password.type='password';password.setAttribute('aria-label','坚果云应用密码');connect.type='submit';form.append(name,password,connect);d.append(form);
-  const probe=el('button','连通性测试'),roundtrip=el('button','独立测试文件写入与回读'),disconnect=el('button','退出连接'),note=el('p','个人库自动同步尚未接齐桌面冲突协议，当前不会上传笔记。读写测试只操作独立随机测试文件。');d.append(probe,roundtrip,disconnect,note);
-  const show=s=>{form.hidden=s.configured===true||s.connected===true;status.textContent=form.hidden?'已保存连接：'+s.account+'（可点击测试实时核验）':'尚未连接';};
-  form.onsubmit=e=>{e.preventDefault();run(async()=>{connect.disabled=true;try{show(await nutstore.connect({account:name.value,password:password.value}));password.value='';}finally{connect.disabled=false;}});};
-  probe.onclick=()=>run(async()=>{await nutstore.probe();status.textContent='实时连通性通过；不代表个人库同步已完成。';});
-  roundtrip.onclick=()=>run(async()=>{await nutstore.roundTripProbe();status.textContent='随机测试文件写入、下载及内容核对通过，已清理测试文件。';});
-  disconnect.onclick=()=>run(async()=>show(await nutstore.disconnect()));run(async()=>show(await nutstore.status()));
+  const {d,status,run}=dialog('坚果云同步'),menu=el('section'),detail=el('section');menu.className='m7-sync-menu';d.classList.add('native-nutstore');d.append(menu,detail);let connection={configured:false};
+  const menuRow=(label,icon,action)=>{const b=el('button');b.type='button';b.className='m7-menu-row';b.innerHTML=mobileShellIcon(icon);b.append(el('span',label));b.onclick=action;return b;};
+  const note=()=>el('p','个人库同步尚未接齐桌面冲突协议，当前不会上传笔记。连接测试不会被当作同步完成。');
+  function show(s){connection=s;detail.replaceChildren();menu.replaceChildren();const configured=s.configured===true||s.connected===true;status.textContent='';
+   menu.append(menuRow(configured?'已保存连接 · '+s.account:'未连接', 'check',connectionInfo),menuRow('立即同步','refresh',()=>{detail.replaceChildren(note());}),menuRow('自动同步','clock',()=>{const label=el('label'),check=el('input');check.type='checkbox';check.disabled=true;check.setAttribute('aria-label','自动同步尚未接通');label.className='m7-disabled-switch';label.append(el('span','自动同步'),check);detail.replaceChildren(label,note());}),menuRow(configured?'退出登录':'连接账号','logout',()=>configured?run(async()=>show(await nutstore.disconnect())):connectForm()));
+  }
+  function connectionInfo(){const probe=menuRow('连通性测试','refresh',()=>run(async()=>{await nutstore.probe();status.textContent='实时连通性通过；不代表个人库同步已完成。';})),roundtrip=menuRow('独立测试文件写入与回读','check',()=>run(async()=>{await nutstore.roundTripProbe();status.textContent='随机测试文件写入、下载及内容核对通过，已清理测试文件。';}));detail.replaceChildren(el('h4','连接状态'),el('p',connection.configured?'已保存凭据，点击测试实时核验。':'尚未配置连接。'),probe,roundtrip,note());}
+  function connectForm(){const form=el('form'),name=el('input'),password=el('input'),connect=el('button','连接并保存');name.placeholder='坚果云账号';name.setAttribute('aria-label','坚果云账号');password.placeholder='第三方应用密码（非登录密码）';password.type='password';password.setAttribute('aria-label','坚果云应用密码');connect.type='submit';form.append(name,password,connect);detail.replaceChildren(form);form.onsubmit=e=>{e.preventDefault();run(async()=>{connect.disabled=true;try{show(await nutstore.connect({account:name.value,password:password.value}));password.value='';}finally{connect.disabled=false;}});};}
+  run(async()=>show(await nutstore.status()));
  });
  if(cloud)button('官方云端同步',()=>{
   const {d,status,run}=dialog('官方云端同步'),info=el('p'),list=el('section'),refresh=el('button','刷新云空间'),allocate=el('button','开通已授权空间'),upload=el('button','上传当前笔记本');
