@@ -24,9 +24,25 @@ jobs:
         run: npm run sync:android
       - name: Verify shared document contracts
         run: node scripts/test-mobile-document-store.mjs
+      - name: Restore persistent test-only signing identity
+        env:
+          TEST_KEYSTORE: ${{ secrets.SHENSI_ANDROID_TEST_KEYSTORE }}
+        run: |
+          test -n "$TEST_KEYSTORE"
+          printf '%s' "$TEST_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/shensi-mobile-test.jks"
+          chmod 600 "$RUNNER_TEMP/shensi-mobile-test.jks"
       - name: Build debug APK and Java unit tests
         working-directory: apps/mobile/android
+        env:
+          SHENSI_TEST_KEYSTORE: ${{ runner.temp }}/shensi-mobile-test.jks
         run: bash gradlew --no-daemon assembleDebug testDebugUnitTest
+      - name: Public backend connectivity report
+        continue-on-error: true
+        run: node scripts/probe-mobile-backend-readiness.mjs public-readiness.json
+      - name: Verify APK identity
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk > apk-signature.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk > apk-identity.txt
       - name: Hash APK
         run: sha256sum apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk > apk-sha256.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -35,4 +51,7 @@ jobs:
           path: |
             apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
             apk-sha256.txt
+            apk-signature.txt
+            apk-identity.txt
+            public-readiness.json
           retention-days: 14

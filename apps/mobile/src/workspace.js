@@ -4,17 +4,17 @@ import {mountServicePanels} from './service-panels.js';
 const element=(tag,text,attrs={})=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;for(const [key,value] of Object.entries(attrs))e.setAttribute(key,value);return e;};
 const uid=prefix=>prefix+'-'+crypto.randomUUID();
 const closeDialog=dialog=>{dialog.close();dialog.remove();};
-export async function mountFoundation(root,{documents,account,nutstore,marketplace,hostLabel='ANDROID · 内核验收'}={}){
+export async function mountFoundation(root,{documents,account,nutstore,marketplace,cloud,hostLabel='ANDROID · 0.0.2 测试版'}={}){
  let notebooks=await documents.list(),notebookId=notebooks[0]?.id||'',current=notebookId?await documents.load(notebookId):null,documentId='',editing=false,pending=Promise.resolve(),failedDraft=false;
  let textarea,notice,tree,content,select,mode;let draftRevision=0;
  root.replaceChildren();root.className='native-workspace';
  const brand=element('header',undefined,{class:'brand'});brand.append(element('span','神思笔记'),element('small',hostLabel));
- const status=element('p','本机事务保存与历史真实可用。账户、坚果云和手机广场从下方连接；完整界面融合、媒体同步与插件安装仍在开发中。',{class:'status'});
+ const status=element('p','联网测试版：本机文档与历史、账号登录、官方云笔记本快照、手机模板插件。完整预览布局、白板媒体及自动双向同步尚未完成。',{class:'status'});
  const toolbar=element('nav',undefined,{class:'notebooks','aria-label':'笔记本'});select=element('select',undefined,{'aria-label':'当前笔记本'});
  const addBook=element('button','＋ 笔记本',{'data-action':'notebook'});toolbar.append(select,addBook);
  const body=element('div',undefined,{class:'workspace-body'});tree=element('aside',undefined,{class:'document-tree','aria-label':'文档目录'});content=element('section',undefined,{class:'document-content'});body.append(tree,content);
  notice=element('p','',{role:'status','aria-live':'polite',class:'notice'});root.append(brand,status,toolbar,body,notice);
- if(account&&nutstore&&marketplace)mountServicePanels(root,{account,nutstore,marketplace});
+ if(account&&nutstore&&marketplace)mountServicePanels(root,{account,nutstore,marketplace,cloud,documents,currentNotebook:()=>notebookId,canTransfer:()=>!editing,refreshWorkspace:async()=>{notebooks=await documents.list();if(notebookId)current=await documents.load(notebookId);fillNotebooks();fillTree();renderDocument();}});
  const showError=error=>{notice.textContent=error.message||'操作失败，输入保留。';};
  async function safe(fn){try{await fn();}catch(error){showError(error);}}
  function fillNotebooks(){select.replaceChildren();if(!notebooks.length)select.append(element('option','尚无笔记本'));for(const n of notebooks)select.append(element('option',n.title,{value:n.id}));select.value=notebookId;}

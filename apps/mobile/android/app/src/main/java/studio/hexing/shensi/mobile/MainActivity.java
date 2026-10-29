@@ -7,6 +7,8 @@ public class MainActivity extends BridgeActivity {
     @Override public void onCreate(Bundle savedInstanceState) {
         registerPlugin(ShensiStoragePlugin.class);
         registerPlugin(ShensiSecureVaultPlugin.class);
+        registerPlugin(ShensiMetadataPlugin.class);
+        registerPlugin(ShensiCloudTransportPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

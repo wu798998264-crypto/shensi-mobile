@@ -7,8 +7,8 @@ android {
         applicationId "studio.hexing.shensi.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "0.0.2-test"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +16,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        mobileTest {
+            if (System.getenv("SHENSI_TEST_KEYSTORE")) {
+                storeFile file(System.getenv("SHENSI_TEST_KEYSTORE"))
+                storePassword "android"
+                keyAlias "shensi-mobile-test"
+                keyPassword "android"
+            }
+        }
+    }
     buildTypes {
+        debug {
+            applicationIdSuffix ".test"
+            if (System.getenv("SHENSI_TEST_KEYSTORE")) signingConfig signingConfigs.mobileTest
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

@@ -1,5 +1,6 @@
 // Shared Android/iOS service client. The caller must supply a native secure vault.
 // No browser/localStorage fallback, Node dependency, generation or purchase endpoint.
+import {createCloudFileClient} from './cloud-sync-client.mjs';
 export const ACCOUNT_ISSUER='https://api.hexing.studio/skill';
 const failure=(message,code,status)=>Object.assign(new Error(message),{code,...status?{status}: {}});
 const publicUser=user=>({id:String(user.id),account:String(user.account||''),displayName:String(user.displayName||''),email:String(user.email||''),emailVerifiedAt:Number(user.emailVerifiedAt)||0});
@@ -45,6 +46,7 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
   const next={issuer,token:result.token,user:publicUser(me.user)};await secureVault.set(key,JSON.stringify(next));session=next;loaded=true;verified=true;lastError='';return state();
  }
  return {
+  cloudFiles:({journal}={})=>createCloudFileClient({issuer,journal,fetchImpl,allowLoopbackForTests,getSession:()=>serial(async()=>{await load();if(!session)throw failure('请先登录神思账号','LOGIN_REQUIRED');return structuredClone(session);})}),
   status:()=>serial(async()=>{await load();return state();}),
   refresh:()=>serial(verify),
   login:({account,password}={})=>serial(()=>{
