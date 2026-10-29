@@ -19,9 +19,14 @@ if(previewUi){
   await copyFile(join(root,'../..','docs/previews/creative-suite-20261027/v3.css'),join(out,'mobile-preview.css'));
   await copyFile(join(root,'src','mobile-preview.css'),join(out,'mobile-shell.css'));
 }else for(const name of ['index.html','app.css'])await copyFile(join(root,'src',name),join(out,name));
+if(!previewUi){
+  await copyFile(join(root,'../..','docs/previews/creative-suite-20261027/preview.css'),join(out,'design-preview.css'));
+  await copyFile(join(root,'../..','docs/previews/creative-suite-20261027/v3.css'),join(out,'mobile-preview.css'));
+  await copyFile(join(root,'src','native-shell.css'),join(out,'mobile-shell.css'));
+}
 await copyFile(join(root,'../..','packages/ui/logo.png'),join(assets,'shensi-logo.png'));
 await materializeMobileBranding();
-const names=['index.html','main.js','assets/shensi-logo.png',...(previewUi?['design-preview.css','mobile-preview.css','mobile-shell.css']:['app.css'])],files={};
+const names=['index.html','main.js','assets/shensi-logo.png','design-preview.css','mobile-preview.css','mobile-shell.css',...(!previewUi?['app.css']:[])],files={};
 for(const name of names)files[name]={sha256:createHash('sha256').update(await readFile(join(out,name))).digest('hex')};
 await writeFile(join(out,'build-manifest.json'),JSON.stringify({schema:3,kind:previewUi?'mobile-approved-preview-ui':preview?'android-foundation-preview':'android-foundation',entry,inputs:Object.keys(result.metafile.inputs),logoAsset:'assets/shensi-logo.png',files,productionDataIncluded:false,isolatedPreviewData:previewUi,productionServiceAdaptersIncluded:!previewUi},null,2));
 console.log(`Mobile web assets built (${previewUi?'approved preview UI':preview?'preview foundation':'native foundation'}); this does not compile or verify an Android APK.`);

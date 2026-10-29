@@ -41,6 +41,9 @@ jobs:
       - name: Verify approved preview resources
         if: inputs.ui == 'approved-preview'
         run: node scripts/test-mobile-approved-package.mjs
+      - name: Verify native storage and UI boundaries
+        if: inputs.ui == 'foundation'
+        run: node scripts/test-mobile-native-contracts.mjs
       - name: Verify shared document contracts
         run: node scripts/test-mobile-document-store.mjs
       - name: Restore persistent test-only signing identity
