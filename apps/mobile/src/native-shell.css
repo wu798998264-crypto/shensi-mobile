@@ -2,6 +2,8 @@
 html,body{height:100%;margin:0;overflow:hidden;background:#fafaf8}
 .native-workspace.native-approved{width:100%;height:100dvh;max-width:none;min-height:0;margin:0;padding:env(safe-area-inset-top) 0 0;border:0;border-radius:0;box-shadow:none;position:relative;display:flex;flex-direction:column;font-family:var(--mobile-soft-font);color:var(--m-ink);background:var(--m-bg)}
 .native-approved [hidden]{display:none!important}
+.native-approved .notice:empty{display:none}
+.native-approved .native-empty h1{font-family:var(--mobile-soft-font)}
 .native-approved svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .native-approved .phone-head{height:56px;gap:8px;padding:0 15px;border:0;background:var(--m-bg)}
 .native-approved .phone-head>button,.native-approved .phone-head>div:last-child>button{width:36px;min-width:36px;padding:5px;display:inline-flex;align-items:center;justify-content:center}
