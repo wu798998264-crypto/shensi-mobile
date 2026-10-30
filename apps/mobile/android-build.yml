@@ -48,6 +48,7 @@ jobs:
           node scripts/test-mobile-foundation-package.mjs
           node scripts/test-mobile-document-flags.mjs
           node scripts/test-mobile-8951-icons.mjs
+          node scripts/test-mobile-media-import.mjs
       - name: Verify shared document contracts
         run: node scripts/test-mobile-document-store.mjs
       - name: Restore persistent test-only signing identity

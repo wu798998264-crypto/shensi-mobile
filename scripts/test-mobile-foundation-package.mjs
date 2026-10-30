@@ -23,5 +23,5 @@ for(const name of ['drawable-nodpi/shensi_logo.png','mipmap-nodpi/shensi_launche
 assert.equal(hash(await readFile(join(base,'assets/shensi-logo.png'))),hash(await readFile('packages/ui/logo.png')));
 const gradle=await readFile('apps/mobile/android/app/build.gradle','utf8'),workflow=await readFile('apps/mobile/android-build.yml','utf8');
 assert(gradle.includes('verifyMobileSigningIdentity'));assert(gradle.includes('470fc88db925ccb1b38ce4c8676d5f85b9bc9b05b808efdc349ca24454d6ea30'));
-assert.match(gradle,/versionCode 4/);assert(gradle.includes('0.0.2-test.4'));assert.match(workflow,/default: foundation/);
-console.log('PASS connected native package: approved UI + real adapters, no demo/private data, hashes and launcher correct, fixed signing gate and versionCode4');
+assert.match(gradle,/versionCode 5/);assert(gradle.includes('0.0.3-test.5'));assert.match(workflow,/default: foundation/);
+console.log('PASS connected native package: approved UI + real adapters, no demo/private data, hashes and launcher correct, fixed signing gate and versionCode5');

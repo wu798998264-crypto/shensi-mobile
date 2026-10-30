@@ -26,7 +26,10 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
  const state=()=>({issuer,status:!session?'signed_out':verified?'verified':'verification_required',user:session?publicUser(session.user):null,lastError});
  async function load(){if(loaded)return;const raw=await secureVault.get(key);if(raw){try{const v=JSON.parse(raw);if(v.issuer!==issuer||!v.user?.id||typeof v.token!=='string'||!v.token||v.token.length>16384)throw Error();session=v;}catch{throw failure('保存的账户会话无效，请清除后重新登录','INVALID_SESSION');}}loaded=true;}
  async function request(path,{token,body}={}){
-  let response;try{response=await fetchImpl(issuer+path,{method:body===undefined?'GET':'POST',redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(timeoutMs),headers:{Accept:'application/json',...(body===undefined?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body)});}catch{throw failure('账户服务连接失败或超时，请检查网络后重试','ACCOUNT_UNAVAILABLE');}
+  // SMTP acknowledgement can consume 12s server-side. Leave network margin
+  // without retrying a send whose outcome might already be accepted.
+  const deadline=path==='/v1/auth/email-code'?Math.max(timeoutMs,30000):timeoutMs;
+  let response;try{response=await fetchImpl(issuer+path,{method:body===undefined?'GET':'POST',redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(deadline),headers:{Accept:'application/json',...(body===undefined?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body)});}catch{throw failure(path==='/v1/auth/email-code'?'验证码发送结果尚未确认，请先检查收件箱与垃圾邮件，稍后再试。':'账户服务连接失败或超时，请检查网络后重试','ACCOUNT_UNAVAILABLE');}
   // Do not echo raw upstream errors: a proxy could reflect a password or token.
   const reader=response.body?.getReader();let size=0,text='';const decoder=new TextDecoder();
   if(!reader)throw failure('账户服务未返回数据','INVALID_RESPONSE');
@@ -48,7 +51,7 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
   const next={issuer,token:result.token,user:publicUser(me.user)};await persistSession(next);session=next;loaded=true;verified=true;lastError='';return state();
  }
  return {
-  cloudFiles:({journal}={})=>createCloudFileClient({issuer,journal,fetchImpl,allowLoopbackForTests,getSession:()=>serial(async()=>{await load();if(!session)throw failure('请先登录神思账号','LOGIN_REQUIRED');return structuredClone(session);})}),
+  cloudFiles:({journal,expectedMemberId}={})=>createCloudFileClient({issuer,journal,expectedMemberId,fetchImpl,allowLoopbackForTests,getSession:()=>serial(async()=>{await load();if(!session)throw failure('请先登录神思账号','LOGIN_REQUIRED');return structuredClone(session);})}),
   status:()=>serial(async()=>{await load();return state();}),
   refresh:()=>serial(verify),
   rememberedAccount:{get:async()=>{const raw=await secureVault.get(key+':name');if(!raw)return null;const saved=JSON.parse(raw);return {account:String(saved.account||'').slice(0,256),email:String(saved.email||'').slice(0,254)};},set:async value=>{if(value)await secureVault.set(key+':name',JSON.stringify({account:String(value.account||'').slice(0,256),email:String(value.email||'').slice(0,254)}));else await secureVault.remove(key+':name');}},

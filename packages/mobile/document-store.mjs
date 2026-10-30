@@ -1,6 +1,7 @@
 import {checkpoint,assertVersion} from '../core/src/history.mjs';
 import {sha256HexSync,stableVersionJson} from '../core/legacy/version-integrity.js';
 import {renderMarkdown} from './rich-text.mjs';
+import {validateMediaReceipt,MAX_IMPORT_FILES,MAX_TEXT_BYTES} from './media-contract.mjs';
 
 const fail=(message,code='INVALID_DOCUMENT')=>Object.assign(new Error(message),{code});
 const clone=structuredClone;
@@ -28,8 +29,8 @@ export function createMobileDocumentStore({storage}={}){
   if(saved.revision!==current.revision+1||saved.value!==value)throw fail('事务提交回读不一致，请重新读取，不要重复提交','STORAGE_RECEIPT_INVALID');
   return {revision:saved.revision,state:clone(current.state)};
  }
- const document=(state,documentId)=>{
-  id(documentId);const doc=state.documents[documentId];if(!doc||doc.canvas)throw fail('当前只接入普通文档；白板保持独立原协议');
+ const document=(state,documentId,{allowCanvas=false}={})=>{
+  id(documentId);const doc=state.documents[documentId];if(!doc||doc.canvas&&!allowCanvas)throw fail('请使用对应的文档或白板编辑入口');
   if(doc.locked||doc.coreLocked||doc.readOnly||doc.deleted)throw fail('文档已锁定、只读或在回收站','DOCUMENT_LOCKED');return doc;
  };
  async function mutate(key,request,kind,action){return serial(id(key),async()=>{
@@ -54,6 +55,40 @@ export function createMobileDocumentStore({storage}={}){
    id(request.documentId);if(state.documents[request.documentId])throw fail('文档已经存在');
    const markdown=text(request.markdown??'');state.documents[request.documentId]={id:request.documentId,title:title(request.title),documentKind:'markdown',markdown,html:plainHtml(markdown)};
    // Desktop user-created documents do not implicitly create history.
+  }),
+  createWhiteboard:(key,request)=>mutate(key,request,'create-whiteboard',state=>{
+   id(request.documentId);if(state.documents[request.documentId])throw fail('白板已经存在');
+   state.documents[request.documentId]={id:request.documentId,title:title(request.title),documentKind:'whiteboard',markdown:'',html:'',canvas:{nodes:[],edges:[],viewport:{x:0,y:0,zoom:1}}};
+  }),
+  appendWhiteboardImports:(key,request)=>mutate(key,request,'whiteboard-import',state=>{
+   const doc=document(state,request.documentId,{allowCanvas:true});if(!doc.canvas||!Array.isArray(doc.canvas.nodes))throw fail('目标不是可导入的白板');
+   if(!Array.isArray(request.items)||!request.items.length||request.items.length>MAX_IMPORT_FILES)throw fail('单次请选择1至20个文件');
+   const existing=new Set(doc.canvas.nodes.map(n=>n.id)),items=request.items.map(item=>{
+    id(item.id);if(existing.has(item.id))throw fail('导入卡片身份重复');existing.add(item.id);
+    if(item.type==='text'){text(item.text);if(new TextEncoder().encode(item.text).length>MAX_TEXT_BYTES)throw fail('文本文件超过2MiB');return {id:item.id,type:'text',name:title(item.name),text:item.text};}
+    const media=validateMediaReceipt(item.media);return {id:item.id,type:'file',kind:media.kind,name:media.name,localMedia:media,mimeType:media.mime,size:media.bytes};
+   });
+   checkpoint(state,request.documentId,{source:'user',operationType:'snapshot',reason:'手机导入素材前'});
+   const start=doc.canvas.nodes.length;doc.canvas.nodes.push(...items.map((item,i)=>({...item,x:((start+i)%3)*340,y:Math.floor((start+i)/3)*260,width:300,height:220})));
+   return checkpoint(state,request.documentId,{source:'user',operationType:'snapshot',reason:'手机导入素材'});
+  }),
+  saveWhiteboardText:(key,request)=>mutate(key,request,'whiteboard-text',state=>{
+   const doc=document(state,request.documentId,{allowCanvas:true});
+   if(!doc.canvas||!Array.isArray(doc.canvas.nodes))throw fail('目标不是兼容的白板');
+   const node=doc.canvas.nodes.find(n=>n.id===id(request.nodeId));
+   if(!node||node.type!=='text')throw fail('仅可编辑白板文本卡片');
+   checkpoint(state,request.documentId,{source:'user',operationType:'snapshot',reason:'手机修改文本卡片前'});
+   node.text=text(request.text);
+   return checkpoint(state,request.documentId,{source:'user',operationType:'snapshot',reason:'手机文本卡片保存'});
+  }),
+  trashDocument:(key,request)=>mutate(key,request,'trash-document',state=>{
+   const doc=document(state,request.documentId,{allowCanvas:true});if(request.confirmed!==true)throw fail('移入回收站需要确认','CONFIRMATION_REQUIRED');
+   checkpoint(state,request.documentId,{source:'user',operationType:'snapshot',reason:'移入回收站前'});doc.deleted=true;doc.deletedAt=new Date().toISOString();
+  }),
+  checkpointForSync:(key,request)=>serial(id(key),async()=>{
+   const current=await load(key);if(!current.state)throw fail('笔记本不存在');if(current.revision!==request.expectedRevision)throw fail('资料已变化，先保存当前内容再同步','WORKSPACE_STATE_CONFLICT');
+   const receipts={};for(const [documentId,doc]of Object.entries(current.state.documents)){if(doc.deleted)continue;receipts[documentId]=checkpoint(current.state,documentId,{source:'sync',operationType:'snapshot',reason:request.direction==='download'?'云端下载前本机版本':'云端上传前版本'});}
+   return Object.values(receipts).some(r=>r.created)?persist(key,current):current;
   }),
   setDocumentFlag:(key,request)=>mutate(key,request,'document-flag',state=>{
    id(request.documentId);const doc=state.documents[request.documentId];
@@ -87,16 +122,17 @@ export function createMobileDocumentStore({storage}={}){
    return persist(key,current);
   }),
   deleteVersion:(key,request)=>mutate(key,request,'delete-version',state=>{
-   document(state,request.documentId);id(request.versionId);
+   document(state,request.documentId,{allowCanvas:true});id(request.versionId);
    if(request.confirmed!==true)throw fail('删除历史版本需要确认','CONFIRMATION_REQUIRED');
    const versions=state.histories[request.documentId]||[],index=versions.findIndex(v=>v.id===request.versionId);
    if(index<0)throw fail('历史版本不存在','VERSION_NOT_FOUND');
    versions.splice(index,1);
   }),
   restoreVersion:(key,request)=>mutate(key,request,'restore',state=>{
-   const previous=document(state,request.documentId),version=state.histories[request.documentId]?.find(v=>v.id===request.versionId);
+   const previous=document(state,request.documentId,{allowCanvas:true}),version=state.histories[request.documentId]?.find(v=>v.id===request.versionId);
    if(!version?.document)throw fail('历史版本不存在');assertVersion(version);
-   const restored=clone(version.document);if(restored.id!==previous.id||restored.canvas)throw fail('历史版本与目标文档不匹配');
+   const restored=clone(version.document);if(restored.id&&restored.id!==request.documentId||!!restored.canvas!==!!previous.canvas)throw fail('历史版本与目标文档不匹配');
+   checkpoint(state,request.documentId,{source:'user',operationType:'snapshot',reason:'恢复历史前的当前版本'});
    // Match the desktop restore rule: retain current location/title, and keep
    // the displaced complete document in the restoration log.
    state.documents[request.documentId]={...restored,title:previous.title,moduleId:previous.moduleId,contentRef:previous.contentRef,sourcePath:previous.sourcePath};

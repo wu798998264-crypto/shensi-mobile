@@ -17,3 +17,7 @@
 .native-approved .mobile-account-dialog .account-remember input{width:15px;height:15px;min-height:0;padding:0;margin:0}
 .native-approved .mobile-account-dialog .account-password-field input{padding-right:40px}
 .native-approved .mobile-account-dialog .account-password-field button{min-height:30px}
+.native-approved .mobile-account-dialog .account-login-form{display:block}
+.native-approved .mobile-account-dialog .account-login-form [data-auth-status]:empty{min-height:0;margin:0}
+.native-approved .mobile-account-dialog .service-heading>button{color:var(--m-ink);background:var(--m-panel);display:grid;place-items:center;padding:10px;width:44px;height:44px;min-height:44px}
+.native-approved .account-register-dialog header>button{color:var(--m-ink);background:var(--m-panel);display:grid;place-items:center;width:44px;height:44px;min-height:44px;line-height:1}

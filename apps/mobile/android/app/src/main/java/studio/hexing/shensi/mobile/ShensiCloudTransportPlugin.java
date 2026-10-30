@@ -10,10 +10,57 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.concurrent.TimeUnit;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.MediaType;
 
 // Exact-origin binary bridge. No arbitrary URLs, redirects, cookies or disk paths.
 @CapacitorPlugin(name = "ShensiCloudTransport")
 public class ShensiCloudTransportPlugin extends ShensiLocalPlugin {
+    private final OkHttpClient davClient = new OkHttpClient.Builder()
+        .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
+        .connectTimeout(15, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS).callTimeout(90, TimeUnit.SECONDS).build();
+
+    @PluginMethod public void nutstore(PluginCall call) {
+        if (!trusted(call)) return;
+        getBridge().execute(() -> {
+            try {
+                URL url = new URL(call.getString("url", ""));
+                String method = call.getString("method", "GET"), auth = call.getString("authorization", "");
+                if (!url.getProtocol().equals("https") || !url.getHost().equals("dav.jianguoyun.com") || url.getPort() != -1 || url.getUserInfo() != null || url.getQuery() != null || url.getRef() != null || !url.getPath().startsWith("/dav/") || !method.matches("OPTIONS|PROPFIND|MKCOL|GET|HEAD|PUT|DELETE") || !auth.matches("Basic [A-Za-z0-9+/=]{1,4096}")) throw new IllegalArgumentException();
+                String encoded = call.getString("data", "");
+                if (encoded.length() > 11184812) throw new IllegalArgumentException();
+                byte[] bytes = Base64.decode(encoded, Base64.NO_WRAP);
+                if (bytes.length > 8 * 1024 * 1024) throw new IllegalArgumentException();
+                JSObject headers = call.getObject("headers", new JSObject());
+                Request.Builder request = new Request.Builder().url(url).header("Authorization", auth);
+                for (String name : new String[]{"Content-Type", "Depth", "If-Match", "If-None-Match", "Range"}) {
+                    String value = headers.getString(name, "");
+                    if (value.length() > 512 || value.contains("\r") || value.contains("\n")) throw new IllegalArgumentException();
+                    if (!value.isEmpty()) request.header(name, value);
+                }
+                RequestBody body = (method.equals("PUT") || method.equals("PROPFIND") || bytes.length > 0) ? RequestBody.create(bytes, MediaType.parse(headers.getString("Content-Type", "application/octet-stream"))) : null;
+                if ((method.equals("GET") || method.equals("HEAD")) && body != null) throw new IllegalArgumentException();
+                request.method(method, body);
+                try (Response response = davClient.newCall(request.build()).execute()) {
+                    if (response.code() >= 300 && response.code() < 400) throw new IllegalArgumentException();
+                    if (response.body() != null && response.body().contentLength() > 8 * 1024 * 1024) throw new IllegalArgumentException();
+                    ByteArrayOutputStream result = new ByteArrayOutputStream();
+                    if (response.body() != null) try (InputStream input = response.body().byteStream()) {
+                        byte[] chunk = new byte[8192]; int count;
+                        while ((count = input.read(chunk)) != -1) { if (result.size() + count > 8 * 1024 * 1024) throw new IllegalArgumentException(); result.write(chunk, 0, count); }
+                    }
+                    JSObject safeHeaders = new JSObject();
+                    for (String name : new String[]{"Content-Type", "ETag", "Retry-After", "Content-Range", "Accept-Ranges"}) if (response.header(name) != null) safeHeaders.put(name, response.header(name));
+                    JSObject output = new JSObject();output.put("status", response.code());output.put("headers", safeHeaders);output.put("base64", Base64.encodeToString(result.toByteArray(), Base64.NO_WRAP));call.resolve(output);
+                }
+            } catch (Exception error) { call.reject("坚果云传输未确认，请检查网络或应用密码；不会自动重复写入", "NUTSTORE_TRANSPORT_FAILED"); }
+        });
+    }
     @PluginMethod public void request(PluginCall call) {
         if (!trusted(call)) return;
         getBridge().execute(() -> transfer(call));

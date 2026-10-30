@@ -4,6 +4,14 @@
 .account-login-form .account-login-options button{display:block;text-align:left;justify-content:flex-start;min-height:24px;padding:3px 0;line-height:18px}
 .account-login-form .account-remember{display:flex;flex-direction:row;align-items:center;gap:7px;margin:0;padding:3px 0;min-height:24px;line-height:18px;font-size:13px}
 .account-remember input{width:auto;min-height:0;margin:0;accent-color:var(--accent,#795bcb)}
-[data-auth-remember-slot=email]{margin:12px 0}
+.account-login-form{display:block}
+[data-auth-remember-slot=email]{margin:8px 0 4px;min-height:52px;box-sizing:border-box}
+.account-login-form .account-login-row{margin:8px 0 4px;min-height:52px;box-sizing:border-box}
+.account-login-form [data-auth-status]{min-height:1.65em;margin:4px 0;font-size:13px;line-height:1.65}
+.account-login-form [data-auth-panel=password]>label,.account-login-form [data-auth-panel=email]>label{margin:10px 0}
+.account-auth-error{max-width:min(360px,calc(100vw - 36px));padding:20px;border:1px solid var(--line,#e4e0eb);border-radius:16px;color:var(--text,#332f3d);background:var(--bg,#fff);box-sizing:border-box;font:inherit}
+.account-auth-error::backdrop{background:#201a3055}
+.account-auth-error p{margin:0 0 16px;line-height:1.6;overflow-wrap:anywhere}
+.account-auth-error button{display:block;margin-left:auto;padding:8px 18px;border:0;border-radius:10px;background:var(--accent,#795bcb);color:white;font:inherit;cursor:pointer}
 .account-login-form [hidden]{display:none!important}
 .account-security-dialog .account-profile-review{padding:10px 12px;border-radius:10px;background:var(--surface-2,#f3f2f6);font-size:13px;line-height:1.6}

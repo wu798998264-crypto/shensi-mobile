@@ -42,5 +42,7 @@ Object.assign(softIcons,{
 });
 // The approved set keeps close in its simple-path fallback map.
 softIcons.close='<path d="M6 6l12 12 M18 6 6 18"/>';
+softIcons.back='<path d="m14 6-6 6 6 6 M8 12h13"/>';
+softIcons.starFilled=softIcons.star.replace('<path ', '<path fill="currentColor" ');
 export const mobileShellIcon=key=>`<svg viewBox="0 0 24 24" aria-hidden="true" data-mobile-icon="${key}">${softIcons[key]||softIcons.doc}</svg>`;
 

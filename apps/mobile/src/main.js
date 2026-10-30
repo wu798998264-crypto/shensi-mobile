@@ -8,6 +8,7 @@ import {createMobileMetadata} from '../../../packages/mobile/metadata.mjs';
 import {createCloudNotebookSync} from '../../../packages/mobile/cloud-notebooks.mjs';
 import {createMobileNutstoreClient} from '../../../packages/mobile/nutstore-client.mjs';
 import {createMobileMarketplaceClient} from '../../../packages/mobile/marketplace-client.mjs';
+import {createMobileMediaImporter} from './media-import.js';
 
 const root=document.querySelector('#app');
 try {
@@ -16,7 +17,8 @@ try {
  const fetchImpl=nativeFetchAdapter(CapacitorHttp,registerPlugin('ShensiCloudTransport'));
  const account=createMobileAccountClient({secureVault:adapters.secureVault,fetchImpl});
  const nativeMeta=registerPlugin('ShensiMetadata'),metadata=createMobileMetadata({read:key=>nativeMeta.read({key}),compareAndSwap:(key,expectedRevision,value)=>nativeMeta.compareAndSwap({key,expectedRevision,value})}),documents=createMobileDocumentStore(adapters);
- await mountFoundation(root,{documents,account,cloud:createCloudNotebookSync({documents,storage:adapters.storage,metadata,account}),nutstore:createMobileNutstoreClient({secureVault:adapters.secureVault,fetchImpl}),marketplace:createMobileMarketplaceClient({fetchImpl,artifactFetch:nativeArtifactFetch(registerPlugin('ShensiCloudTransport')),metadata,secureVault:adapters.secureVault,platform:'android'})});
+ const media=createMobileMediaImporter({transport:registerPlugin('ShensiMedia'),convertUrl:url=>Capacitor.convertFileSrc(url)});
+ await mountFoundation(root,{documents,media,account,cloud:createCloudNotebookSync({documents,storage:adapters.storage,metadata,account}),nutstore:createMobileNutstoreClient({secureVault:adapters.secureVault,fetchImpl}),marketplace:createMobileMarketplaceClient({fetchImpl,artifactFetch:nativeArtifactFetch(registerPlugin('ShensiCloudTransport')),metadata,secureVault:adapters.secureVault,platform:'android'})});
 } catch(error) {
  root.replaceChildren();const h=document.createElement('h1');h.textContent='神思笔记';
  const p=document.createElement('p');p.textContent=error.code==='NATIVE_HOST_REQUIRED'?'这是 Android 原生入口，请在安装包中打开。浏览器不会降级保存账号或正式资料。':'原生资料库无法打开，未创建替代目录或覆盖原资料。';

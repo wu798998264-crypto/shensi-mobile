@@ -40,6 +40,24 @@ current=await service.load('notebook-test');const versionId=current.state.histor
 current=await service.restoreVersion('notebook-test',{documentId:'note-test',versionId,expectedRevision:current.revision,operationId:'restore-test'});
 assert.equal(current.state.documents['note-test'].markdown,'原文');assert(current.state.coreRestoreLog.length);assert(current.state.histories['note-test'].some(v=>v.document.markdown.startsWith('并发')));
 pass('恢复历史保留此前正文和恢复日志');
+// A remote/external edit might not have been explicitly saved to history yet.
+let liveRow=rows.get('notebook-test'),uncheckpointed=JSON.parse(liveRow.value);uncheckpointed.documents['note-test'].markdown='恢复前尚无历史的新正文';liveRow.value=JSON.stringify(uncheckpointed);
+current=await service.restoreVersion('notebook-test',{documentId:'note-test',versionId,expectedRevision:liveRow.revision,operationId:'restore-uncheckpointed'});
+assert.equal(current.state.histories['note-test'][0].document.markdown,'恢复前尚无历史的新正文');assert.equal(current.state.documents['note-test'].markdown,'原文');pass('恢复之前缺失历史的新正文也进入可查看历史，不只留隐藏恢复日志');
+let board=await service.createWhiteboard('notebook-test',{documentId:'board-test',title:'真实白板',expectedRevision:current.revision,operationId:'create-board'});
+assert.deepEqual(board.state.documents['board-test'].canvas.nodes,[]);
+let raw=rows.get('notebook-test'),boardState=JSON.parse(raw.value);boardState.documents['board-test'].canvas.nodes=[{id:'text-node',type:'text',text:'卡片原文',x:0,y:0,width:300,height:200}];raw.value=JSON.stringify(boardState);
+board=await service.saveWhiteboardText('notebook-test',{documentId:'board-test',nodeId:'text-node',text:'修改后的文本卡片',expectedRevision:board.revision,operationId:'edit-board-text'});
+assert.equal(board.state.histories['board-test'].length,2);board.state.histories['board-test'].forEach(assertVersion);
+const boardVersion=board.state.histories['board-test'][1].id;
+board=await service.restoreVersion('notebook-test',{documentId:'board-test',versionId:boardVersion,expectedRevision:board.revision,operationId:'restore-board'});assert.equal(board.state.documents['board-test'].canvas.nodes[0].text,'卡片原文');
+await assert.rejects(service.deleteVersion('notebook-test',{documentId:'board-test',versionId:boardVersion,expectedRevision:board.revision,operationId:'delete-without-confirm'}),e=>e.code==='CONFIRMATION_REQUIRED');
+board=await service.deleteVersion('notebook-test',{documentId:'board-test',versionId:boardVersion,confirmed:true,expectedRevision:board.revision,operationId:'delete-board-version'});assert.equal(board.state.histories['board-test'].length,1);
+board=await service.setDocumentFlag('notebook-test',{documentId:'board-test',field:'locked',value:true,expectedRevision:board.revision,operationId:'lock-board'});
+await assert.rejects(service.trashDocument('notebook-test',{documentId:'board-test',confirmed:true,expectedRevision:board.revision,operationId:'trash-locked-board'}),e=>e.code==='DOCUMENT_LOCKED');
+board=await service.setDocumentFlag('notebook-test',{documentId:'board-test',field:'locked',value:false,expectedRevision:board.revision,operationId:'unlock-board'});
+board=await service.trashDocument('notebook-test',{documentId:'board-test',confirmed:true,expectedRevision:board.revision,operationId:'trash-board'});assert(board.state.documents['board-test'].deleted);assert.equal(board.state.documents['board-test'].canvas.nodes[0].text,'卡片原文');
+pass('真实创建白板、文本卡片前后历史、恢复与确认删除、锁定拒绝删除、回收站保留卡片和历史');
 const row=rows.get('notebook-test'),state=JSON.parse(row.value);state.documents['note-test'].locked=true;row.value=JSON.stringify(state);
 await assert.rejects(service.saveDocument('notebook-test',{documentId:'note-test',markdown:'不能修改',expectedRevision:row.revision,operationId:'locked'}),e=>e.code==='DOCUMENT_LOCKED');
 state.documents['note-test'].locked=false;state.histories['note-test'][0].document.markdown='损坏';row.value=JSON.stringify(state);

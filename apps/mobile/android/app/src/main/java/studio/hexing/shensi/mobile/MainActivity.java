@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ShensiSecureVaultPlugin.class);
         registerPlugin(ShensiMetadataPlugin.class);
         registerPlugin(ShensiCloudTransportPlugin.class);
+        registerPlugin(ShensiMediaPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

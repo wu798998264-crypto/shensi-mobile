@@ -4,13 +4,13 @@ const failure=(message,code,status)=>Object.assign(Error(message),{code,...statu
 const id=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,128}$/.test(value);
 const digest=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const toHex=value=>Array.from(new Uint8Array(value),b=>b.toString(16).padStart(2,'0')).join('');
-export function createCloudFileClient({issuer='https://api.hexing.studio/skill',getSession,journal,fetchImpl=fetch,crypto=globalThis.crypto,allowLoopbackForTests=false}={}){
+export function createCloudFileClient({issuer='https://api.hexing.studio/skill',getSession,journal,fetchImpl=fetch,crypto=globalThis.crypto,allowLoopbackForTests=false,expectedMemberId}={}){
  const address=new URL(issuer);
  if(address.username||address.password||address.search||address.hash||!(address.protocol==='https:'||allowLoopbackForTests&&address.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(address.hostname)))throw failure('云同步地址不安全','CLOUD_SYNC_INVALID_ISSUER');
  if(typeof getSession!=='function'||!journal||!['get','set','remove'].every(key=>typeof journal[key]==='function')||!crypto?.subtle||!crypto.randomUUID)throw failure('云同步缺少安全登录或持久续传记录','CLOUD_SYNC_ADAPTER_REQUIRED');
  issuer=address.href.replace(/\/$/,'');const flights=new Set();
  const hash=async bytes=>toHex(await crypto.subtle.digest('SHA-256',bytes));
- async function session(){const value=await getSession();if(value?.issuer!==issuer||!id(value.user?.id)||typeof value.token!=='string'||!value.token||value.token.length>16384)throw failure('请先登录此云空间的神思账号','CLOUD_SYNC_LOGIN_REQUIRED');return value;}
+ async function session(){const value=await getSession();if(value?.issuer!==issuer||!id(value.user?.id)||typeof value.token!=='string'||!value.token||value.token.length>16384)throw failure('请先登录此云空间的神思账号','CLOUD_SYNC_LOGIN_REQUIRED');if(expectedMemberId!==undefined&&value.user.id!==expectedMemberId)throw failure('登录账号已变化，未向新账号同步原笔记本','CLOUD_SYNC_ACCOUNT_CHANGED');return value;}
  const request=async(auth,path,{method='GET',body,bytes,sha256,signal,binary=false}={})=>{
   const current=await session();if(current.user.id!==auth.user.id||current.token!==auth.token)throw failure('登录账号已变化，原上传记录已保留','CLOUD_SYNC_ACCOUNT_CHANGED');
   let response;try{response=await fetchImpl(issuer+path,{method,redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.any([AbortSignal.timeout(60000),...(signal?[signal]:[])]),headers:{Authorization:'Bearer '+auth.token,Accept:binary?'application/octet-stream':'application/json',...(bytes?{'Content-Type':'application/octet-stream','X-Content-SHA256':sha256}:body!==undefined?{'Content-Type':'application/json'}:{})},body:bytes||(body===undefined?undefined:JSON.stringify(body))});}
@@ -66,6 +66,7 @@ export function createCloudFileClient({issuer='https://api.hexing.studio/skill',
     const bytes=await request(auth,'/v1/cloud-sync/files/'+fileId+'/chunks/'+index,{binary:true,signal});if(bytes.length!==expected||await hash(bytes)!==chunk.sha256)throw failure('下载摘要不符，未替换本地文件','CLOUD_SYNC_HASH_MISMATCH');
     await sink.write(index,bytes);received+=bytes.length;onProgress({phase:'downloading',bytes:received,total:manifest.file.bytes});
    }
+   const current=await session();if(current.user.id!==auth.user.id||current.token!==auth.token)throw failure('登录账号已变化，未采用原账号下载','CLOUD_SYNC_ACCOUNT_CHANGED');
    const verified=await sink.finish({bytes:manifest.file.bytes,sha256:manifest.file.sha256});if(verified?.verified!==true)throw failure('本地整文件校验未确认，未完成下载','CLOUD_SYNC_HASH_MISMATCH');onProgress({phase:'complete',bytes:received,total:received});return {file:manifest.file,verified:true};
    }catch(error){await sink.abort().catch(()=>{});throw error;}
   }
