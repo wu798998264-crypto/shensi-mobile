@@ -8,6 +8,9 @@ export function createNativeShell(root,actions){
  const button=(label,key,fn,attrs={})=>{const node=el('button',undefined,{type:'button','aria-label':label,title:label,...attrs});node.innerHTML=shellIcon(key);node.onclick=fn;return node;};
  const row=(label,key,fn,detail='')=>{const node=button(label,key,fn,{class:'m7-menu-row'});node.append(el('span',label));if(detail)node.append(el('small',detail));if(label==='历史版本')node.dataset.action='history';return node;};
  const tabs=new Map();let current=null,bookName='',bookId='',favorite=false,favoritesOnly=false,pluginChoice='chat';
+ // Session-only composer drafts are distinct from document edits/history.
+ // Bind each input to its original context, including IME input during a switch.
+ const chatDrafts=new Map(),chatContext=()=>JSON.stringify([bookId,current?.id||null]);
  const head=el('header',undefined,{class:'phone-head'}),name=el('strong','神思笔记'),brand=el('div',undefined,{class:'native-brand'});brand.append(name);
  const mode=button('编辑','edit',()=>actions.edit(),{'data-action':'mode'}),more=button('文档详情与状态','more',()=>detailsMenu()),headActions=el('div');headActions.append(mode,more);head.append(button('展开目录','panel',()=>showDirectory()),brand,headActions);
  const content=el('section',undefined,{class:'phone-content document-content'}),notice=el('p','',{role:'status','aria-live':'polite',class:'notice',popover:'manual'});
@@ -75,19 +78,21 @@ export function createNativeShell(root,actions){
    for(const match of lines){const item=row(match[2],'doc',()=>{closePanel();[...content.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(n=>n.textContent===match[2])?.scrollIntoView({block:'center'});});item.style.paddingLeft=(14+(match[1].length-1)*16)+'px';outline.append(item);}
    if(!current)outline.append(el('p','请先打开文档'));body.append(outline);
   }else{
-   body.append(el('p','原生文档对话仍在接入。不会发送模型请求或展示示例回复。',{class:'hint'}));
-   const compose=el('div',undefined,{class:'m3-chat-input m7-compose'}),input=el('textarea',undefined,{placeholder:'继续聊聊这一章…','aria-label':'文档对话输入',disabled:''}),controls=el('div',undefined,{class:'m7-compose-actions'});
+   body.append(el('p','可以先输入内容。模型发送通道尚未接通；未发送文字仅在当前页面保留，刷新或退出后不保留。',{class:'hint',id:'mobile-chat-availability'}));
+   const compose=el('div',undefined,{class:'m3-chat-input m7-compose'}),input=el('textarea',undefined,{placeholder:'继续聊聊这一章…','aria-label':'文档对话输入','aria-describedby':'mobile-chat-availability'}),controls=el('div',undefined,{class:'m7-compose-actions'});
+   const context=chatContext();input.value=chatDrafts.get(context)||'';
+   input.oninput=()=>{if(input.value)chatDrafts.set(context,input.value);else chatDrafts.delete(context);};
    const configuration=row('选择配置','sparkles',()=>unavailable('文档对话模型'));configuration.className='m7-model-button';configuration.insertAdjacentHTML('beforeend',shellIcon('down'));
    const models=el('button','选择模型',{type:'button',class:'m7-effort-button','aria-label':'选择具体模型和参数'});models.insertAdjacentHTML('beforeend',shellIcon('down'));models.onclick=()=>unavailable('文档对话模型');
-   const send=button('发送消息','arrow',()=>{},{class:'m7-send',disabled:''});controls.append(configuration,models,send);compose.append(input,controls);body.append(compose);
+   const send=button('发送消息','arrow',()=>{},{class:'m7-send',disabled:'',title:'模型发送通道尚未接通，输入文字不会发送','aria-describedby':'mobile-chat-availability'});controls.append(configuration,models,send);compose.append(input,controls);body.append(compose);
   }
   const switcher=el('div',undefined,{class:'m4-plugin-switch'}),options=el('div',undefined,{class:'m4-plugin-options'});options.hidden=true;
   for(const [id,label,icon]of [['chat','文档对话','chat'],['outline','文档大纲','doc'],['nutstore','坚果云同步','cloud']]){const option=row(label,icon,()=>id==='nutstore'?openService('坚果云'):showPlugin(id));option.classList.toggle('active',id===key);options.append(option);}
   const pill=button('切换插件',key==='chat'?'chat':'doc',()=>{options.hidden=!options.hidden;switcher.classList.toggle('expanded',!options.hidden);pill.setAttribute('aria-expanded',String(!options.hidden));pill.lastElementChild.outerHTML=shellIcon(options.hidden?'expand':'collapse');},{class:'m4-plugin-pill','aria-expanded':'false'});pill.append(el('b',key==='outline'?'文档大纲':'文档对话'));pill.insertAdjacentHTML('beforeend',shellIcon('expand'));switcher.append(options,pill);foot.append(switcher);plugin.append(header,body,foot);plugin.hidden=shade.hidden=false;
  }
  let gesture;content.onpointerdown=e=>{if(e.target.closest('button,input,textarea,[contenteditable=true]'))return;gesture={x:e.clientX,y:e.clientY};};content.onpointerup=e=>{if(!gesture)return;const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;gesture=null;if(Math.abs(dx)>65&&Math.abs(dy)<60)dx<0?showDirectory():showPlugin(pluginChoice);};
- root.onkeydown=e=>{if(e.key==='Escape'&&!root.querySelector('dialog[open]'))closePanel();};
+ root.onkeydown=e=>{if(e.key==='Escape'&&!e.isComposing&&e.keyCode!==229&&!root.querySelector('dialog[open]'))closePanel();};
  return {content,notice,tree,select,addBook,mode,services,closePanel,showDirectory,button,row,
-  update({document,notebook,notebookId,editing,total,isFavorite}){if(bookId&&bookId!==notebookId)tabs.clear();bookId=notebookId;current=document;favorite=!!isFavorite;bookName=notebook||'神思笔记';name.textContent=bookName;count.textContent=`当前笔记本共 ${total} 个文档（含白板）`;if(document)tabs.set(document.id,document);mode.disabled=!document||!!(document.locked||document.coreLocked||document.readOnly);mode.innerHTML=shellIcon(editing?'read':'edit');mode.setAttribute('aria-label',editing?'保存并阅读':'编辑');mode.title=mode.getAttribute('aria-label');}
+  update({document,notebook,notebookId,editing,total,isFavorite}){const previousContext=chatContext();if(bookId&&bookId!==notebookId)tabs.clear();bookId=notebookId;current=document;favorite=!!isFavorite;bookName=notebook||'神思笔记';name.textContent=bookName;count.textContent=`当前笔记本共 ${total} 个文档（含白板）`;if(document)tabs.set(document.id,document);mode.disabled=!document||!!(document.locked||document.coreLocked||document.readOnly);mode.innerHTML=shellIcon(editing?'read':'edit');mode.setAttribute('aria-label',editing?'保存并阅读':'编辑');mode.title=mode.getAttribute('aria-label');if(!plugin.hidden&&previousContext!==chatContext())showPlugin(pluginChoice);}
  };
 }
