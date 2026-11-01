@@ -1,21 +1,23 @@
 export function allowedMobileServiceUrl(raw){
  const url=new URL(raw);
  const account=url.origin==='https://api.hexing.studio'&&url.pathname.startsWith('/skill/');
- const nutstore=url.origin==='https://dav.jianguoyun.com'&&(url.pathname==='/dav'||url.pathname.startsWith('/dav/'));
+ const nutstore=url.origin==='https://dav.jianguoyun.com'&&(url.pathname==='/dav'||url.pathname.startsWith('/dav/')||!url.search&&['/nsdav/delta','/nsdav/latestDeltaCursor'].includes(url.pathname));
  if(url.username||url.password||url.hash||!account&&!nutstore)throw Error('不允许连接此服务地址');
  return url.href;
 }
 const encode=bytes=>{let value='';for(let i=0;i<bytes.length;i+=8192)value+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(value);};
 const decode=value=>Uint8Array.from(atob(value),c=>c.charCodeAt(0));
 export function nativeFetchAdapter(http,cloudTransport){
+ const nutstoreRequest=createNutstoreRequestGate(input=>cloudTransport.nutstore(input).then(result=>({...result,headers:new Headers(result.headers)})),{intervalMs:200});
  return async(url,options={})=>{
   allowedMobileServiceUrl(url);if(options.signal?.aborted)throw Error('请求已取消');
   if(new URL(url).origin==='https://dav.jianguoyun.com'){
+   if(new URL(url).pathname.startsWith('/nsdav/')&&options.method!=='POST')throw Error('坚果云增量接口仅允许读取变更清单');
    if(typeof cloudTransport?.nutstore!=='function')throw Error('坚果云原生WebDAV传输桥尚未加载，请更新手机版');
    const headers=new Headers(options.headers),body=options.body===undefined?new Uint8Array():typeof options.body==='string'?new TextEncoder().encode(options.body):options.body;
    if(!(body instanceof Uint8Array)||body.length>8*1024*1024)throw Error('坚果云单次传输内容超出当前原生桥限制');
    const safeHeaders={};for(const name of ['Content-Type','Depth','If-Match','If-None-Match','Range'])if(headers.has(name))safeHeaders[name]=headers.get(name);
-   const result=await cloudTransport.nutstore({url,method:options.method||'GET',authorization:headers.get('Authorization')||'',headers:safeHeaders,data:encode(body)});
+   const result=await nutstoreRequest({url,method:options.method||'GET',authorization:headers.get('Authorization')||'',headers:safeHeaders,data:encode(body)},{signal:options.signal});
    if(options.signal?.aborted)throw Error('坚果云传输等待已超时；请先核对结果，不要重复上传');
    if(result.status>=300&&result.status<400)throw Error('服务重定向被拒绝，未转发凭据');
    const bytes=decode(result.base64);if(bytes.length>8*1024*1024)throw Error('坚果云响应超过当前原生桥限制');
@@ -47,3 +49,4 @@ export function nativeArtifactFetch(transport){return async(url)=>{
  const result=await transport.artifact({url});const body=decode(result.base64);if(body.length>2*1024*1024)throw Error('插件制品过大');
  return new Response([204,205,304].includes(result.status)?null:body,{status:result.status,headers:result.location?{location:result.location}:{}});
 };}
+import {createNutstoreRequestGate} from '../core/src/nutstore-request-gate.mjs';

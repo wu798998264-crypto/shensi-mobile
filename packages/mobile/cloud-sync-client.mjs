@@ -31,6 +31,17 @@ export function createCloudFileClient({issuer='https://api.hexing.studio/skill',
   status:async({signal}={})=>request(await authenticate(signal),'/v1/cloud-sync/status',{signal}),
   allocate:async({signal}={})=>request(await authenticate(signal),'/v1/cloud-sync/space',{method:'POST',body:{},signal}),
   list:async({state='current',after,signal}={})=>{if(!['current','history','trash'].includes(state)||after&&!id(after))throw failure('文件分页无效','CLOUD_SYNC_INVALID_REQUEST');return request(await authenticate(signal),'/v1/cloud-sync/files?'+new URLSearchParams({state,limit:'100',...(after?{after}:{})}),{signal});},
+  listAll:async({state='current',signal}={})=>{
+   if(!['current','history','trash'].includes(state))throw failure('文件分页无效','CLOUD_SYNC_INVALID_REQUEST');
+   const auth=await authenticate(signal),items=[],ids=new Set(),cursors=new Set();let after;
+   for(let page=0;page<1000;page++){
+    const value=await request(auth,'/v1/cloud-sync/files?'+new URLSearchParams({state,limit:'100',...(after?{after}:{})}),{signal});
+    if(!Array.isArray(value.items)||value.items.length>100||value.items.some(f=>!id(f?.id)||ids.has(f.id)))throw failure('云端文件列表变化或格式无效，请重新读取；未采用残缺清单','CLOUD_SYNC_INVALID_RESPONSE');
+    for(const item of value.items){if(ids.has(item.id))throw failure('云端分页包含重复文件，未采用残缺清单','CLOUD_SYNC_INVALID_RESPONSE');ids.add(item.id);items.push(item);}
+    if(value.nextAfter==null||value.nextAfter==='')return {items,nextAfter:null,complete:true};
+    if(!id(value.nextAfter)||cursors.has(value.nextAfter)||!value.items.length)throw failure('云端文件分页循环或游标无效','CLOUD_SYNC_INVALID_RESPONSE');cursors.add(value.nextAfter);after=value.nextAfter;
+   }throw failure('云端文件分页超过安全上限，未采用残缺清单','CLOUD_SYNC_INVALID_RESPONSE');
+  },
   upload:async({key,name,kind,source,baseRevision=null,onProgress=()=>{},signal})=>{
    if(!id(key)||!source||!Number.isSafeInteger(source.bytes)||source.bytes<0||source.bytes>2*1024**3||!digest(source.sha256)||typeof source.read!=='function')throw failure('需要有效的本地文件及完整摘要','CLOUD_SYNC_INVALID_SOURCE');
    const auth=await authenticate(signal),jkey=journalKey(auth,key);

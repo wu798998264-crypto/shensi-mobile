@@ -26,5 +26,7 @@ assert.match(store,/beginTransaction/);assert.match(store,/endTransaction/);asse
 assert.match(store,/revision instanceof Integer \|\| revision instanceof Long/);assert(!store.includes('call.getLong("expectedRevision")'));
 pass('Android原生源码使用SQLite事务CAS、非导出Keystore密钥、AAD绑定、异常无秘密日志');
 const main=await readFile(java+'MainActivity.java','utf8');assert.match(main,/registerPlugin\(ShensiStoragePlugin.class\)/);assert.match(main,/registerPlugin\(ShensiSecureVaultPlugin.class\)/);
+const media=await readFile(java+'ShensiMediaPlugin.java','utf8');for(const method of ['begin','write','finish','abort','resolve','describe','read'])assert.match(media,new RegExp('@PluginMethod public synchronized void '+method+'\\(PluginCall call\\)\\{\\s*if\\(!trusted\\(call\\)\\)return;'));
+assert.match(media,/f\.readFully\(bytes\)/);assert.match(media,/length>CHUNK/);assert.match(media,/expectedSha256/);assert.match(media,/getCanonicalFile/);assert.match(media,/finalFile\.exists\(\)/);pass('手机媒体桥所有入口校验受信页面；定长分块、摘要和原身份导入保留，不暴露任意路径（静态检查）');
 const bundle=await readFile('apps/mobile/www/main.js','utf8');assert(!/node:crypto|node:fs|localStorage|eval\(/.test(bundle));pass('Android桥接已注册，浏览器构建不包含Node/明文缓存');
 await mkdir('docs/migration/evidence/mobile-android-foundation',{recursive:true});await writeFile('docs/migration/evidence/mobile-android-foundation/native-contracts.json',JSON.stringify({passed:true,checks,staticNativeReviewOnly:true,androidCompiled:false,nativeKeystoreTest:false},null,2));

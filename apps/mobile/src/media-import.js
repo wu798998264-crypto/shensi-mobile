@@ -1,4 +1,5 @@
 import {importFileInfo,validateMediaReceipt,MEDIA_CHUNK_BYTES,MAX_IMPORT_FILES} from '../../../packages/mobile/media-contract.mjs';
+import {createMediaTransfer,encodeMediaChunk as encode} from '../../../packages/mobile/media-transfer.mjs';
 
 export function pickWhiteboardFiles(){
  return new Promise((resolve,reject)=>{
@@ -8,8 +9,8 @@ export function pickWhiteboardFiles(){
 }
 export function createMobileMediaImporter({transport,pickFiles=pickWhiteboardFiles,convertUrl=value=>value}={}){
  let busy=false;
- const encode=bytes=>{let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(binary);};
  return {
+  ...createMediaTransfer(transport),
   resolve:async node=>{const receipt=validateMediaReceipt(node.localMedia),found=await transport.resolve({id:receipt.id});return convertUrl(found.url);},
   async upload({notebookId,documentId,documents,expectedRevision,onProgress=()=>{}}){
    if(busy)throw Error('正在导入素材，请勿重复点击');busy=true;let pendingId;

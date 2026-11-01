@@ -18,7 +18,7 @@ try {
  const account=createMobileAccountClient({secureVault:adapters.secureVault,fetchImpl});
  const nativeMeta=registerPlugin('ShensiMetadata'),metadata=createMobileMetadata({read:key=>nativeMeta.read({key}),compareAndSwap:(key,expectedRevision,value)=>nativeMeta.compareAndSwap({key,expectedRevision,value})}),documents=createMobileDocumentStore(adapters);
  const media=createMobileMediaImporter({transport:registerPlugin('ShensiMedia'),convertUrl:url=>Capacitor.convertFileSrc(url)});
- await mountFoundation(root,{documents,media,account,cloud:createCloudNotebookSync({documents,storage:adapters.storage,metadata,account}),nutstore:createMobileNutstoreClient({secureVault:adapters.secureVault,fetchImpl}),marketplace:createMobileMarketplaceClient({fetchImpl,artifactFetch:nativeArtifactFetch(registerPlugin('ShensiCloudTransport')),metadata,secureVault:adapters.secureVault,platform:'android'})});
+ await mountFoundation(root,{documents,media,account,cloud:createCloudNotebookSync({documents,storage:adapters.storage,metadata,account,media}),nutstore:createMobileNutstoreClient({secureVault:adapters.secureVault,fetchImpl,documents,storage:adapters.storage,metadata,media}),marketplace:createMobileMarketplaceClient({fetchImpl,artifactFetch:nativeArtifactFetch(registerPlugin('ShensiCloudTransport')),metadata,secureVault:adapters.secureVault,platform:'android'})});
 } catch(error) {
  root.replaceChildren();const h=document.createElement('h1');h.textContent='神思笔记';
  const p=document.createElement('p');p.textContent=error.code==='NATIVE_HOST_REQUIRED'?'这是 Android 原生入口，请在安装包中打开。浏览器不会降级保存账号或正式资料。':'原生资料库无法打开，未创建替代目录或覆盖原资料。';

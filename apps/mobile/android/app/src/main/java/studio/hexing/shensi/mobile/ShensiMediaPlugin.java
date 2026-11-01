@@ -50,15 +50,24 @@ public class ShensiMediaPlugin extends ShensiLocalPlugin {
         JSObject r=new JSObject(new String(Files.readAllBytes(meta.toPath()),StandardCharsets.UTF_8));
         if(!r.getString("id").equals(id)||!f.isFile()||f.length()!=r.getLong("bytes"))throw new Exception("附件缺失或大小不一致");return r;
     }
+    private String digest(File file) throws Exception {
+        MessageDigest digest=MessageDigest.getInstance("SHA-256");try(FileInputStream in=new FileInputStream(file)){byte[] buf=new byte[CHUNK];int n;while((n=in.read(buf))!=-1)digest.update(buf,0,n);}
+        StringBuilder hex=new StringBuilder();for(byte b:digest.digest())hex.append(String.format(Locale.ROOT,"%02x",b&255));return hex.toString();
+    }
+    private JSObject verified(String id) throws Exception { JSObject r=receipt(id);if(!digest(file(id)).equals(r.getString("sha256")))throw new Exception("附件内容已变化，未采用失效回执");return r; }
     private void reject(PluginCall call,Exception e){call.reject(e.getMessage()==null?"附件操作失败，原资料保留":e.getMessage(),"MOBILE_MEDIA_FAILED");}
     @PluginMethod public synchronized void begin(PluginCall call){
         if(!trusted(call))return;
         try{
             String name=call.getString("name");long bytes=number(call,"bytes");
             if(name==null||name.trim().isEmpty()||name.length()>200||name.matches("(?s).*[\\\\/\\p{Cntrl}].*")||bytes<1||bytes>256L*1024*1024)throw new Exception("文件名无效、文件为空或超过256MiB");
-            if(sessions.size()>=20)throw new Exception("导入任务过多");String ext=name.substring(name.lastIndexOf('.')+1).toLowerCase(Locale.ROOT);String[] fmt=format(ext);String id="m-"+UUID.randomUUID()+"."+ext;
+            if(sessions.size()>=20)throw new Exception("导入任务过多");String ext=name.substring(name.lastIndexOf('.')+1).toLowerCase(Locale.ROOT);String[] fmt=format(ext);JSObject expected=call.getObject("expected");String id=expected==null?"m-"+UUID.randomUUID()+"."+ext:expected.getString("id");file(id);
+            if(expected!=null){String hash=expected.getString("sha256");if(hash==null||!hash.matches("[a-f0-9]{64}")||!id.endsWith("."+ext)||!name.equals(expected.getString("name"))||bytes!=expected.getLong("bytes")||!fmt[0].equals(expected.getString("kind"))||!fmt[1].equals(expected.getString("mime")))throw new Exception("同步附件信息不符");}
+            if(sessions.containsKey(id))throw new Exception("此附件已有未完成的写入");
+            if(expected!=null&&file(id).exists()){JSObject saved=verified(id);if(!expected.getString("sha256").equals(saved.getString("sha256"))||!name.equals(saved.getString("name"))||bytes!=saved.getLong("bytes"))throw new Exception("本机已有不同内容的同名附件，原文件保留");JSObject out=new JSObject();out.put("id",id);out.put("existing",true);out.put("receipt",saved);out.put("chunkBytes",CHUNK);call.resolve(out);return;}
             if(!new File(file(id).getPath()+".part").createNewFile())throw new Exception("无法创建附件");
             JSObject r=new JSObject();r.put("id",id);r.put("name",name);r.put("bytes",bytes);r.put("ext",ext);r.put("kind",fmt[0]);r.put("mime",fmt[1]);r.put("written",0L);sessions.put(id,r);
+            if(expected!=null)r.put("expectedSha256",expected.getString("sha256"));
             JSObject out=new JSObject();out.put("id",id);out.put("chunkBytes",CHUNK);call.resolve(out);
         }catch(Exception e){reject(call,e);}
     }
@@ -77,10 +86,9 @@ public class ShensiMediaPlugin extends ShensiLocalPlugin {
         try{
             String id=call.getString("id");File finalFile=file(id);JSObject s=sessions.get(id);if(s==null){call.resolve(receipt(id));return;}
             File part=new File(finalFile.getPath()+".part");if(s.getLong("written")!=s.getLong("bytes")||part.length()!=s.getLong("bytes"))throw new Exception("附件尚未完整写入");
-            MessageDigest digest=MessageDigest.getInstance("SHA-256");try(FileInputStream in=new FileInputStream(part)){byte[] buf=new byte[CHUNK];int n;while((n=in.read(buf))!=-1)digest.update(buf,0,n);}
-            StringBuilder hex=new StringBuilder();for(byte b:digest.digest())hex.append(String.format(Locale.ROOT,"%02x",b&255));s.put("sha256",hex.toString());
+            String actualHash=digest(part);if(s.has("expectedSha256")&&!actualHash.equals(s.getString("expectedSha256")))throw new Exception("下载附件整文件摘要不符，未发布");s.put("sha256",actualHash);
             try(RandomAccessFile f=new RandomAccessFile(part,"rw")){f.getFD().sync();}if(finalFile.exists()||!part.renameTo(finalFile))throw new Exception("附件提交失败，未覆盖已有文件");
-            JSObject r=new JSObject(s.toString());r.remove("ext");r.remove("written");File metaPart=new File(finalFile.getPath()+".json.part"),meta=new File(finalFile.getPath()+".json");
+            JSObject r=new JSObject(s.toString());r.remove("ext");r.remove("written");r.remove("expectedSha256");File metaPart=new File(finalFile.getPath()+".json.part"),meta=new File(finalFile.getPath()+".json");
             try(FileOutputStream out=new FileOutputStream(metaPart)){out.write(r.toString().getBytes(StandardCharsets.UTF_8));out.getFD().sync();}if(!metaPart.renameTo(meta))throw new Exception("附件记录提交失败");sessions.remove(id);call.resolve(receipt(id));
         }catch(Exception e){reject(call,e);}
     }
@@ -89,5 +97,11 @@ public class ShensiMediaPlugin extends ShensiLocalPlugin {
     }
     @PluginMethod public synchronized void resolve(PluginCall call){
         if(!trusted(call))return;try{String id=call.getString("id");receipt(id);JSObject r=new JSObject();r.put("url",android.net.Uri.fromFile(file(id)).toString());call.resolve(r);}catch(Exception e){reject(call,e);}
+    }
+    @PluginMethod public synchronized void describe(PluginCall call){
+        if(!trusted(call))return;try{call.resolve(verified(call.getString("id")));}catch(Exception e){reject(call,e);}
+    }
+    @PluginMethod public synchronized void read(PluginCall call){
+        if(!trusted(call))return;try{String id=call.getString("id");JSObject meta=receipt(id);long offset=number(call,"offset"),length=number(call,"length");if(!meta.getString("sha256").equals(call.getString("sha256"))||offset<0||length<1||length>CHUNK||offset>meta.getLong("bytes")-length)throw new Exception("附件读取范围或摘要不符");byte[] bytes=new byte[(int)length];try(RandomAccessFile f=new RandomAccessFile(file(id),"r")){f.seek(offset);f.readFully(bytes);}JSObject out=new JSObject();out.put("id",id);out.put("offset",offset);out.put("bytes",length);out.put("sha256",meta.getString("sha256"));out.put("base64",Base64.encodeToString(bytes,Base64.NO_WRAP));call.resolve(out);}catch(Exception e){reject(call,e);}
     }
 }

@@ -1,6 +1,7 @@
 // Shared Android/iOS service client. The caller must supply a native secure vault.
 // No browser/localStorage fallback, Node dependency, generation or purchase endpoint.
 import {createCloudFileClient} from './cloud-sync-client.mjs';
+import {cloudSyncStatus as readCloudStatus} from '../core/src/cloud-sync-status.mjs';
 export const ACCOUNT_ISSUER='https://api.hexing.studio/skill';
 const failure=(message,code,status)=>Object.assign(new Error(message),{code,...status?{status}: {}});
 const publicUser=user=>({id:String(user.id),account:String(user.account||''),displayName:String(user.displayName||'神思用户'),email:String(user.email||''),emailVerifiedAt:Number(user.emailVerifiedAt)||0,hasPassword:user.hasPassword===true,avatar:typeof user.avatar==='string'&&user.avatar.length<=180000&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(user.avatar)?user.avatar:''});
@@ -32,9 +33,10 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
   let response;try{response=await fetchImpl(issuer+path,{method:body===undefined?'GET':'POST',redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(deadline),headers:{Accept:'application/json',...(body===undefined?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body)});}catch{throw failure(path==='/v1/auth/email-code'?'验证码发送结果尚未确认，请先检查收件箱与垃圾邮件，稍后再试。':'账户服务连接失败或超时，请检查网络后重试','ACCOUNT_UNAVAILABLE');}
   // Do not echo raw upstream errors: a proxy could reflect a password or token.
   const reader=response.body?.getReader();let size=0,text='';const decoder=new TextDecoder();
-  if(!reader)throw failure('账户服务未返回数据','INVALID_RESPONSE');
-  try{for(;;){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>1024*1024){await reader.cancel();throw failure('账户响应超过安全大小','INVALID_RESPONSE');}text+=decoder.decode(part.value,{stream:true});}text+=decoder.decode();}catch(error){if(error.code)throw error;throw failure('账户响应中断，请重新核验','ACCOUNT_UNAVAILABLE');}
-  let value;try{value=JSON.parse(text);}catch{throw failure('账户服务响应无效','INVALID_RESPONSE');}
+  if(!reader&&response.ok)throw failure('账户服务未返回数据','INVALID_RESPONSE');
+  try{while(reader){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>1024*1024){await reader.cancel();throw failure('账户响应超过安全大小','INVALID_RESPONSE');}text+=decoder.decode(part.value,{stream:true});}text+=decoder.decode();}catch(error){if(error.code)throw error;throw failure('账户响应中断，请重新核验','ACCOUNT_UNAVAILABLE');}
+  let value;try{value=JSON.parse(text);}catch{if(response.ok)throw failure('账户服务响应无效','INVALID_RESPONSE');value={};}
+  if(!value||typeof value!=='object'||Array.isArray(value)){if(response.ok)throw failure('账户响应格式无效','INVALID_RESPONSE');value={};}
   if(!response.ok)throw Object.assign(failure(messages[value.code]||({400:'账户信息不完整或格式不正确，请检查后重试',401:'登录已失效或凭证不正确',403:'账号操作未获授权',409:'账号或资料状态已变化，请刷新后重试',429:'请求过于频繁，请稍后重试'}[response.status]||'账户服务暂不可用'),messages[value.code]?value.code:'ACCOUNT_REJECTED',response.status),{retryAfterSeconds:Math.min(86400,Math.max(0,Number(value.retryAfterSeconds)||0))});
   return value;
  }
@@ -81,10 +83,18 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
   }),
   entitlements:()=>serial(async()=>{
    await verify();const token=session.token;
-   try{const [membership,quota,billing]=await Promise.all([request('/v1/membership',{token}),request('/v1/quota',{token}),request('/v1/billing/config')]);
-    if(!Number.isSafeInteger(quota.available)||quota.available<0||!Number.isSafeInteger(quota.reserved)||quota.reserved<0)throw failure('算力余额无效','INVALID_RESPONSE');
-    return {...state(),membership,quota:{available:quota.available,reserved:quota.reserved},services:{purchaseAvailable:billing.paymentEnabled===true,cloudSyncAvailable:billing.cloudSyncEnabled===true},checkedAt:new Date().toISOString()};
-   }catch(error){verified=false;lastError=error.message;if(error.status===401){session=null;await secureVault.remove(key);}throw error;}
+   const names=['membership','quota','billing','cloud'],responses=await Promise.allSettled([
+    request('/v1/membership',{token}).then(value=>{if(typeof (value?.membership||value)?.entitled!=='boolean')throw failure('会员权益响应无效','INVALID_RESPONSE');return value;}),
+    request('/v1/quota',{token}).then(quota=>{if(!Number.isSafeInteger(quota?.available)||quota.available<0||!Number.isSafeInteger(quota.reserved)||quota.reserved<0)throw failure('算力余额无效','INVALID_RESPONSE');return {available:quota.available,reserved:quota.reserved};}),
+    request('/v1/billing/config').then(value=>{if(typeof value?.paymentEnabled!=='boolean')throw failure('支付状态响应无效','INVALID_RESPONSE');return value;}),
+    request('/v1/cloud-sync/status',{token}).then(readCloudStatus)
+   ]);
+   // A commercial endpoint cannot revoke the identity just verified by auth/me.
+   // Recheck actual authentication on 401; only that authoritative rejection clears it.
+   if(responses.some(value=>value.status==='rejected'&&value.reason.status===401))await verify();
+   const values={},serviceErrors={};responses.forEach((result,index)=>{if(result.status==='fulfilled')values[names[index]]=result.value;else serviceErrors[names[index]]=result.reason.message;});
+   const cloud=values.cloud||{state:'unavailable',message:serviceErrors.cloud,checkedAt:new Date().toISOString()};
+   return {...state(),membership:values.membership||null,quota:values.quota||null,cloudSyncStatus:cloud,serviceErrors,services:{purchaseAvailable:values.billing?.paymentEnabled===true,cloudSyncAvailable:cloud.state==='available'},checkedAt:new Date().toISOString()};
   }),
   officialModels:()=>serial(async()=>{
    await verify();
@@ -104,7 +114,7 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
     if(!compute.entitled)return result(compute.purchased?'inactive':'purchase_required',compute);
     if(!catalog.enabled||!models.length)return result('service_unavailable',compute);
     return result('available',compute,models);
-   }catch(error){verified=false;lastError=error.message;if(error.status===401){session=null;await secureVault.remove(key);}throw error;}
+   }catch(error){if(error.status===401)await verify();throw error;}
   }),
   logout:()=>serial(async()=>{
    // Clear local authentication even when remote revocation is unavailable.

@@ -23,3 +23,5 @@ export function validateMediaReceipt(value){
  if(!value||typeof value.id!=='string'||!/^m-[a-f0-9-]{36}\.(png|jpg|jpeg|webp|gif|mp4|mov|webm|mp3|wav|m4a|ogg)$/.test(value.id)||!/^([a-f0-9]{64})$/.test(value.sha256||''))throw mediaFailure('附件保存回执无效');
  const info=importFileInfo(value);if(info.kind==='text'||value.kind!==info.kind||value.mime!==info.mime||!value.id.endsWith('.'+info.ext))throw mediaFailure('附件类型回执不一致');return {id:value.id,name:info.name,kind:info.kind,mime:info.mime,bytes:info.bytes,sha256:value.sha256};
 }
+// Stable managed alias; historical mobile receipts keep their original IDs.
+export const desktopMediaPath=receipt=>'附件/云同步/'+validateMediaReceipt(receipt).id;

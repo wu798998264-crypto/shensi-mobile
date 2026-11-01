@@ -31,7 +31,9 @@ public class ShensiCloudTransportPlugin extends ShensiLocalPlugin {
             try {
                 URL url = new URL(call.getString("url", ""));
                 String method = call.getString("method", "GET"), auth = call.getString("authorization", "");
-                if (!url.getProtocol().equals("https") || !url.getHost().equals("dav.jianguoyun.com") || url.getPort() != -1 || url.getUserInfo() != null || url.getQuery() != null || url.getRef() != null || !url.getPath().startsWith("/dav/") || !method.matches("OPTIONS|PROPFIND|MKCOL|GET|HEAD|PUT|DELETE") || !auth.matches("Basic [A-Za-z0-9+/=]{1,4096}")) throw new IllegalArgumentException();
+                boolean delta = (url.getPath().equals("/nsdav/delta") || url.getPath().equals("/nsdav/latestDeltaCursor")) && method.equals("POST") && url.getQuery() == null;
+                boolean dav = url.getPath().startsWith("/dav/") && method.matches("OPTIONS|PROPFIND|MKCOL|GET|HEAD|PUT|DELETE");
+                if (!url.getProtocol().equals("https") || !url.getHost().equals("dav.jianguoyun.com") || url.getPort() != -1 || url.getUserInfo() != null || url.getQuery() != null && !method.equals("PROPFIND") || url.getRef() != null || !(dav || delta) || !auth.matches("Basic [A-Za-z0-9+/=]{1,4096}")) throw new IllegalArgumentException();
                 String encoded = call.getString("data", "");
                 if (encoded.length() > 11184812) throw new IllegalArgumentException();
                 byte[] bytes = Base64.decode(encoded, Base64.NO_WRAP);
@@ -48,14 +50,14 @@ public class ShensiCloudTransportPlugin extends ShensiLocalPlugin {
                 request.method(method, body);
                 try (Response response = davClient.newCall(request.build()).execute()) {
                     if (response.code() >= 300 && response.code() < 400) throw new IllegalArgumentException();
-                    if (response.body() != null && response.body().contentLength() > 8 * 1024 * 1024) throw new IllegalArgumentException();
+                    if (!method.equals("HEAD") && response.body() != null && response.body().contentLength() > 8 * 1024 * 1024) throw new IllegalArgumentException();
                     ByteArrayOutputStream result = new ByteArrayOutputStream();
                     if (response.body() != null) try (InputStream input = response.body().byteStream()) {
                         byte[] chunk = new byte[8192]; int count;
                         while ((count = input.read(chunk)) != -1) { if (result.size() + count > 8 * 1024 * 1024) throw new IllegalArgumentException(); result.write(chunk, 0, count); }
                     }
                     JSObject safeHeaders = new JSObject();
-                    for (String name : new String[]{"Content-Type", "ETag", "Retry-After", "Content-Range", "Accept-Ranges"}) if (response.header(name) != null) safeHeaders.put(name, response.header(name));
+                    for (String name : new String[]{"Content-Type", "Content-Length", "ETag", "Retry-After", "Content-Range", "Accept-Ranges", "Link"}) if (response.header(name) != null) safeHeaders.put(name, response.header(name));
                     JSObject output = new JSObject();output.put("status", response.code());output.put("headers", safeHeaders);output.put("base64", Base64.encodeToString(result.toByteArray(), Base64.NO_WRAP));call.resolve(output);
                 }
             } catch (Exception error) { call.reject("坚果云传输未确认，请检查网络或应用密码；不会自动重复写入", "NUTSTORE_TRANSPORT_FAILED"); }
