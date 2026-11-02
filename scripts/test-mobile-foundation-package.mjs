@@ -23,7 +23,7 @@ for(const name of ['drawable-nodpi/shensi_logo.png','mipmap-nodpi/shensi_launche
 assert.equal(hash(await readFile(join(base,'assets/shensi-logo.png'))),hash(await readFile('packages/ui/logo.png')));
 const gradle=await readFile('apps/mobile/android/app/build.gradle','utf8'),workflow=await readFile('apps/mobile/android-build.yml','utf8');
 assert(gradle.includes('verifyMobileSigningIdentity'));assert(gradle.includes('470fc88db925ccb1b38ce4c8676d5f85b9bc9b05b808efdc349ca24454d6ea30'));
-assert.match(gradle,/versionCode 7/);assert(gradle.includes('0.0.7-test.7'));assert.match(workflow,/default: foundation/);
+assert.match(gradle,/versionCode 8/);assert(gradle.includes('0.0.8-test.8'));assert.match(workflow,/default: foundation/);
 assert(bundle.includes('mobile-chat-availability'));assert(bundle.includes('chatDrafts'));
 assert(!/"aria-label": "文档对话输入",\s*disabled:/.test(bundle),'Composer must remain editable without a connected send channel');
-console.log('PASS connected native package: approved UI + real adapters, editable composer, no demo/private data, hashes and launcher correct, fixed signing gate and versionCode7');
+console.log('PASS connected native package: approved UI + real adapters, editable composer, no demo/private data, hashes and launcher correct, fixed signing gate and versionCode8');

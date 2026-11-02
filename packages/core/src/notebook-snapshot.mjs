@@ -1,4 +1,5 @@
 import {assertVersion} from './history.mjs';
+import {stableVersionJson} from '../legacy/version-integrity.js';
 import {validateMediaReceipt,desktopMediaPath} from '../../mobile/media-contract.mjs';
 
 export const CLOUD_NOTEBOOK_LIMIT=8*1024*1024;
@@ -34,6 +35,7 @@ export function validateCloudNotebook(value){
  if(!withMedia&&value?.format!=='shensi-notebook-snapshot-v1'||!record(value.state)||value.state.schemaVersion!==1||!validId(value.state.notebook?.id)||typeof value.state.notebook.title!=='string'||!value.state.notebook.title.trim()||value.state.notebook.title.length>200)throw Error('不是兼容的神思笔记本快照');
  const state=value.state;if(!record(state.documents)||!record(state.histories))throw Error('笔记本结构不完整');
  for(const [id,doc]of Object.entries(state.documents)){
+  if(doc?.deleted!==undefined&&typeof doc.deleted!=='boolean')throw Error('文档删除状态无效');
   if(!validId(id)||!record(doc)||doc.id!==undefined&&doc.id!==id||typeof doc.title!=='string'||doc.title.length>200||typeof doc.markdown!=='string'||doc.markdown.length>2000000||doc.canvas&&!withMedia)throw Error('此快照入口只恢复普通文档；白板附件同步未完成前不会强制转换');
   if(!withMedia&&hasMedia(doc))throw Error('此笔记本含附件；附件协议接通前不会上传缺少文件的快照');
  }
@@ -47,6 +49,18 @@ export function validateCloudNotebook(value){
  for(const f of folders){const seen=new Set([f.id]);let parent=f.parentId;while(parent){if(seen.has(parent)||!byId.has(parent))throw Error('目录引用循环或缺失');seen.add(parent);parent=byId.get(parent).parentId;}}
  if(state.mobileDrafts!==undefined&&!record(state.mobileDrafts))throw Error('草稿结构无效');
  for(const [id,draft]of Object.entries(state.mobileDrafts||{}))if(!validId(id)||typeof draft?.markdown!=='string'||draft.markdown.length>2000000)throw Error('草稿内容无效');
+ if(state.coreDocumentTimes!==undefined&&!record(state.coreDocumentTimes))throw Error('修改时间结构无效');
+ for(const [id,times]of Object.entries(state.coreDocumentTimes||{}))if(!validId(id)||!record(times)||Object.keys(times).some(k=>!['createdAt','modifiedAt'].includes(k))||Object.values(times).some(v=>v!=null&&v!==''&&(typeof v!=='string'||!Number.isFinite(Date.parse(v)))))throw Error('修改时间无效');
+ if(state.coreSyncDraftHistory!==undefined&&!Array.isArray(state.coreSyncDraftHistory))throw Error('同步草稿历史无效');
+ for(const item of state.coreSyncDraftHistory||[])if(!validId(item?.documentId)||typeof item?.draft?.markdown!=='string'||item.draft.markdown.length>2000000)throw Error('同步草稿历史内容无效');
+ if(state.coreSyncResolutions!==undefined&&!record(state.coreSyncResolutions))throw Error('同步处理记录无效');
+ for(const [id,v]of Object.entries(state.coreSyncResolutions||{}))if(!validId(id)||!Array.isArray(v?.inputs)||!v.inputs.length||v.inputs.length>10000||[...v.inputs,v.output].some(h=>typeof h!=='string'||!/^[a-f0-9]{64}$/.test(h)))throw Error('同步处理记录校验失败');
+ for(const v of Object.values(state.coreSyncResolutions||{})){
+  if(v.resolvedAt!==undefined&&(typeof v.resolvedAt!=='string'||!Number.isFinite(Date.parse(v.resolvedAt))))throw Error('同步决定时间无效');
+  if(v.ancestors!==undefined&&(!record(v.ancestors)||!v.resolvedAt||Object.keys(v.ancestors).length>10000||Object.entries(v.ancestors).some(([hash,stamp])=>!/^[a-f0-9]{64}$/.test(hash)||typeof stamp!=='string'||!Number.isFinite(Date.parse(stamp))||Date.parse(stamp)>Date.parse(v.resolvedAt))))throw Error('同步祖先版本记录无效');
+ }
+ if(state.coreSyncRetainedAt!==undefined&&!record(state.coreSyncRetainedAt))throw Error('同步历史保留记录无效');
+ for(const [id,entries]of Object.entries(state.coreSyncRetainedAt||{}))if(!validId(id)||!record(entries)||Object.entries(entries).some(([key,value])=>!validId(key)||typeof value!=='string'||!Number.isFinite(Date.parse(value))))throw Error('同步历史保留时间无效');
  if(new TextEncoder().encode(JSON.stringify(value)).length>CLOUD_NOTEBOOK_LIMIT)throw Error('当前快照上限为8MiB，未删减历史');
  return state;
 }
@@ -59,7 +73,14 @@ export function portableNotebookState(id,state,{allowMedia=false}={}){
  for(const [key,value]of Object.entries(state.documents||{})){
   const doc=structuredClone(value);for(const k of ['sourcePath','contentRef','savedAt','coreRichText','customFolderId','customFolderPath'])delete doc[k];documents[key]=doc;
  }
+ // A missing document is not evidence of deletion. Only an explicit recycle
+ // record can be exported as a tombstone, preserving the last live payload.
+ for(const trash of state.trash||[]){const removed=trash.documents||{[trash.id]:trash.document};for(const [key,doc]of Object.entries(removed))if(doc&&!documents[key]&&validId(key)){documents[key]={...structuredClone(doc),deleted:true};for(const field of ['sourcePath','contentRef','savedAt','coreRichText','customFolderId','customFolderPath'])delete documents[key][field];}}
  const portable={schemaVersion:1,notebook:{id,title:state.projectName||state.notebook?.title||'我的笔记'},documents,histories:structuredClone(state.histories||{}),coreFolders:structuredClone(state.coreFolders||[]),coreFavorites:structuredClone(state.coreFavorites||[]),coreRestoreLog:structuredClone(state.coreRestoreLog||[]),mobileDrafts:structuredClone(state.mobileDrafts||{}),coreHistoryDeleted:structuredClone(state.coreHistoryDeleted||[])};
+ for(const trash of state.trash||[])for(const [id,versions]of Object.entries(trash.histories||{})){if(!documents[id])continue;const history=portable.histories[id]??=[];for(const version of versions){assertVersion(version);const known=history.find(v=>v.id===version.id);if(known&&stableVersionJson(known.document)!==stableVersionJson(version.document))throw Error('回收站历史身份冲突，未同步');if(!known)history.push(structuredClone(version));}}
+ portable.coreDocumentTimes=structuredClone(state.coreDocumentTimes||{});portable.coreSyncDraftHistory=structuredClone(state.coreSyncDraftHistory||[]);
+ portable.coreSyncResolutions=structuredClone(state.coreSyncResolutions||{});
+ portable.coreSyncRetainedAt=structuredClone(state.coreSyncRetainedAt||{});
  validateCloudNotebook({format:allowMedia?'shensi-notebook-snapshot-v2':'shensi-notebook-snapshot-v1',state:portable,...allowMedia?{media:notebookMedia(portable)}:{}});return portable;
 }
 export function portableNotebookSnapshot(id,state,{allowMedia=false}={}){

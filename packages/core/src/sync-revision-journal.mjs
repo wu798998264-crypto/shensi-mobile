@@ -68,7 +68,8 @@ export function createSyncRevisionJournal({io,remoteRoot,deviceId,layoutVersion=
  }
  async function upload({entry,...options},batch=null){
   const path=syncLogicalPath(entry.logicalPath),prior=await expected(path,options,batch),object=crypto.randomUUID(),revision=crypto.randomUUID();
-  const value={version:1,logicalPath:path,revision,parents:prior?.revisionIds||[],object,deleted:false,hash:entry.hash,size:entry.size,contentType:entry.contentType||'application/octet-stream',deviceId,updatedAt:new Date().toISOString()};validate(value);
+  const editTime=entry.modifiedAt||(entry.mtimeMs?new Date(entry.mtimeMs).toISOString():''),createTime=entry.createdAt||(entry.birthtimeMs?new Date(entry.birthtimeMs).toISOString():'');
+  const value={version:1,logicalPath:path,revision,parents:prior?.revisionIds||[],object,deleted:false,hash:entry.hash,size:entry.size,contentType:entry.contentType||'application/octet-stream',deviceId,updatedAt:new Date().toISOString(),modifiedAt:editTime,createdAt:createTime};validate(value);
   // Adapter verifies immutable source and remote byte hash before publishing.
   const destination=objectPath(objects,object);await ensureParent(destination);await io.putEntry(destination,entry,options.onProgress);const result=await commit(value);batch?.set(path,result);return result;
  }

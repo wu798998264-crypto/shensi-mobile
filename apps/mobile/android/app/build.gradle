@@ -8,8 +8,8 @@ android {
         applicationId "studio.hexing.shensi.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7
-        versionName approvedPreview ? "0.0.7-preview.7" : "0.0.7-test.7"
+        versionCode 8
+        versionName approvedPreview ? "0.0.8-preview.8" : "0.0.8-test.8"
         resValue "string", "build_app_name", approvedPreview ? "神思笔记·界面预览" : "神思笔记"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

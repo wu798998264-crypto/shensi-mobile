@@ -6,7 +6,7 @@ let store=createMobileDocumentStore({storage}),current=await store.createNoteboo
 current=await store.createDocument('flags-book',{documentId:'note-a',title:'正文',markdown:'保留正文',expectedRevision:current.revision,operationId:'create-a'});
 current=await store.saveDocument('flags-book',{documentId:'note-a',markdown:'保留正文',expectedRevision:current.revision,operationId:'save-a'});
 current=await store.saveDraft('flags-book',{documentId:'note-a',markdown:'未保存草稿',draftRevision:1,baseRevision:current.revision});
-const histories=structuredClone(current.state.histories),drafts=structuredClone(current.state.mobileDrafts);
+const histories=structuredClone(current.state.histories),drafts=structuredClone(current.state.mobileDrafts),times=structuredClone(current.state.coreDocumentTimes);
 const change=(field,value,operationId)=>({documentId:'note-a',field,value,expectedRevision:current.revision,operationId});
 const favorite=change('favorite',true,'favorite-a');current=await store.setDocumentFlag('flags-book',favorite);
 assert.equal((await store.setDocumentFlag('flags-book',favorite)).replayed,true);
@@ -17,7 +17,7 @@ await assert.rejects(store.setDocumentFlag('flags-book',{...change('favorite',fa
 await assert.rejects(store.setDocumentFlag('flags-book',change('readOnly',false,'bad-field')),/标记/);
 current=await store.setDocumentFlag('flags-book',change('locked',false,'unlock-a'));
 current=await store.setDocumentFlag('flags-book',change('favorite',false,'unfavorite-a'));
-assert.deepEqual(current.state.histories,histories);assert.deepEqual(current.state.mobileDrafts,drafts);assert.equal(current.state.documents['note-a'].markdown,'保留正文');
+assert.deepEqual(current.state.histories,histories);assert.deepEqual(current.state.mobileDrafts,drafts);assert.deepEqual(current.state.coreDocumentTimes,times);assert.equal(current.state.documents['note-a'].markdown,'保留正文');
 const row=rows.get('flags-book'),state=JSON.parse(row.value);state.documents['note-a'].coreLocked=true;row.value=JSON.stringify(state);
 await assert.rejects(store.setDocumentFlag('flags-book',change('locked',false,'protected-unlock')),e=>e.code==='DOCUMENT_LOCKED');
 console.log('PASS 收藏/锁定原生事务回读、幂等、旧页冲突、锁定拒写，正文/草稿/历史不变，不能解除外部只读锁');

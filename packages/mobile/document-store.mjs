@@ -2,6 +2,7 @@ import {checkpoint,assertVersion} from '../core/src/history.mjs';
 import {sha256HexSync,stableVersionJson} from '../core/legacy/version-integrity.js';
 import {renderMarkdown} from './rich-text.mjs';
 import {validateMediaReceipt,MAX_IMPORT_FILES,MAX_TEXT_BYTES} from './media-contract.mjs';
+import {syncDocumentContent} from '../core/src/sync-notebook-merge.mjs';
 
 const fail=(message,code='INVALID_DOCUMENT')=>Object.assign(new Error(message),{code});
 const clone=structuredClone;
@@ -39,7 +40,7 @@ export function createMobileDocumentStore({storage}={}){
   const prior=current.state.coreTextOperations?.[operationId];
   if(prior){if(prior.requestHash!==requestHash)throw fail('操作身份已用于其他内容','OPERATION_CONFLICT');return {...current,replayed:true,historyReceipt:prior.historyReceipt};}
   if(current.revision!==expectedRevision)throw fail('资料已变化，保留当前输入并重新核对','WORKSPACE_STATE_CONFLICT');
-  const receipt=action(current.state);
+  const before=clone(current.state.documents),receipt=action(current.state),stamp=new Date().toISOString();current.state.coreDocumentTimes??={};for(const [docId,doc]of Object.entries(current.state.documents))if(syncDocumentContent(before[docId])!==syncDocumentContent(doc))current.state.coreDocumentTimes[docId]={createdAt:current.state.coreDocumentTimes[docId]?.createdAt||stamp,modifiedAt:stamp};
   (current.state.coreTextOperations??={})[operationId]={requestHash,documentId:payload.documentId,createdAt:new Date().toISOString(),historyReceipt:receipt||null};
   return {...await persist(key,current),historyReceipt:receipt};
  });}

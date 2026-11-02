@@ -1,30 +1,34 @@
 import {validateCloudNotebook,portableNotebookSnapshot,CLOUD_NOTEBOOK_LIMIT} from '../core/src/notebook-snapshot.mjs';
 import {checkpoint} from '../core/src/history.mjs';
 import {syncDigest} from '../core/src/sync-revision-journal.mjs';
+import {mergeNotebookSnapshots,notebookSyncPreview,notebookDeletionConflicts,notebookConflictName} from '../core/src/sync-notebook-merge.mjs';
 const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
 export function createMobileNotebookTransfer({documents,storage,media}){
  const verifyMedia=async snapshot=>{if(snapshot.format==='shensi-notebook-snapshot-v2'){if(!media)throw Error('当前入口未加载白板附件同步');for(const receipt of snapshot.media)await media.source(receipt);}};
- return {
+ const api={
+  async peek(id){const row=await documents.load(id);if(!row.state)throw Error('笔记本不存在');return portableNotebookSnapshot(id,row.state,{allowMedia:!!media});},
+  async apply(snapshot,{expectedHash}={}){const state=structuredClone(validateCloudNotebook(snapshot)),id=state.notebook.id,row=await documents.load(id);if(!row.state)throw Error('原笔记本不存在，未覆盖');const current=portableNotebookSnapshot(id,row.state,{allowMedia:!!media});if(await syncDigest(encoder.encode(JSON.stringify(current)))!==expectedHash)throw Error('本地内容已变化，请重新预览冲突');await verifyMedia(snapshot);const value=JSON.stringify({...row.state,...state});if(encoder.encode(value).length>CLOUD_NOTEBOOK_LIMIT)throw Error('完整历史超过8MiB，未删减或覆盖');const saved=await storage.compareAndSwap(id,row.revision,value);if(saved.value!==value||JSON.stringify((await documents.load(id)).state)!==value)throw Error('冲突合并回读不一致');return {notebookId:id,copy:false,historyPreserved:true};},
   async export(id){let row=await documents.load(id);if(!row.state)throw Error('笔记本不存在');await verifyMedia(portableNotebookSnapshot(id,row.state,{allowMedia:!!media}));row=await documents.checkpointForSync(id,{expectedRevision:row.revision,direction:'upload'});return portableNotebookSnapshot(id,row.state,{allowMedia:!!media});},
   async import(snapshot){
    const state=structuredClone(validateCloudNotebook(snapshot));await verifyMedia(snapshot);const old=await storage.read(state.notebook.id),original=state.notebook.id;
-   if(old.value!==null){await documents.checkpointForSync(original,{expectedRevision:old.revision,direction:'download'});state.notebook.id='notebook-'+crypto.randomUUID();state.notebook.title=state.notebook.title.slice(0,180)+'（坚果云副本）';}
+   if(old.value!==null){const local=await api.peek(original);return api.apply(mergeNotebookSnapshots(local,[snapshot]),{expectedHash:await syncDigest(encoder.encode(JSON.stringify(local)))});}
    for(const [id,doc]of Object.entries(state.documents))if(!doc.deleted)checkpoint(state,id,{source:'sync',operationType:'snapshot',reason:'坚果云下载版本'});
    const value=JSON.stringify(state);if(encoder.encode(value).length>CLOUD_NOTEBOOK_LIMIT)throw Error('笔记本超过8MiB，未删减正文或历史');
    const saved=await storage.compareAndSwap(state.notebook.id,0,value);if(saved.value!==value||saved.revision!==1)throw Error('下载保存回执不符，请核对后继续');
    if(JSON.stringify((await documents.load(state.notebook.id)).state)!==value)throw Error('下载保存回读不符，原库未覆盖');return {notebookId:state.notebook.id,copy:original!==state.notebook.id};
   }
  };
+ return api;
 }
 
-// Same manual notebook exchange on desktop and phone. A remote branch never
-// replaces a local notebook. Whole-library automatic sync remains separate.
+// Same manual notebook exchange on desktop and phone. Competing content is
+// retained in same-document history. Whole-library automatic sync is separate.
 export function createNutstoreNotebookTransfer({repository,notebooks,metadata,scope,media}){
  const path=id=>'notebooks/'+id+'.json',key=id=>'nutstore-notebook:'+scope+':'+id;
  const pendingKey='nutstore-notebook-conflicts:'+scope;
  const pending=async(id,add)=>{const ids=new Set(await metadata.get(pendingKey)||[]);add?ids.add(id):ids.delete(id);await metadata.set(pendingKey,[...ids]);};
  const validId=id=>{if(!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(id))throw Error('笔记本身份无效');return id;};
- const changed=()=>Object.assign(Error('云端版本已变化，请重新打开冲突窗口核对；双方内容和已保存的副本均保留'),{code:'REMOTE_CHANGED_DURING_SYNC'});
+ const changed=()=>Object.assign(Error('云端版本已变化，请重新打开冲突窗口核对；双方内容和已保存的历史均保留'),{code:'REMOTE_CHANGED_DURING_SYNC'});
  function validEntry(entry){if(!/^notebooks\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}\.json$/.test(entry?.logicalPath||'')||entry.deleted||entry.conflicted||entry.size>CLOUD_NOTEBOOK_LIMIT)throw Error('请选择一个有效且未删除的笔记本版本');}
  const chunkBytes=4*1024*1024,mediaPath=(receipt,index)=>'media/'+receipt.id+'/'+receipt.sha256+'/'+String(index).padStart(6,'0');
  async function uploadMedia(snapshot,onProgress){
@@ -64,27 +68,27 @@ export function createNutstoreNotebookTransfer({repository,notebooks,metadata,sc
    const bytes=await repository.download({entry,onProgress}),snapshot=JSON.parse(decoder.decode(bytes));validateCloudNotebook(snapshot);
    if(path(snapshot.state.notebook.id)!==entry.logicalPath)throw Error('云端文件与笔记本身份不符');
    await downloadMedia(snapshot,onProgress);
-   const result=await notebooks.import(snapshot);
+   let result;try{result=await notebooks.import(snapshot);}catch(error){if(['SYNC_TIME_UNCERTAIN','SYNC_DELETE_CONFIRMATION_REQUIRED'].includes(error.code))await pending(snapshot.state.notebook.id,true);throw error;}
    if(result.notebookId===snapshot.state.notebook.id&&histories.heads.length===1&&histories.heads[0]===entry.revision)await metadata.set(key(result.notebookId),{etag:await syncDigest(encoder.encode(entry.revision)),hash:entry.hash});
    return result;
   },
   async conflicts(){
    const ids=new Set(await metadata.get(pendingKey)||[]),items=await repository.inventory();
-   return items.filter(e=>/^notebooks\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}\.json$/.test(e.logicalPath)).filter(e=>e.conflicted||ids.has(e.logicalPath.slice(10,-5))).map(e=>({id:e.logicalPath.slice(10,-5),logicalPath:e.logicalPath,version:e.etag,reason:'此笔记本存在尚未核对的云端版本。保留双方会下载全部云端分支为独立副本，再上传当前本地版本；不自动拼接正文。',remote:e,resolutions:['keep_both']}));
+   const result=[];for(const e of items.filter(e=>/^notebooks\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}\.json$/.test(e.logicalPath)).filter(e=>e.conflicted||ids.has(e.logicalPath.slice(10,-5)))){const id=e.logicalPath.slice(10,-5),local=await notebooks.peek(id),version=await syncDigest(encoder.encode(e.etag+'\n'+JSON.stringify(local))),remote=await readSnapshots(e),deletions=notebookDeletionConflicts([local,...remote]);result.push({id,logicalPath:e.logicalPath,displayName:notebookConflictName([local,...remote]).name,version,reason:deletions.length?'delete_confirmation':'both_modified',remote:e,resolutions:deletions.length?['delete_both','restore_live']:['use_remote','use_local']});}return result;
   },
+  async preview({conflictId:id,expectedVersion}){const value=await conflictContext(id,expectedVersion),ids=notebookConflictName([value.local,...value.remote]).ids;return {sides:[notebookSyncPreview(value.local,'本地',ids),...value.remote.map((s,i)=>notebookSyncPreview(s,'云端版本 '+(i+1),ids))]};},
   async resolve({conflictId:id,resolution,expectedVersion},onProgress){
-   validId(id);if(resolution!=='keep_both'||typeof expectedVersion!=='string'||!expectedVersion)throw Error('请先查看冲突并选择保留双方');
-   const current=(await repository.inventory()).find(e=>e.logicalPath===path(id));if(!current||current.etag!==expectedVersion)throw changed();
-   const copies=[];
-   // First preserve EVERY remote head through the ordinary validated import.
-   // Neither local notebook nor remote history is replaced or deleted.
-   for(const entry of current.conflicted?current.branches:[current])if(!entry.deleted)copies.push(await api.download(entry,onProgress));
-   const snapshot=await notebooks.export(id);validateCloudNotebook(snapshot);const bytes=encoder.encode(JSON.stringify(snapshot)),hash=await syncDigest(bytes);
+   const {current,local,remote}=await conflictContext(id,expectedVersion),snapshot=mergeNotebookSnapshots(local,remote,{resolution});
+   for(const source of remote)await downloadMedia(source,onProgress);
+   const bytes=encoder.encode(JSON.stringify(snapshot)),hash=await syncDigest(bytes),localHash=await syncDigest(encoder.encode(JSON.stringify(local)));
    await uploadMedia(snapshot,onProgress);
-   if((await repository.inventory()).find(e=>e.logicalPath===path(id))?.etag!==expectedVersion)throw changed();
+   if((await repository.inventory()).find(e=>e.logicalPath===path(id))?.etag!==current.etag||await syncDigest(encoder.encode(JSON.stringify(await notebooks.peek(id))))!==localHash)throw changed();
    const result=await repository.upload({entry:{logicalPath:path(id),bytes,hash,size:bytes.length,contentType:'application/json'},expectedRemoteExists:!current.deleted,expectedRemoteEtag:current.etag,...current.conflicted?{resolveRevisions:current.revisionIds}:{},onProgress});
    const verified=(await repository.inventory()).find(e=>e.logicalPath===path(id));if(verified?.etag!==result.etag||verified.conflicted)throw changed();
-   await metadata.set(key(id),{etag:result.etag,hash});await pending(id,false);return {verified:true,revision:result.revision,copies,historyPreserved:true};
+   await notebooks.apply(snapshot,{expectedHash:localHash});await metadata.set(key(id),{etag:result.etag,hash});await pending(id,false);return {verified:true,revision:result.revision,copies:[],historyPreserved:true,notebookId:id};
   }
- };return api;
+ };
+ async function readSnapshots(entry){const snapshots=[];for(const branch of entry.conflicted?entry.branches:[entry]){if(branch.deleted)throw Error('云端整本删除记录需要恢复历史后核对，未自动删除本机');const bytes=await repository.download({entry:branch}),snapshot=JSON.parse(decoder.decode(bytes));validateCloudNotebook(snapshot);if(path(snapshot.state.notebook.id)!==entry.logicalPath)throw Error('云端笔记本身份不符');snapshots.push(snapshot);}return snapshots;}
+ async function conflictContext(id,expectedVersion){validId(id);const current=(await repository.inventory()).find(e=>e.logicalPath===path(id));if(!current)throw changed();const local=await notebooks.peek(id);if(await syncDigest(encoder.encode(current.etag+'\n'+JSON.stringify(local)))!==expectedVersion)throw changed();return {current,local,remote:await readSnapshots(current)};}
+ return api;
 }

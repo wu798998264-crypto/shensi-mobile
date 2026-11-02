@@ -23,7 +23,7 @@ export function createMobileNutstoreClient({secureVault,fetchImpl=fetch,document
    source:async(...args)=>{await assertIdentity();return media.source(...args);},
    sink:receipt=>{const sink=media.sink(receipt);return Object.fromEntries(['begin','write','finish','abort'].map(method=>[method,async(...args)=>{if(method!=='abort')await assertIdentity();return sink[method](...args);}]));}
   };
-  const result=await fn(createNutstoreNotebookTransfer({repository,notebooks:{export:async(...args)=>{await assertIdentity();return target.export(...args);},import:async(...args)=>{await assertIdentity();return target.import(...args);}},metadata,scope,media:scopedMedia}));if(kind)emit({status:'completed',finishedAt:new Date().toISOString()});return result;
+  const bound=Object.fromEntries(['export','import','peek','apply'].map(method=>[method,async(...args)=>{await assertIdentity();return target[method](...args);} ]));const result=await fn(createNutstoreNotebookTransfer({repository,notebooks:bound,metadata,scope,media:scopedMedia}));if(kind)emit({status:'completed',finishedAt:new Date().toISOString()});return result;
  }catch(error){if(error.code==='RETRY_WAIT'&&identityAccount)await metadata.set(cooldownKey(identityAccount),Date.now()+Math.max(60000,error.retryAfterMs||0));if(kind)emit({status:error.code==='REMOTE_CHANGED_DURING_SYNC'?'conflict':'failed',error:error.message,code:error.code||'NUTSTORE_TRANSFER_FAILED',finishedAt:new Date().toISOString()});throw error;}finally{active=false;}};
  async function request(c,method,path='',body,extra={}){
   await cooled(c.account);
@@ -43,6 +43,7 @@ export function createMobileNutstoreClient({secureVault,fetchImpl=fetch,document
   uploadNotebook:(id,onProgress)=>transfer(t=>t.upload(id,onProgress),'upload'),
   downloadNotebook:(entry,onProgress)=>transfer(t=>t.download(entry,onProgress),'download'),
   conflicts:()=>transfer(t=>t.conflicts()),
+  previewConflict:request=>transfer(t=>t.preview(request)),
   resolveConflict:(request,onProgress)=>transfer(t=>t.resolve(request,onProgress),'resolve'),
   async connect({account,password}){if(active)throw Error('传输期间不能更换坚果云账号');if(typeof account!=='string'||!account.trim()||typeof password!=='string'||!password||account.includes(':')||account.length>256||password.length>512)throw Error('请填写坚果云账号和应用密码');const c={account:account.trim(),password},r=await verify(c);await secureVault.set(KEY,JSON.stringify(c));return {...r,notebookTransferAvailable:ready};},
   async probe(){const c=await config();if(!c)throw Error('请先连接坚果云');return verify(c);},

@@ -42,11 +42,11 @@ export function createCloudFileClient({issuer='https://api.hexing.studio/skill',
     if(!id(value.nextAfter)||cursors.has(value.nextAfter)||!value.items.length)throw failure('云端文件分页循环或游标无效','CLOUD_SYNC_INVALID_RESPONSE');cursors.add(value.nextAfter);after=value.nextAfter;
    }throw failure('云端文件分页超过安全上限，未采用残缺清单','CLOUD_SYNC_INVALID_RESPONSE');
   },
-  upload:async({key,name,kind,source,baseRevision=null,onProgress=()=>{},signal})=>{
+  upload:async({key,name,kind,source,baseRevision=null,resolveFileIds,onProgress=()=>{},signal})=>{
    if(!id(key)||!source||!Number.isSafeInteger(source.bytes)||source.bytes<0||source.bytes>2*1024**3||!digest(source.sha256)||typeof source.read!=='function')throw failure('需要有效的本地文件及完整摘要','CLOUD_SYNC_INVALID_SOURCE');
    const auth=await authenticate(signal),jkey=journalKey(auth,key);
    return enter(jkey,async()=>{
-    const intent={key,name,kind,bytes:source.bytes,sha256:source.sha256,baseRevision},fingerprint=await hash(new TextEncoder().encode(JSON.stringify(intent)));let saved=await journal.get(jkey);
+    const intent={key,name,kind,bytes:source.bytes,sha256:source.sha256,baseRevision,...resolveFileIds?{resolveFileIds}:{}},fingerprint=await hash(new TextEncoder().encode(JSON.stringify(intent)));let saved=await journal.get(jkey);
     if(saved&&saved.fingerprint!==fingerprint&&!saved.completed)throw failure('本地内容已变化，请先处理原上传；未覆盖原续传记录','CLOUD_SYNC_SOURCE_CHANGED');
     if(!saved||saved.fingerprint!==fingerprint){saved={fingerprint,idempotencyKey:crypto.randomUUID(),uploadId:null,completed:false};await journal.set(jkey,saved);}
     let upload;
