@@ -14,7 +14,7 @@ export function mountMobileAccountPanel({d,status,run},account){
  const reconcile=async fn=>{try{return await fn();}catch(error){const next=await account.status();if(next.status!==current.status||next.user?.id!==current.user?.id)show(next);throw error;}};
  const call=(name,body)=>reconcile(()=>{const fn=account[method[name]];if(typeof fn!=='function')throw Error('当前客户端尚未接入此账号操作');return fn(body);});
  const runAccount=fn=>run(()=>reconcile(fn));
- const security=createAccountSecurity({call,user:()=>current.user,updated:()=>reconcile(async()=>{show(await account.refresh());await showReview();}),toast:text=>{status.textContent=text;}});
+ const security=createAccountSecurity({owner:d.parentElement,call,user:()=>current.user,updated:()=>reconcile(async()=>{show(await account.refresh());await showReview();}),toast:text=>{status.textContent=text;}});
  async function showReview(){if(disposed||current.status!=='verified'||!account.profile)return;const result=await account.profile();if(disposed)return;const review=result.review;reviewStatus.textContent=review?({pending_review:'笔名与头像待审核，通过前不公开。',rejected:'资料未通过：'+review.reason,approved:'笔名与头像已审核通过。',superseded:'此前提交已被替代。'}[review.status]||''):'笔名与头像须审核通过后显示。';}
  function show(state){
   if(disposed)return;current=state;const loggedIn=state.status!=='signed_out';identity.replaceChildren();loginArea.hidden=loggedIn;actions.hidden=!loggedIn;reviewStatus.hidden=!loggedIn;

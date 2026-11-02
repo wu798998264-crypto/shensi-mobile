@@ -1,6 +1,6 @@
 const h=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-export function createAccountSecurity({call,updated,toast,user}){
+export function createAccountSecurity({call,updated,toast,user,owner=document.body}){
  let dialog,busy=false,timers=[];
  const field=(label,name,type='text',value='',extra='')=>`<label>${label}<input name="${name}" aria-label="${label}" type="${type}" value="${h(value)}" ${extra}></label>`;
  function close(){if(busy)return;dialog?.close();}
@@ -8,7 +8,7 @@ export function createAccountSecurity({call,updated,toast,user}){
   if(dialog?.open)return;
   dialog=document.createElement('dialog');dialog.className='account-security-dialog';dialog.setAttribute('aria-label',title);
   dialog.innerHTML=`<form><header><h2>${title}</h2><button type="button" data-account-close aria-label="关闭${title}">×</button></header><div class="account-security-body">${body}</div><p role="status" data-account-status></p><footer><button type="button" data-account-close>取消</button><button type="submit" class="primary">${submitText}</button></footer></form>`;
-  document.body.append(dialog);const form=dialog.querySelector('form');
+  owner.append(dialog);const form=dialog.querySelector('form');
   form.onsubmit=event=>{event.preventDefault();void run(()=>submit(form));};
   dialog.onclick=event=>{if(event.target.closest('[data-account-close]'))close();};
   dialog.oncancel=event=>{if(busy)event.preventDefault();};

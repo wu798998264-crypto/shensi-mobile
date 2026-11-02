@@ -121,3 +121,29 @@ html,body{height:100%;margin:0;overflow:hidden;background:#fafaf8}
 .mobile-album-fullscreen>section{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;justify-content:center;padding:20px 20px max(20px,env(safe-area-inset-bottom))}
 .mobile-album-fullscreen .mobile-album-media{max-height:100%;object-fit:contain}.mobile-album-fullscreen article{white-space:normal;overflow-wrap:anywhere}
 .native-approved .mobile-album-fullscreen textarea{box-sizing:border-box;width:100%;height:100%;min-height:200px;padding:16px;font:inherit;line-height:1.7;color:var(--m-ink);background:var(--m-panel);border:1px solid var(--m-line);border-radius:12px;resize:none}
+
+/* Capacitor 8 supplies corrected CSS insets for older Android WebViews too. */
+:root{--mobile-safe-top:var(--safe-area-inset-top,env(safe-area-inset-top,0px));--mobile-safe-bottom:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));--mobile-safe-left:var(--safe-area-inset-left,env(safe-area-inset-left,0px));--mobile-safe-right:var(--safe-area-inset-right,env(safe-area-inset-right,0px))}
+.native-workspace.native-approved{padding:var(--mobile-safe-top) var(--mobile-safe-right) 0 var(--mobile-safe-left)}
+.native-approved .native-directory,.native-approved .native-plugin{padding-top:calc(14px + var(--mobile-safe-top));padding-bottom:calc(12px + var(--mobile-safe-bottom))}
+.native-approved .native-settings{padding:calc(23px + var(--mobile-safe-top)) 20px calc(24px + var(--mobile-safe-bottom))}
+.native-approved dialog{max-height:calc(100dvh - var(--mobile-safe-top) - 12px);padding-bottom:calc(24px + var(--mobile-safe-bottom))}
+.native-approved .native-settings{max-height:100dvh}
+.native-approved .mobile-album-fullscreen{max-height:100dvh;padding-bottom:0}
+.native-approved .mobile-album-fullscreen>header{padding-top:calc(16px + var(--mobile-safe-top))}
+.native-approved .mobile-album-fullscreen>section{padding-bottom:calc(20px + var(--mobile-safe-bottom))}
+.native-approved .m3-nav{bottom:calc(26px + var(--mobile-safe-bottom))}
+.native-approved .notice[popover]{bottom:calc(90px + var(--mobile-safe-bottom))}
+.notebook-picker{position:relative;flex:1;min-width:0;z-index:2}
+.native-approved .notebook-picker-button{width:100%;min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border:1px solid var(--m-line);border-radius:8px;background:var(--m-panel);color:var(--m-ink);font-size:12px}
+.notebook-picker-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.notebook-picker-button svg{width:16px;height:16px}
+.notebook-options{position:absolute;top:calc(100% + 6px);left:0;right:0;max-height:55dvh;overflow:auto;padding:6px;background:var(--m-panel);color:var(--m-ink);border:1px solid var(--m-line);border-radius:12px;box-shadow:0 8px 25px #0003}
+.notebook-option{position:relative;border-bottom:1px solid var(--m-line);min-height:72px;padding-top:28px}
+.native-approved .notebook-option-name{display:block;width:100%;font-size:13px;min-height:40px;padding:6px;text-align:left;background:transparent;border:0;color:inherit;overflow-wrap:anywhere}
+.notebook-option-name[aria-current=true]{font-weight:700;color:var(--m-accent)}
+.notebook-option-tools{position:absolute;right:0;top:0;display:flex}.native-approved .notebook-option-tools button{width:32px;height:32px;min-height:32px;display:grid;place-items:center;padding:7px;border:0;background:transparent;color:var(--m-muted)}
+.notebook-option-tools svg{width:17px;height:17px}.native-approved .notebook-options>.m7-menu-row{font-size:12px;padding:12px 5px;gap:5px}
+.mobile-chat-history{flex:1;min-height:30px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.native-approved .mobile-chat-history .chat-message{border:1px solid var(--m-line);border-radius:12px;padding:12px;color:var(--m-ink)}.chat-message.user{background:var(--m-panel)}
+.native-approved .mobile-chat-input{min-height:90px;width:100%;border:1px solid var(--m-line);border-radius:12px;padding:12px;background:var(--m-panel);color:var(--m-ink);resize:vertical;font:inherit}
+.mobile-chat-controls{display:flex;gap:8px;flex-wrap:wrap}.mobile-chat-controls select{width:100%;background:var(--m-panel);color:var(--m-ink);min-width:0}.mobile-chat-controls button{font-size:12px;background:var(--m-panel);color:var(--m-ink);border-color:var(--m-line)}
+.native-approved[data-language=en] .m7-setting-row span{white-space:normal;line-height:1.4}.native-approved[data-language=en] .m7-setting-row>small{max-width:30%;text-align:right}

@@ -3,16 +3,23 @@ import {mobileEditorTools,editorIcon} from '../../../packages/mobile/editor-icon
 import {mountServicePanels} from './service-panels.js';
 import {createNativeShell} from './native-shell.js';
 import {mountWhiteboardAlbum} from './whiteboard-album.js';
+import {mountInterfaceLanguage} from './interface-language.js';
+import {createCustomApiPanels} from './custom-api-panel.js';
 const element=(tag,text,attrs={})=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;for(const [key,value] of Object.entries(attrs))e.setAttribute(key,value);return e;};
 const uid=prefix=>prefix+'-'+crypto.randomUUID();
 const closeDialog=dialog=>{dialog.close();dialog.remove();};
-export async function mountFoundation(root,{documents,account,nutstore,marketplace,cloud,media,hostLabel='ANDROID · 0.0.3 测试版'}={}){
+export async function mountFoundation(root,{documents,account,nutstore,marketplace,cloud,media,metadata,customApi,systemAppearance,hostLabel='ANDROID · 0.0.9 测试版'}={}){
+ root.interfaceLanguage?.destroy();const language=await mountInterfaceLanguage(root,metadata);root.interfaceLanguage=language;let appearance=await metadata?.get('mobile-appearance')||'跟随系统';
  let notebooks=await documents.list(),notebookId=notebooks[0]?.id||'',current=notebookId?await documents.load(notebookId):null,documentId='',editing=false,pending=Promise.resolve(),failedDraft=false;
  let textarea,notice,tree,content,select,mode,noticeTimer,uploading=false;let draftRevision=0,favoritesOnly=false;const expandedFolders=new Set();
  const visibleDocuments=()=>Object.entries(current?.state.documents||{}).map(([id,doc])=>({...doc,id})).filter(d=>!d.deleted);
  const notify=text=>{clearTimeout(noticeTimer);notice.hidePopover?.();notice.textContent=text;if(!text)return;notice.showPopover?.();noticeTimer=setTimeout(()=>{notice.textContent='';if(notice.isConnected)notice.hidePopover?.();},2000);};
  const isFavorite=id=>(current?.state.coreFavorites||[]).includes('document:'+id);
+ const apiPanels=customApi?createCustomApiPanels({root,client:customApi,metadata,notify}):null;
  const shell=createNativeShell(root,{
+  language,appearance:()=>appearance,setAppearance:async value=>{await metadata?.set('mobile-appearance',value);appearance=value;await systemAppearance?.(value);},
+  notebooks:()=>notebooks,renameNotebook:id=>manageNotebook(id,'rename'),deleteNotebook:id=>manageNotebook(id,'delete'),recycleNotebooks,
+  customApiSettings:()=>apiPanels?.settings(),...(apiPanels?{mountChat:(body,context)=>apiPanels.mountChat(body,context).catch(showError)}:{}),
   edit:()=>{},notify,history:()=>{if(!current?.state.documents[documentId]){notify('请先打开文档');return;}if(editing){notify('请先保存当前编辑');return;}showHistory();},
   newNotebook:()=>newItem('notebook'),newDocument:()=>newItem(notebookId?'document':'notebook'),documents:visibleDocuments,
   newWhiteboard:()=>newItem(notebookId?'whiteboard':'notebook'),trashDocument:onDone=>trashDocument(onDone),
@@ -32,13 +39,16 @@ export async function mountFoundation(root,{documents,account,nutstore,marketpla
   selectDocument:id=>{if(editing){notify('请先保存当前编辑');return false;}documentId=id;renderDocument();fillTree();shell.closePanel();return true;},
   closeDocument:(id=documentId)=>{const doc=current?.state.documents[id];if(doc?.locked||doc?.coreLocked||doc?.readOnly){notify('文档已锁定，请先解除锁定后再关闭。');return false;}if(id===documentId){if(editing){notify('请先保存当前编辑');return false;}documentId='';renderDocument();}return true;},
   accountStatus:()=>account?.status(),
-  service:name=>{const button=[...root.querySelectorAll('.service-tools button')].find(b=>b.textContent===name);if(!button)return false;button.click();return true;}
+  service:name=>{const button=[...root.querySelectorAll('.service-tools button')].find(b=>b.dataset.service===name);if(!button)return false;button.click();return true;}
  });
  ({content,notice,tree,select,mode}=shell);const addBook=shell.addBook;
  if(account&&nutstore&&marketplace){mountServicePanels(root,{account,nutstore,marketplace,cloud,documents,currentNotebook:()=>notebookId,canTransfer:()=>!editing,refreshWorkspace:async()=>{notebooks=await documents.list();if(notebookId)current=await documents.load(notebookId);fillNotebooks();fillTree();renderDocument();}});root.querySelector('.service-tools').hidden=true;}
  const showError=error=>notify(error.message||'操作失败，输入保留。');
  async function safe(fn){try{await fn();return true;}catch(error){showError(error);return false;}}
- function fillNotebooks(){select.replaceChildren();if(!notebooks.length)select.append(element('option','尚无笔记本',{value:''}));for(const n of notebooks)select.append(element('option',n.title,{value:n.id}));select.append(element('option','＋ 新建笔记本',{value:'__create__'}));select.value=notebookId;}
+ function fillNotebooks(){select.replaceChildren();if(!notebooks.length)select.append(element('option','尚无笔记本',{value:''}));for(const n of notebooks)select.append(element('option',n.title,{value:n.id}));select.value=notebookId;shell.renderBooks();}
+ async function refreshBooks(){notebooks=await documents.list();if(!notebooks.some(n=>n.id===notebookId)){notebookId=notebooks[0]?.id||'';documentId='';}current=notebookId?await documents.load(notebookId):null;fillNotebooks();fillTree();renderDocument();}
+ async function manageNotebook(id,kind){if(editing||uploading){notify('请先保存当前编辑');return;}await safe(async()=>{const snapshot=await documents.load(id),d=element('dialog'),form=element('form'),input=element('input',undefined,{'aria-label':'笔记本名称',required:'',maxlength:'200'}),accept=element('button',kind==='rename'?'保存':'确认删除',{type:'submit'}),error=element('p','',{role:'status'});input.value=snapshot.state.notebook.title;form.append(element('h2',kind==='rename'?'重命名笔记本':'删除笔记本'));if(kind==='rename')form.append(input);else form.append(element('p',snapshot.state.notebook.title,{'data-user-content':''}),element('p','删除后保留完整正文、附件和历史，可在回收站恢复。此操作仅影响本机，不会静默删除云端。'));const cancel=element('button','取消',{type:'button'});cancel.onclick=()=>closeDialog(d);form.append(error,accept,cancel);form.onsubmit=async event=>{event.preventDefault();accept.disabled=true;try{await documents[kind==='rename'?'renameNotebook':'trashNotebook'](id,{title:input.value,confirmed:true,expectedRevision:snapshot.revision,operationId:uid(kind)});closeDialog(d);await refreshBooks();notify(kind==='rename'?'已重命名笔记本':'已移入回收站，资料与历史保留。');}catch(e){error.textContent=e.message;}finally{accept.disabled=false;}};d.onclose=()=>d.remove();d.append(form);root.append(d);d.showModal();});}
+ async function recycleNotebooks(){await safe(async()=>{const d=element('dialog'),close=element('button','关闭'),list=element('section');close.onclick=()=>closeDialog(d);d.append(element('h2','已删除笔记本'),close,list);d.onclose=()=>d.remove();root.append(d);d.showModal();const rows=(await documents.list({includeDeleted:true})).filter(n=>n.deleted);if(!rows.length)list.append(element('p','暂无'));for(const n of rows){const row=element('section',undefined,{class:'service-row'}),restore=element('button','恢复笔记本');row.append(element('strong',n.title,{'data-user-content':''}),restore);restore.onclick=()=>safe(async()=>{await documents.restoreNotebook(n.id,{expectedRevision:n.revision,operationId:uid('restore-book')});row.remove();await refreshBooks();notify('已恢复笔记本');});list.append(row);}});}
  function fillTree(){
   tree.replaceChildren();const branch={folders:new Map(),files:[]};
   const folders=current?.state.coreFolders||[];
@@ -120,7 +130,7 @@ export async function mountFoundation(root,{documents,account,nutstore,marketpla
   const doc=current?.state.documents[documentId];if(!doc)return;if(editing||doc.locked||doc.coreLocked||doc.readOnly){showError(Error('请先保存并解除锁定，才能移入回收站。'));return;}
   const d=element('dialog'),cancel=element('button','取消'),accept=element('button','移入回收站');d.append(element('h3','移入回收站？'),element('p','正文、附件引用和历史版本会保留，不会彻底删除。'),cancel,accept);cancel.onclick=()=>closeDialog(d);accept.onclick=()=>safe(async()=>{accept.disabled=true;try{current=await documents.trashDocument(notebookId,{documentId,confirmed:true,expectedRevision:current.revision,operationId:uid('trash')});closeDialog(d);onDone?.();documentId='';fillTree();renderDocument();notify('已移入回收站，资料与历史保留。');}finally{accept.disabled=false;}});root.append(d);d.showModal();
  }
- addBook.onclick=()=>newItem('notebook');select.onchange=()=>safe(async()=>{if(editing){select.value=notebookId;notify('请先保存当前编辑。');return;}if(select.value==='__create__'){select.value=notebookId;newItem('notebook');return;}notebookId=select.value;current=await documents.load(notebookId);documentId=visibleDocuments()[0]?.id||'';fillTree();renderDocument();});
+ addBook.onclick=()=>newItem('notebook');select.onchange=()=>safe(async()=>{if(editing){select.value=notebookId;shell.renderBooks();notify('请先保存当前编辑。');return;}notebookId=select.value;current=await documents.load(notebookId);documentId=visibleDocuments()[0]?.id||'';shell.renderBooks();fillTree();renderDocument();});
  documentId=visibleDocuments()[0]?.id||'';fillNotebooks();fillTree();renderDocument();
  return {flush:()=>pending};
 }

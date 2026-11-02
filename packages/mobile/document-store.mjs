@@ -36,6 +36,7 @@ export function createMobileDocumentStore({storage}={}){
  };
  async function mutate(key,request,kind,action){return serial(id(key),async()=>{
   id(request.operationId);const current=await load(key);if(!current.state)throw fail('笔记本不存在');
+  if(current.state.notebook.deleted&&kind!=='restore-notebook')throw fail('笔记本已在回收站，请先恢复');
   const {expectedRevision,operationId,...payload}=request,requestHash=hash({kind,...payload});
   const prior=current.state.coreTextOperations?.[operationId];
   if(prior){if(prior.requestHash!==requestHash)throw fail('操作身份已用于其他内容','OPERATION_CONFLICT');return {...current,replayed:true,historyReceipt:prior.historyReceipt};}
@@ -46,7 +47,14 @@ export function createMobileDocumentStore({storage}={}){
  });}
  return {
   load,
-  async list(){const keys=await storage.list(),notebooks=[];for(const key of keys){const row=await load(key);if(row.state)notebooks.push({...row.state.notebook,revision:row.revision});}return notebooks;},
+  async list({includeDeleted=false}={}){const keys=await storage.list(),notebooks=[];for(const key of keys){const row=await load(key);if(row.state&&(includeDeleted||!row.state.notebook.deleted))notebooks.push({...row.state.notebook,revision:row.revision});}return notebooks;},
+  renameNotebook:(key,request)=>mutate(key,request,'rename-notebook',state=>{state.notebook.title=title(request.title);}),
+  trashNotebook:(key,request)=>mutate(key,request,'trash-notebook',state=>{
+   if(request.confirmed!==true)throw fail('删除笔记本需要确认','CONFIRMATION_REQUIRED');
+   if(Object.keys(state.mobileDrafts||{}).length||Object.values(state.documents).some(d=>!d.deleted&&(d.locked||d.coreLocked||d.readOnly)))throw fail('请先保存草稿并解除文档锁定，再删除笔记本');
+   state.notebook.deleted=true;state.notebook.deletedAt=new Date().toISOString();
+  }),
+  restoreNotebook:(key,request)=>mutate(key,request,'restore-notebook',state=>{delete state.notebook.deleted;delete state.notebook.deletedAt;}),
   createNotebook:({id:key,title:name})=>serial(id(key),async()=>{
    const current=await load(key);if(current.state)throw fail('笔记本已存在','WORKSPACE_STATE_CONFLICT');
    current.state={schemaVersion:1,notebook:{id:key,title:title(name)},documents:{},histories:{},coreFolders:[],coreTextOperations:{},coreRestoreLog:[],mobileDrafts:{}};
