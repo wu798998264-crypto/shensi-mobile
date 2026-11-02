@@ -5,11 +5,12 @@ import {createNativeShell} from './native-shell.js';
 import {mountWhiteboardAlbum} from './whiteboard-album.js';
 import {mountInterfaceLanguage} from './interface-language.js';
 import {createCustomApiPanels} from './custom-api-panel.js';
+import {hydrateDocumentMedia} from './document-media.js';
 const element=(tag,text,attrs={})=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;for(const [key,value] of Object.entries(attrs))e.setAttribute(key,value);return e;};
 const uid=prefix=>prefix+'-'+crypto.randomUUID();
 const closeDialog=dialog=>{dialog.close();dialog.remove();};
 export async function mountFoundation(root,{documents,account,nutstore,marketplace,cloud,media,metadata,customApi,systemAppearance,hostLabel='ANDROID · 0.0.9 测试版'}={}){
- root.interfaceLanguage?.destroy();const language=await mountInterfaceLanguage(root,metadata);root.interfaceLanguage=language;let appearance=await metadata?.get('mobile-appearance')||'跟随系统';
+ root.stopAutoSync?.();root.interfaceLanguage?.destroy();const language=await mountInterfaceLanguage(root,metadata);root.interfaceLanguage=language;let appearance=await metadata?.get('mobile-appearance')||'跟随系统';
  let notebooks=await documents.list(),notebookId=notebooks[0]?.id||'',current=notebookId?await documents.load(notebookId):null,documentId='',editing=false,pending=Promise.resolve(),failedDraft=false;
  let textarea,notice,tree,content,select,mode,noticeTimer,uploading=false;let draftRevision=0,favoritesOnly=false;const expandedFolders=new Set();
  const visibleDocuments=()=>Object.entries(current?.state.documents||{}).map(([id,doc])=>({...doc,id})).filter(d=>!d.deleted);
@@ -42,7 +43,8 @@ export async function mountFoundation(root,{documents,account,nutstore,marketpla
   service:name=>{const button=[...root.querySelectorAll('.service-tools button')].find(b=>b.dataset.service===name);if(!button)return false;button.click();return true;}
  });
  ({content,notice,tree,select,mode}=shell);const addBook=shell.addBook;
- if(account&&nutstore&&marketplace){mountServicePanels(root,{account,nutstore,marketplace,cloud,documents,currentNotebook:()=>notebookId,canTransfer:()=>!editing,refreshWorkspace:async()=>{notebooks=await documents.list();if(notebookId)current=await documents.load(notebookId);fillNotebooks();fillTree();renderDocument();}});root.querySelector('.service-tools').hidden=true;}
+ const canTransfer=()=>!editing&&!uploading&&!failedDraft&&!root.querySelector('.mobile-album-fullscreen[open]');
+ if(account&&nutstore&&marketplace){mountServicePanels(root,{account,nutstore,marketplace,cloud,documents,currentNotebook:()=>notebookId,canTransfer,refreshWorkspace:async()=>{if(!canTransfer())return;const book=notebookId,revision=current?.revision,nextBooks=await documents.list(),next=book?await documents.load(book):null;if(!canTransfer()||book!==notebookId||revision!==current?.revision)return;notebooks=nextBooks;current=next;fillNotebooks();fillTree();renderDocument();}});root.querySelector('.service-tools').hidden=true;}
  const showError=error=>notify(error.message||'操作失败，输入保留。');
  async function safe(fn){try{await fn();return true;}catch(error){showError(error);return false;}}
  function fillNotebooks(){select.replaceChildren();if(!notebooks.length)select.append(element('option','尚无笔记本',{value:''}));for(const n of notebooks)select.append(element('option',n.title,{value:n.id}));select.value=notebookId;shell.renderBooks();}
@@ -80,16 +82,16 @@ export async function mountFoundation(root,{documents,account,nutstore,marketpla
     try{const result=await media.upload({notebookId:book,documentId:target,documents,expectedRevision:revision,onProgress:notify});if(book===notebookId){current=await documents.load(book);fillTree();if(target===documentId)renderDocument();}notify(result?.cancelled?'已取消选择':`已导入 ${result?.count||0} 个素材，已保存到本机并保留历史。`);}
     finally{uploading=false;if(current?.state.documents[documentId]?.canvas)mode.disabled=false;}
    });
-   mountWhiteboardAlbum(content,{document:doc,readOnly:locked,resolveMedia:media?.resolve,saveText:async(nodeId,text)=>{current=await documents.saveWhiteboardText(notebookId,{documentId,nodeId,text,expectedRevision:current.revision,operationId:uid('card-save')});notify('已保存文本卡片及历史版本。');},onError:showError});return;
+   mountWhiteboardAlbum(content,{document:doc,readOnly:locked,resolveMedia:media?.resolve?node=>media.resolve(node,current.state):undefined,saveText:async(nodeId,text)=>{current=await documents.saveWhiteboardText(notebookId,{documentId,nodeId,text,expectedRevision:current.revision,operationId:uid('card-save')});notify('已保存文本卡片及历史版本。');},onError:showError});return;
   }
   const draft=current.state.mobileDrafts?.[documentId];draftRevision=draft?.draftRevision||0;
   if(editing){
    const tools=element('nav',undefined,{class:'editor-tools','aria-label':'文本编辑工具栏'});
    for(const [command,label] of mobileEditorTools){const button=element('button','',{type:'button','aria-label':label,title:label});button.innerHTML=editorIcon(command);button.onpointerdown=e=>e.preventDefault();button.onclick=()=>editRichText(textarea,command);tools.append(button);}
    content.insertBefore(tools,content.querySelector('h1'));
-   textarea=element('article',undefined,{'aria-label':'文档正文',contenteditable:'true',spellcheck:'false'});textarea.innerHTML=renderMarkdown(draft?.markdown??doc.markdown);content.append(textarea);bindRichText(textarea,saveDraft);
+   textarea=element('article',undefined,{'aria-label':'文档正文',contenteditable:'true',spellcheck:'false'});textarea.innerHTML=renderMarkdown(draft?.markdown??doc.markdown);content.append(textarea);hydrateDocumentMedia(textarea,current.state,media);bindRichText(textarea,saveDraft);
   }
-  else {const article=element('article');article.innerHTML=renderMarkdown(doc.markdown);content.append(article);if(draft&&!locked){const recover=element('button','恢复未保存草稿',{'data-action':'recover'});recover.onclick=()=>{editing=true;failedDraft=false;renderDocument();};content.append(recover);}}
+  else {const article=element('article');article.innerHTML=renderMarkdown(doc.markdown);content.append(article);hydrateDocumentMedia(article,current.state,media);if(draft&&!locked){const recover=element('button','恢复未保存草稿',{'data-action':'recover'});recover.onclick=()=>{editing=true;failedDraft=false;renderDocument();};content.append(recover);}}
   content.append(element('small',editing?'编辑模式 · 保存在本机':'阅读模式 · 保存在本机',{class:'native-document-status'}));
   mode.onclick=()=>safe(async()=>{
    if(locked)throw Error('文档已锁定，请先在文档详情中解除锁定。');
@@ -114,8 +116,8 @@ export async function mountFoundation(root,{documents,account,nutstore,marketpla
  }
  function showVersion(version){
   const dialog=element('dialog',undefined,{class:'native-history'}),article=element('article');article.innerHTML=renderMarkdown(version.document.markdown);
-  if(version.document.canvas){article.replaceChildren();mountWhiteboardAlbum(article,{document:version.document,readOnly:true,resolveMedia:media?.resolve,onError:showError});}
-  dialog.append(element('h2','历史内容'),shell.button('关闭历史','close',()=>closeDialog(dialog),{'data-action':'close-history'}),article);
+  if(version.document.canvas){article.replaceChildren();const state=current.state;mountWhiteboardAlbum(article,{document:version.document,readOnly:true,resolveMedia:media?.resolve?node=>media.resolve(node,state):undefined,onError:showError});}
+  dialog.append(element('h2','历史内容'),shell.button('关闭历史','close',()=>closeDialog(dialog),{'data-action':'close-history'}),article);hydrateDocumentMedia(article,current.state,media);
   const restore=element('button','设为当前（先保留当前版）',{'data-action':'restore-version'});restore.onclick=()=>safe(async()=>{current=await documents.restoreVersion(notebookId,{documentId,versionId:version.id,expectedRevision:current.revision,operationId:uid('restore')});closeDialog(dialog);renderDocument();notify('已恢复；恢复前全文仍保留在恢复记录中。');});
   const remove=shell.button('删除此版本','trash',()=>{const confirm=element('dialog'),cancel=element('button','取消'),accept=element('button','确认删除');confirm.append(element('h3','删除此历史版本？'),element('p','只删除此历史记录，当前正文不变。此操作不可撤销。'),cancel,accept);cancel.onclick=()=>closeDialog(confirm);accept.onclick=()=>safe(async()=>{accept.disabled=true;try{current=await documents.deleteVersion(notebookId,{documentId,versionId:version.id,confirmed:true,expectedRevision:current.revision,operationId:uid('delete-version')});closeDialog(confirm);closeDialog(dialog);showHistory();}finally{accept.disabled=false;}});confirm.addEventListener('close',()=>confirm.remove());root.append(confirm);confirm.showModal();},{class:'delete-version'});
   const actions=element('div',undefined,{class:'version-actions m8-version-actions'});actions.append(restore,remove);dialog.append(actions);dialog.addEventListener('close',()=>dialog.remove());root.append(dialog);dialog.showModal();

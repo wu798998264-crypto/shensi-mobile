@@ -1,5 +1,6 @@
 import {importFileInfo,validateMediaReceipt,MEDIA_CHUNK_BYTES,MAX_IMPORT_FILES} from '../../../packages/mobile/media-contract.mjs';
 import {createMediaTransfer,encodeMediaChunk as encode} from '../../../packages/mobile/media-transfer.mjs';
+import {notebookNodeMedia} from '../../../packages/core/src/notebook-media-paths.mjs';
 
 export function pickWhiteboardFiles(){
  return new Promise((resolve,reject)=>{
@@ -11,7 +12,7 @@ export function createMobileMediaImporter({transport,pickFiles=pickWhiteboardFil
  let busy=false;
  return {
   ...createMediaTransfer(transport),
-  resolve:async node=>{const receipt=validateMediaReceipt(node.localMedia),found=await transport.resolve({id:receipt.id});return convertUrl(found.url);},
+  resolve:async(node,state)=>{const receipt=notebookNodeMedia(node,state),found=await transport.resolve({id:receipt.id});return convertUrl(found.url);},
   async upload({notebookId,documentId,documents,expectedRevision,onProgress=()=>{}}){
    if(busy)throw Error('正在导入素材，请勿重复点击');busy=true;let pendingId;
    try{

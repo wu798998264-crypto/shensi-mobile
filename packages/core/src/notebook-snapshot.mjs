@@ -1,25 +1,24 @@
 import {assertVersion} from './history.mjs';
 import {stableVersionJson} from '../legacy/version-integrity.js';
-import {validateMediaReceipt,desktopMediaPath} from '../../mobile/media-contract.mjs';
+import {validateMediaReceipt} from '../../mobile/media-contract.mjs';
+import {notebookMediaReferences,validateNotebookMediaPaths,documentMediaPaths} from './notebook-media-paths.mjs';
 
 export const CLOUD_NOTEBOOK_LIMIT=8*1024*1024;
 const validId=s=>typeof s==='string'&&/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(s)&&!['__proto__','constructor','prototype'].includes(s);
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const hasMedia=doc=>doc?.canvas||doc?.coreMediaArtifacts?.length||/<(?:img|audio|video|source|iframe|object)\b|data-attachment-path\s*=/i.test(String(doc?.html||'')+String(doc?.coreRichText?.html||''))||/!\[\[|!\[[^\]]*\]\(|\]\((?:\.\/)?(?:attachments|assets|\.shensi)\//i.test(String(doc?.markdown||''));
-// v2 preserves complete canvas/history bytes; it never rewrites an historical
-// attachment reference. Only immutable localMedia receipts are portable yet.
+// v2 preserves complete canvas/history bytes. Desktop paths use a sidecar
+// receipt map, never a rewritten historical card or a new history checksum.
 export function notebookMedia(state){
  const media=new Map();
  const inspect=doc=>{
-  if(!doc||hasMedia({...doc,canvas:undefined}))throw Error('文档含未接通的附件引用，不能只同步索引');
+  if(!doc)throw Error('文档附件结构不完整');documentMediaPaths(doc);
   if(!doc.canvas)return;
-  if(Object.keys(doc.canvas).some(key=>!['nodes','edges','viewport','settings','assets'].includes(key))||doc.canvas.assets?.length)throw Error('白板包含未映射的历史素材或引用，不能只同步当前卡片');
+  if(doc.canvas.assets!==undefined&&!Array.isArray(doc.canvas.assets))throw Error('白板历史素材结构无效');
   if(!Array.isArray(doc.canvas.nodes)||!Array.isArray(doc.canvas.edges))throw Error('白板结构不完整');
   const ids=new Set();for(const node of doc.canvas.nodes){
-   if(!record(node)||!validId(node.id)||ids.has(node.id)||!['text','group','file'].includes(node.type))throw Error('此白板含尚未接通的卡片类型，原卡片保留');ids.add(node.id);
-   if(Object.keys(node).some(key=>!['id','type','kind','name','text','label','color','x','y','width','height','localMedia','mimeType','size','file'].includes(key)))throw Error('白板包含尚未映射的卡片字段，未遗漏引用或改写原数据');
-   if(node.file&&(!node.localMedia||node.file!==desktopMediaPath(node.localMedia))||node.url||node.assetPath||node.contentRef||node.references?.length||node.assets?.length)throw Error('白板含未接通的素材路径，不能遗漏原文件');
-   if(node.type==='file'){const receipt=validateMediaReceipt(node.localMedia),previous=media.get(receipt.id);if(previous&&JSON.stringify(previous)!==JSON.stringify(receipt))throw Error('同一附件身份指向不同内容，未修改历史');media.set(receipt.id,receipt);}
+   if(!record(node)||!validId(node.id)||ids.has(node.id)||!['text','group','file','image','audio','video'].includes(node.type))throw Error('此白板含尚未接通的卡片类型，原卡片保留');ids.add(node.id);
+   if(node.type==='file'||['image','audio','video'].includes(node.type)){if(!node.file&&!node.localMedia)throw Error('白板媒体卡片缺少素材路径');if(node.localMedia){const receipt=validateMediaReceipt(node.localMedia),previous=media.get(receipt.id);if(previous&&JSON.stringify(previous)!==JSON.stringify(receipt))throw Error('同一附件身份指向不同内容，未修改历史');media.set(receipt.id,receipt);}}
    else if(node.localMedia)throw Error('白板附件归属无效');
   }
   for(const edge of doc.canvas.edges)if(!record(edge)||!ids.has(edge.fromNode)||!ids.has(edge.toNode))throw Error('白板连线引用不完整');
@@ -28,12 +27,17 @@ export function notebookMedia(state){
  for(const doc of Object.values(state.documents||{}))inspect(doc);
  for(const versions of Object.values(state.histories||{}))for(const version of versions){assertVersion(version);inspect(version.document);}
  for(const item of state.coreRestoreLog||[])inspect(item.document);
+ const mappings=validateNotebookMediaPaths(state.coreSyncMediaPaths),references=notebookMediaReferences(state);
+ if(Object.keys(mappings).some(path=>!references.paths.includes(path)))throw Error('白板媒体清单包含无归属路径');
+ for(const receipt of [...references.receipts,...references.paths.map(path=>{if(!Object.hasOwn(mappings,path))throw Error('白板历史素材路径尚未映射，不能遗漏原文件');return mappings[path];})]){const prior=media.get(receipt.id);if(prior&&JSON.stringify(prior)!==JSON.stringify(receipt))throw Error('同一附件身份指向不同内容，未修改历史');media.set(receipt.id,validateMediaReceipt(receipt));}
  return [...media.values()].sort((a,b)=>a.id.localeCompare(b.id));
 }
 export function validateCloudNotebook(value){
  const withMedia=value?.format==='shensi-notebook-snapshot-v2';
  if(!withMedia&&value?.format!=='shensi-notebook-snapshot-v1'||!record(value.state)||value.state.schemaVersion!==1||!validId(value.state.notebook?.id)||typeof value.state.notebook.title!=='string'||!value.state.notebook.title.trim()||value.state.notebook.title.length>200)throw Error('不是兼容的神思笔记本快照');
  const state=value.state;if(!record(state.documents)||!record(state.histories))throw Error('笔记本结构不完整');
+ validateNotebookMediaPaths(state.coreSyncMediaPaths);
+ if(!withMedia&&Object.keys(state.coreSyncMediaPaths||{}).length)throw Error('白板媒体映射需要完整附件协议');
  for(const [id,doc]of Object.entries(state.documents)){
   if(doc?.deleted!==undefined&&typeof doc.deleted!=='boolean')throw Error('文档删除状态无效');
   if(!validId(id)||!record(doc)||doc.id!==undefined&&doc.id!==id||typeof doc.title!=='string'||doc.title.length>200||typeof doc.markdown!=='string'||doc.markdown.length>2000000||doc.canvas&&!withMedia)throw Error('此快照入口只恢复普通文档；白板附件同步未完成前不会强制转换');
@@ -81,10 +85,12 @@ export function portableNotebookState(id,state,{allowMedia=false}={}){
  portable.coreDocumentTimes=structuredClone(state.coreDocumentTimes||{});portable.coreSyncDraftHistory=structuredClone(state.coreSyncDraftHistory||[]);
  portable.coreSyncResolutions=structuredClone(state.coreSyncResolutions||{});
  portable.coreSyncRetainedAt=structuredClone(state.coreSyncRetainedAt||{});
+ if(Object.keys(state.coreSyncMediaPaths||{}).length){const paths=new Set(notebookMediaReferences(portable).paths);portable.coreSyncMediaPaths=Object.fromEntries(Object.entries(state.coreSyncMediaPaths).filter(([path])=>paths.has(path)).map(([path,receipt])=>[path,structuredClone(receipt)]));}
  validateCloudNotebook({format:allowMedia?'shensi-notebook-snapshot-v2':'shensi-notebook-snapshot-v1',state:portable,...allowMedia?{media:notebookMedia(portable)}:{}});return portable;
 }
 export function portableNotebookSnapshot(id,state,{allowMedia=false}={}){
- const withMedia=allowMedia&&[...Object.values(state.documents||{}),...Object.values(state.histories||{}).flat().map(v=>v.document),...(state.coreRestoreLog||[]).map(v=>v.document)].some(hasMedia);
+ const removed=(state.trash||[]).flatMap(t=>[...Object.values(t.documents||{[t.id]:t.document}),...Object.values(t.histories||{}).flat().map(v=>v.document)]);
+ const withMedia=allowMedia&&[...Object.values(state.documents||{}),...Object.values(state.histories||{}).flat().map(v=>v.document),...(state.coreRestoreLog||[]).map(v=>v.document),...removed].some(hasMedia);
  const portable=portableNotebookState(id,state,{allowMedia:withMedia});
  return {format:withMedia?'shensi-notebook-snapshot-v2':'shensi-notebook-snapshot-v1',state:portable,...withMedia?{media:notebookMedia(portable)}:{}};
 }

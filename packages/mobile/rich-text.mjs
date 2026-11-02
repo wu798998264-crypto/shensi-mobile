@@ -6,6 +6,12 @@ function inline(source){
  const tokens=[],hold=html=>'\u0000'+(tokens.push(html)-1)+'\u0000';
  let text=String(source).replace(/\u0000/g,'').replace(/\\([\\`*_[\]~<>])/g,(_,c)=>hold(escapeText(c)));
  text=text.replace(/`([^`\n]+)`/g,(_,c)=>hold('<code>'+escapeText(c)+'</code>'));
+ text=text.replace(/!\[\[([^\]\n]+)\]\]|!\[([^\]\n]*)\]\(([^)\n]+)\)/g,(source,wiki,label,path)=>{
+  const file=wiki||path,ext=file.split('.').pop().toLowerCase(),tag=['png','jpg','jpeg','webp','gif'].includes(ext)?'img':['mp4','mov','webm'].includes(ext)?'video':['mp3','wav','m4a','ogg'].includes(ext)?'audio':'';
+  const managed=/^(?:附件|08_资料库\/附件)\//.test(file)&&!/[\\:<>"|?*\x00-\x1f]/.test(file)&&file.split('/').every(p=>p&&p!=='.'&&p!=='..');
+  const body=tag&&managed?'<'+tag+' data-attachment-path="'+escapeText(file)+'" '+(tag==='img'?'alt="'+escapeText(label||file)+'"':'controls preload="metadata"')+'>'+(tag==='img'?'':'</'+tag+'>'):escapeText(label||file);
+  return hold('<span data-mobile-media="'+escapeText(file)+'" data-media-source="'+escapeText(source)+'" contenteditable="false">'+body+'</span>');
+ });
  text=text.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g,(_,label,url)=>hold(safeLink(url)?'<a href="'+escapeText(safeLink(url))+'" rel="noopener noreferrer">'+escapeText(label)+'</a>':escapeText(label+' ('+url+')')));
  text=escapeText(text).replace(/\*\*\*([^*\n]+)\*\*\*/g,'<strong><em>$1</em></strong>').replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*\n]+)\*/g,'<em>$1</em>').replace(/~~([^~\n]+)~~/g,'<s>$1</s>');
  return text.replace(/\u0000(\d+)\u0000/g,(_,i)=>tokens[Number(i)]);
@@ -29,6 +35,7 @@ export function editorMarkdown(editor){
  const walk=node=>{
   if(node.nodeType===3)return node.nodeValue.replace(/[\\`*_[\]~]/g,'\\$&');
   if(node.nodeType!==1)return '';
+  if(node.hasAttribute('data-mobile-media'))return node.getAttribute('data-media-source')||'';
   const tag=node.tagName.toLowerCase();if(['script','style','iframe','object','img'].includes(tag))return '';
   const children=()=>[...node.childNodes].map(walk).join(''),wrap=marker=>{const t=children();return t.trim()?t.replace(/^(\s*)([\s\S]*?)(\s*)$/,(_,a,b,c)=>a+marker+b+marker+c):t;};
   if(tag==='br')return '\n';if(tag==='strong'||tag==='b')return wrap('**');if(tag==='em'||tag==='i')return wrap('*');if(tag==='s'||tag==='strike'||tag==='del')return wrap('~~');

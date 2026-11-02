@@ -40,6 +40,9 @@ export function mergeNotebookSnapshots(local,remotes,{resolution='keep_both'}={}
  const snapshots=[local,...remotes],states=snapshots.map(s=>validateCloudNotebook(s)),id=states[0].notebook.id;
  if(states.some(s=>s.notebook.id!==id))throw Error('笔记本身份不一致，未合并');
  const result=clone(states[0]);result.coreDocumentTimes??={};result.histories??={};result.coreSyncDraftHistory??=[];result.coreSyncRetainedAt??={};
+ // Immutable desktop paths cannot silently switch bytes: an ambiguous path
+ // must be fixed at its source, not by rewriting either historical snapshot.
+ for(const state of states)for(const [path,receipt]of Object.entries(state.coreSyncMediaPaths||{})){const previous=result.coreSyncMediaPaths?.[path];if(previous&&stableVersionJson(previous)!==stableVersionJson(receipt))throw Object.assign(Error('两端同一附件路径内容不同，双方原文件和历史已保留，未覆盖'),{code:'SYNC_MEDIA_PATH_CONFLICT'});(result.coreSyncMediaPaths??={})[path]=clone(receipt);}
  const newest=choices=>{
   if(choices.length===1)return choices[0];
   if(choices.every(c=>contentSignature(c.doc)===contentSignature(choices[0].doc)))return choices[0];

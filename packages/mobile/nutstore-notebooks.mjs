@@ -52,6 +52,13 @@ export function createNutstoreNotebookTransfer({repository,notebooks,metadata,sc
  }
  const api={
   async list(){const items=await repository.inventory();return {items:items.filter(e=>e.logicalPath.startsWith('notebooks/')).flatMap(e=>e.conflicted?e.branches.filter(v=>!v.deleted).map(v=>({...v,conflicted:true,branch:true})):e.deleted?[]:[e])};},
+  async sync(id,onProgress){
+   validId(id);if((await metadata.get(pendingKey)||[]).includes(id))return {pending:true};
+   const remote=(await repository.inventory()).find(e=>e.logicalPath===path(id)),base=await metadata.get(key(id));
+   if(remote?.deleted||remote?.conflicted){await pending(id,true);throw changed();}
+   if(remote&&remote.etag!==base?.etag)await api.download(remote,onProgress);
+   return api.upload(id,onProgress);
+  },
   async upload(id,onProgress){
    validId(id);
    const snapshot=await notebooks.export(id);validateCloudNotebook(snapshot);const bytes=encoder.encode(JSON.stringify(snapshot)),hash=await syncDigest(bytes),base=await metadata.get(key(id)),remote=(await repository.inventory()).find(e=>e.logicalPath===path(id));

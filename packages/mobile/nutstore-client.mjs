@@ -1,8 +1,9 @@
 import {createMobileNutstoreJournal} from './nutstore-journal.mjs';
 import {createMobileNotebookTransfer,createNutstoreNotebookTransfer} from './nutstore-notebooks.mjs';
 import {nutstoreRetryAfter,createNutstoreRequestGate} from '../core/src/nutstore-request-gate.mjs';
+import {createNotebookAutoSync} from './notebook-auto-sync.mjs';
 const KEY='shensi.mobile.nutstore.v1',BASE='https://dav.jianguoyun.com/dav/';
-export function createMobileNutstoreClient({secureVault,fetchImpl=fetch,documents,storage,metadata,notebooks,media,requestGateOptions}={}){
+export function createMobileNutstoreClient({secureVault,fetchImpl=fetch,documents,storage,metadata,notebooks,media,requestGateOptions,listLocal=()=>documents.list()}={}){
  // Native Android/preview transports are custom fetch adapters too. They must
  // share the same persistent account budget as connection probes and sync.
  const gates=new Map();
@@ -12,10 +13,10 @@ export function createMobileNutstoreClient({secureVault,fetchImpl=fetch,document
  const emit=patch=>{operation={...operation,...patch};for(const listener of listeners)try{listener(structuredClone(operation));}catch{}};
  const cooldownKey=account=>'nutstore-cooldown:'+account;
  const cooled=async account=>{const until=Number(await metadata?.get(cooldownKey(account)))||0;if(until>Date.now())throw Object.assign(Error('坚果云暂时繁忙，请在 '+new Date(until).toLocaleTimeString()+' 后重试；没有重复发送'),{code:'RETRY_WAIT',retryAfterMs:until-Date.now()});};
- const transfer=async(fn,kind)=>{if(!ready)throw Error('本机笔记本同步存储尚未加载，请更新应用');if(active)throw Error('正在传输，请等待当前操作完成');active=true;let identityAccount;if(kind){operation=null;emit({kind,status:'running',startedAt:new Date().toISOString()});}try{
+ const transfer=async(fn,kind,assertSafe=async()=>{})=>{if(!ready)throw Error('本机笔记本同步存储尚未加载，请更新应用');if(active)throw Error('正在传输，请等待当前操作完成');active=true;let identityAccount;if(kind){operation=null;emit({kind,status:'running',startedAt:new Date().toISOString()});}try{
   const c=await config();if(!c)throw Error('请先连接坚果云');
   identityAccount=c.account;await cooled(identityAccount);
-  const assertIdentity=async()=>{const current=await config();if(current?.account!==c.account||current?.password!==c.password)throw Error('坚果云账号已变化，已停止传输；原资料保留');};
+  const assertIdentity=async()=>{await assertSafe();const current=await config();if(current?.account!==c.account||current?.password!==c.password)throw Error('坚果云账号已变化，已停止传输；原资料保留');};
   const identity='mobile-nutstore-device',deviceId=await metadata.get(identity)||crypto.randomUUID();await metadata.set(identity,deviceId);
   const scope=c.account+':神思双端笔记快照',scanKey='nutstore-journal-index:'+scope;
   const repository=createMobileNutstoreJournal({...c,remoteRoot:'神思双端笔记快照',deviceId,checkpoint:{load:()=>metadata.get(scanKey),save:value=>metadata.set(scanKey,value)},fetchImpl:async(url,options)=>{await assertIdentity();return requestFor(c.account)(url,{...options,assertBeforeDispatch:assertIdentity});}}),target=notebooks||createMobileNotebookTransfer({documents,storage,media});
@@ -33,12 +34,14 @@ export function createMobileNutstoreClient({secureVault,fetchImpl=fetch,document
   if([429,503].includes(res.status)){const retryAfterMs=nutstoreRetryAfter(res.headers.get('retry-after'));await res.body?.cancel().catch(()=>{});await metadata?.set(cooldownKey(c.account),Date.now()+retryAfterMs);throw Object.assign(Error('坚果云暂时繁忙，请等待冷却后重试；登录配置仍保留'),{code:'RETRY_WAIT',retryAfterMs});}
   return res;
  }
- async function verify(c){const res=await request(c,'PROPFIND','', '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/></d:prop></d:propfind>',{'Depth':'0','Content-Type':'application/xml'});await res.body?.cancel().catch(()=>{});if(res.status!==207)throw Error('坚果云连接失败（HTTP '+res.status+'）');return {account:c.account,connected:true,checkedAt:new Date().toISOString(),automaticSyncAvailable:false};}
+ async function verify(c){const res=await request(c,'PROPFIND','', '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/></d:prop></d:propfind>',{'Depth':'0','Content-Type':'application/xml'});await res.body?.cancel().catch(()=>{});if(res.status!==207)throw Error('坚果云连接失败（HTTP '+res.status+'）');return {account:c.account,connected:true,checkedAt:new Date().toISOString(),automaticSyncAvailable:ready};}
  async function mutation(c,method,path,body,headers){const res=await request(c,method,path,body,headers);await res.body?.cancel().catch(()=>{});return res;}
+ const auto=createNotebookAutoSync({metadata,identity:async()=>{const c=await config();return ready&&c?'nutstore:'+c.account:null;},listLocal,syncNotebook:(id,guard)=>transfer(t=>t.sync(id),'auto',guard)});
  return {
+  autoStatus:auto.status,setAutomaticSync:auto.configure,autoTick:auto.tick,setAutoGuard:auto.setGuard,close:auto.close,
   subscribe(listener){listeners.add(listener);return ()=>listeners.delete(listener);},
   operation:()=>operation&&structuredClone(operation),
-  async status(){const c=await config();return {configured:!!c,account:c?.account||'',automaticSyncAvailable:false,notebookTransferAvailable:ready,remoteRoot:'神思双端笔记快照'};},
+  async status(){const c=await config();return {configured:!!c,account:c?.account||'',automaticSyncAvailable:ready,notebookTransferAvailable:ready,remoteRoot:'神思双端笔记快照'};},
   listNotebooks:()=>transfer(t=>t.list()),
   uploadNotebook:(id,onProgress)=>transfer(t=>t.upload(id,onProgress),'upload'),
   downloadNotebook:(entry,onProgress)=>transfer(t=>t.download(entry,onProgress),'download'),

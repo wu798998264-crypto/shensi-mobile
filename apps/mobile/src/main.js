@@ -14,7 +14,7 @@ import {createMobileMediaImporter} from './media-import.js';
 const root=document.querySelector('#app');
 try {
  const adapters=createNativeAdapters({platform:Capacitor.getPlatform(),storagePlugin:registerPlugin('ShensiStorage'),vaultPlugin:registerPlugin('ShensiSecureVault')});
- // Construct only. This entry never logs in or queries production automatically.
+ // No automatic login. Sync runs only after explicit device/account consent.
  const fetchImpl=nativeFetchAdapter(CapacitorHttp,registerPlugin('ShensiCloudTransport'));
  const account=createMobileAccountClient({secureVault:adapters.secureVault,fetchImpl});
  const nativeMeta=registerPlugin('ShensiMetadata'),metadata=createMobileMetadata({read:key=>nativeMeta.read({key}),compareAndSwap:(key,expectedRevision,value)=>nativeMeta.compareAndSwap({key,expectedRevision,value})}),documents=createMobileDocumentStore(adapters);
