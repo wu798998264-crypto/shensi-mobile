@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {createMobileDocumentStore} from '../packages/mobile/document-store.mjs';
 import {checkpoint,assertVersion,snapshotDocument} from '../packages/core/src/history.mjs';
+import {portableNotebookSnapshot,validateCloudNotebook} from '../packages/core/src/notebook-snapshot.mjs';
 const rows=new Map(),checks=[];
 const storage={
  async read(key){return structuredClone(rows.get(key)||{revision:0,value:null});},
@@ -46,9 +47,19 @@ current=await service.restoreVersion('notebook-test',{documentId:'note-test',ver
 assert.equal(current.state.histories['note-test'][0].document.markdown,'恢复前尚无历史的新正文');assert.equal(current.state.documents['note-test'].markdown,'原文');pass('恢复之前缺失历史的新正文也进入可查看历史，不只留隐藏恢复日志');
 let board=await service.createWhiteboard('notebook-test',{documentId:'board-test',title:'真实白板',expectedRevision:current.revision,operationId:'create-board'});
 assert.deepEqual(board.state.documents['board-test'].canvas.nodes,[]);
-let raw=rows.get('notebook-test'),boardState=JSON.parse(raw.value);boardState.documents['board-test'].canvas.nodes=[{id:'text-node',type:'text',text:'卡片原文',x:0,y:0,width:300,height:200}];raw.value=JSON.stringify(boardState);
+let raw=rows.get('notebook-test'),boardState=JSON.parse(raw.value);boardState.documents['board-test'].canvas.nodes=[{id:'text-node',type:'text',text:'卡片原文',x:0,y:0,width:300,height:200}];
+// Desktop-created boards legitimately omit markdown; preserve that shape on mobile.
+delete boardState.documents['board-test'].markdown;
+const incoming=portableNotebookSnapshot('notebook-test',boardState,{allowMedia:true});
+assert.equal(incoming.format,'shensi-notebook-snapshot-v2');
+raw.value=JSON.stringify(validateCloudNotebook(incoming));
+assert.equal((await service.load('notebook-test')).state.documents['board-test'].markdown,undefined);
 board=await service.saveWhiteboardText('notebook-test',{documentId:'board-test',nodeId:'text-node',text:'修改后的文本卡片',expectedRevision:board.revision,operationId:'edit-board-text'});
 assert.equal(board.state.histories['board-test'].length,2);board.state.histories['board-test'].forEach(assertVersion);
+const outgoing=portableNotebookSnapshot('notebook-test',board.state,{allowMedia:true});
+assert.equal(validateCloudNotebook(outgoing).documents['board-test'].markdown,undefined);
+assert.deepEqual(outgoing.state.histories['board-test'],board.state.histories['board-test']);
+pass('桌面无markdown白板在手机保存后再次导出，原结构与历史校验均保留');
 const boardVersion=board.state.histories['board-test'][1].id;
 board=await service.restoreVersion('notebook-test',{documentId:'board-test',versionId:boardVersion,expectedRevision:board.revision,operationId:'restore-board'});assert.equal(board.state.documents['board-test'].canvas.nodes[0].text,'卡片原文');
 await assert.rejects(service.deleteVersion('notebook-test',{documentId:'board-test',versionId:boardVersion,expectedRevision:board.revision,operationId:'delete-without-confirm'}),e=>e.code==='CONFIRMATION_REQUIRED');

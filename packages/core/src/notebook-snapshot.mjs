@@ -40,7 +40,8 @@ export function validateCloudNotebook(value){
  if(!withMedia&&Object.keys(state.coreSyncMediaPaths||{}).length)throw Error('白板媒体映射需要完整附件协议');
  for(const [id,doc]of Object.entries(state.documents)){
   if(doc?.deleted!==undefined&&typeof doc.deleted!=='boolean')throw Error('文档删除状态无效');
-  if(!validId(id)||!record(doc)||doc.id!==undefined&&doc.id!==id||typeof doc.title!=='string'||doc.title.length>200||typeof doc.markdown!=='string'||doc.markdown.length>2000000||doc.canvas&&!withMedia)throw Error('此快照入口只恢复普通文档；白板附件同步未完成前不会强制转换');
+  const canvasDocument=withMedia&&record(doc?.canvas),validMarkdown=typeof doc?.markdown==='string'?doc.markdown.length<=2000000:canvasDocument&&doc.markdown===undefined;
+  if(!validId(id)||!record(doc)||doc.id!==undefined&&doc.id!==id||typeof doc.title!=='string'||doc.title.length>200||!validMarkdown||doc.canvas&&!withMedia)throw Error('笔记本正文或白板快照结构无效；原资料未修改');
   if(!withMedia&&hasMedia(doc))throw Error('此笔记本含附件；附件协议接通前不会上传缺少文件的快照');
  }
  if(state.workspaceAssets?.length)throw Error('此笔记本含附件，不能只同步索引');
