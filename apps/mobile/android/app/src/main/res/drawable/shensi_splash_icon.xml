@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AndroidX/Android 12 masks a 288dp icon to a 192dp circle.
+     Keep the complete 128dp square inside that circle, including its corners.
+     The public logo and launcher resources remain unchanged. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="288dp" android:height="288dp">
+        <shape android:shape="rectangle">
+            <size android:width="288dp" android:height="288dp" />
+            <solid android:color="#00000000" />
+        </shape>
+    </item>
+    <item android:width="128dp" android:height="128dp" android:gravity="center">
+        <bitmap android:src="@drawable/shensi_logo" android:gravity="fill" android:filter="true" />
+    </item>
+</layer-list>

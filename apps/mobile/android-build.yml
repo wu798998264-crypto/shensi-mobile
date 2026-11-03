@@ -49,6 +49,7 @@ jobs:
           node scripts/test-mobile-document-flags.mjs
           node scripts/test-mobile-8951-icons.mjs
           node scripts/test-mobile-media-import.mjs
+          node scripts/test-mobile-splash-safe-area.mjs
       - name: Verify shared document contracts
         run: node scripts/test-mobile-document-store.mjs
       - name: Restore persistent test-only signing identity
@@ -71,6 +72,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk > apk-signature.txt
           grep -qi '470fc88db925ccb1b38ce4c8676d5f85b9bc9b05b808efdc349ca24454d6ea30' apk-signature.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk > apk-identity.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk res/drawable/shensi_splash_icon.xml > apk-splash.txt
       - name: Hash APK
         run: sha256sum apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk > apk-sha256.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -81,5 +83,6 @@ jobs:
             apk-sha256.txt
             apk-signature.txt
             apk-identity.txt
+            apk-splash.txt
             public-readiness.json
           retention-days: 14
