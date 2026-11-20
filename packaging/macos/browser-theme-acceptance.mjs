@@ -37,9 +37,11 @@ export async function verifyBrowserThemes({owner,run,wait,evidence,nativeTheme,a
     await wait(()=>run('matchMedia("(prefers-color-scheme: dark)").matches==='+String(theme==='system-dark')));
     await run('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
    }
-   await run("browserThemeAddress.focus();browserThemeAddress.value='https://example.com/unsaved';browserThemeAddress.setSelectionRange(8,15)");
-   await selectPreferences({...original,theme:theme.startsWith('system-')?'system':theme,customThemes});
-   await wait(()=>run('document.documentElement.dataset.theme==='+JSON.stringify(theme.replace(/^system-/,'') ) ));
+   const preferences={...original,theme:theme.startsWith('system-')?'system':theme,customThemes};
+   await selectPreferences(preferences);
+   // Exercise the live palette change after the settings dialog has returned focus.
+   await run(`browserThemePresentation({theme:${JSON.stringify(theme==='light'?'dark':'light')}});browserThemeAddress.focus();browserThemeAddress.value='https://example.com/unsaved';browserThemeAddress.setSelectionRange(8,15);browserThemePresentation(${JSON.stringify(preferences)});void 0`);
+   await wait(()=>run('document.documentElement.dataset.theme==='+JSON.stringify(theme.replace(/^system-/,''))));
    const p=await palette();assert.equal(await run('getComputedStyle(document.querySelector(".browser-toolbar")).backgroundColor'),p.side,theme+' toolbar surface');
    assert.equal(await run('getComputedStyle(document.querySelector(".browser-tabs")).backgroundColor'),p.side,theme+' tab surface');
    assert.equal(await run('getComputedStyle(document.querySelector(".browser-page")).backgroundColor'),p.bg,theme+' blank page surface');

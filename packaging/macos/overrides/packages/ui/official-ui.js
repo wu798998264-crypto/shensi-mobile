@@ -250,7 +250,22 @@ export function createOfficialUI(context){
    if(controlMode&&button.dataset.controlHistory){await openControl(++panelRevision,button.dataset.controlSource,button.dataset.controlHistory);return true;}
    if(button.hasAttribute('data-chat-recover-original')){chatState=await api('/chat/recover-original',{...chatBody(),requestId:button.dataset.chatRecoverOriginal});await refreshWorkspace(chatScope.id);renderChat();return true;}
    const c=currentChat(),messageId=button.dataset.chatRewind||button.dataset.chatEditUser;
-   if(button.hasAttribute('data-chat-web')){await saveDraft();chatState=await api('/chat/configure',{...chatBody(),webSearchEnabled:!c.webSearchEnabled});button.setAttribute('aria-pressed',String(!c.webSearchEnabled));const label=!c.webSearchEnabled?'关闭联网搜索':'开启联网搜索';button.title=label;button.setAttribute('aria-label',label);return true;}
+   if(button.hasAttribute('data-chat-web')){
+    const snapshot=chatBody(),enabled=button.getAttribute('aria-pressed')!=='true';
+    button.disabled=true;
+    try{
+     await saveDraft();
+     const updated=await api('/chat/configure',{...snapshot,webSearchEnabled:enabled});
+     if(chatScope?.id!==snapshot.id||chatScope.pluginId!==snapshot.pluginId||chatId!==snapshot.conversationId)return true;
+     chatState=updated;
+     const live=drawer?.querySelector('[data-chat-web]');
+     if(live){
+      const pressed=currentChat()?.webSearchEnabled===true,label=pressed?'关闭联网搜索':'开启联网搜索';
+      live.setAttribute('aria-pressed',String(pressed));live.title=label;live.setAttribute('aria-label',label);
+     }
+    }finally{button.disabled=false;}
+    return true;
+   }
    if(messageId){const message=c.messages.find(m=>m.id===messageId);if(button.dataset.chatRewind){await saveDraft();const answer=await context.modal('退回到输入框','<p>该条用户指令及之后的对话和排队任务会退出当前上下文，指令将放回输入框；原记录保留在本地归档。</p>',[['取消','cancel'],['退回','ok']]);if(answer.value==='ok'){chatState=await api('/chat/rewind',{...chatBody(),messageId});renderChat({preserveComposer:false});}}else{const form=body.querySelector('[data-chat-edit-form="'+CSS.escape(messageId)+'"]'),bubble=body.querySelector('[data-chat-user-bubble="'+CSS.escape(messageId)+'"]');if(form&&bubble){form.hidden=false;bubble.hidden=true;form.querySelector('textarea').focus();form.querySelector('textarea').setSelectionRange(message.text.length,message.text.length);}}return true;}
    const queueId=button.dataset.chatQueueEdit||button.dataset.chatQueueRemove||button.dataset.chatQueueSupplement;
    if(queueId||button.hasAttribute('data-chat-queue-resume')){const snapshot=chatBody();button.disabled=true;try{await saveDraft();let action=button.hasAttribute('data-chat-queue-resume')?'queue-resume':button.dataset.chatQueueSupplement?'queue-supplement':button.dataset.chatQueueEdit?'queue-edit':'queue-remove',text;if(action==='queue-edit'){const item=c.queue.find(t=>t.requestId===queueId),answer=await context.modal('编辑排队任务','<textarea name="text" aria-label="排队指令" rows="7">'+h(item.text)+'</textarea>');if(answer.value!=='ok')return true;text=answer.text;}const next=await api('/chat/'+action,{...snapshot,queueId,...(text!==undefined?{text}:{})});if(chatScope?.id===snapshot.id&&chatId===snapshot.conversationId){chatState=next;if(action==='queue-supplement')scrollChatToEnd=true;renderChat();}return true;}finally{button.disabled=false;}}
