@@ -308,6 +308,14 @@
     "sha256": "c272923b81fe1d905a9e34ba170595d1db4e7debc6f636522230fd7bdd696621"
   },
   {
+    "path": "packages/core/src/nutstore-delta.mjs",
+    "sha256": "816b3d6550b467e3cfd0293b4594497e86d0d850f80b67fd8470eaedebc08fdc"
+  },
+  {
+    "path": "packages/mobile/nutstore-journal.mjs",
+    "sha256": "8c1bb6e1a9b6f96aac1f46ba92ee8f9404bec7a34e32c8441d66096ac920d295"
+  },
+  {
     "path": "packages/ui/card-interactions.css",
     "sha256": "348c529cd92e5f5fd56e49ef5e367212169441c1a1e8c7c898decb2c623fe9e7"
   },
