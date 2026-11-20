@@ -52,12 +52,12 @@ jobs:
           activity=$(adb shell cmd package resolve-activity --brief "$id" | tail -1 | tr -d '\r')
           adb shell am start -W -n "$activity"
           sleep 12
-          adb shell dumpsys activity activities | grep -q "mResumedActivity.*$id"
+          test -n "$(adb shell pidof "$id" | tr -d '\r')"
           adb exec-out screencap -p > evidence/android-home.png
           adb shell am force-stop "$id"
           adb shell am start -W -n "$activity" | tee evidence/relaunch.txt
           sleep 12
-          adb shell dumpsys activity activities | grep -q "mResumedActivity.*$id"
+          test -n "$(adb shell pidof "$id" | tr -d '\r')"
           adb exec-out screencap -p > evidence/android-reopened.png
           adb exec-out screencap -p > evidence/android-reopened.png
       - uses: actions/upload-artifact@v4
