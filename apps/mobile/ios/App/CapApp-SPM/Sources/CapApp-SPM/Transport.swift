@@ -108,13 +108,13 @@ private func fetch(_ plugin: LocalPlugin, _ call: CAPPluginCall, _ channel: Chan
 }
 @objc(CloudPlugin) class CloudPlugin: LocalPlugin, CAPBridgedPlugin {
     let identifier = "CloudPlugin", jsName = "ShensiCloudTransport"
-    let pluginMethods = ["request","artifact","nutstore"].map(method)
+    let pluginMethods: [CAPPluginMethod] = ["request","artifact","nutstore"].map(shensiBridgeMethod)
     @objc func request(_ call: CAPPluginCall) { fetch(self, call, .chunk) }
     @objc func artifact(_ call: CAPPluginCall) { fetch(self, call, .artifact) }
     @objc func nutstore(_ call: CAPPluginCall) { fetch(self, call, .nutstore) }
 }
 @objc(UserAPIPlugin) class UserAPIPlugin: LocalPlugin, CAPBridgedPlugin {
     let identifier = "UserAPIPlugin", jsName = "ShensiCustomApi"
-    let pluginMethods = [method("request")]
+    let pluginMethods: [CAPPluginMethod] = [shensiBridgeMethod("request")]
     @objc func request(_ call: CAPPluginCall) { fetch(self, call, .custom) }
 }

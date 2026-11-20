@@ -10,7 +10,7 @@ private struct MediaRecord: Codable {
 private struct ImportJob { var record: MediaRecord, dir: URL, offset = 0 }
 @objc(MediaPlugin) class MediaPlugin: LocalPlugin, CAPBridgedPlugin {
     let identifier = "MediaPlugin", jsName = "ShensiMedia"
-    let pluginMethods = ["begin","write","finish","abort","resolve","describe","read"].map(method)
+    let pluginMethods: [CAPPluginMethod] = ["begin","write","finish","abort","resolve","describe","read"].map(shensiBridgeMethod)
     private let chunk = 256 * 1024
     private var jobs: [String: ImportJob] = [:]
     private let formats = ["png":"image/png","jpg":"image/jpeg","jpeg":"image/jpeg","gif":"image/gif","webp":"image/webp","mp4":"video/mp4","mov":"video/quicktime","webm":"video/webm","mp3":"audio/mpeg","m4a":"audio/mp4","wav":"audio/wav","ogg":"audio/ogg"]

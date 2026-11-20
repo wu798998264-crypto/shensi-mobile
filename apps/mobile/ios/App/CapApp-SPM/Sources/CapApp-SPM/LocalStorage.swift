@@ -96,20 +96,20 @@ class RecordPlugin: LocalPlugin {
         }
     }
 }
-func method(_ name: String) -> CAPPluginMethod { CAPPluginMethod(name: name, returnType: CAPPluginReturnPromise) }
+func shensiBridgeMethod(_ name: String) -> CAPPluginMethod { CAPPluginMethod(name: name, returnType: CAPPluginReturnPromise) }
 @objc(NotebookPlugin) class NotebookPlugin: RecordPlugin, CAPBridgedPlugin {
     let identifier = "NotebookPlugin", jsName = "ShensiStorage"
-    let pluginMethods = ["read", "compareAndSwap", "list"].map(method)
+    let pluginMethods: [CAPPluginMethod] = ["read", "compareAndSwap", "list"].map(shensiBridgeMethod)
 }
 @objc(MetadataPlugin) class MetadataPlugin: RecordPlugin, CAPBridgedPlugin {
     let identifier = "MetadataPlugin", jsName = "ShensiMetadata"
-    let pluginMethods = ["read", "compareAndSwap"].map(method)
+    let pluginMethods: [CAPPluginMethod] = ["read", "compareAndSwap"].map(shensiBridgeMethod)
     override var group: String { "metadata" }
     override var limit: Int { 4 << 20 }
 }
 @objc(VaultPlugin) class VaultPlugin: LocalPlugin, CAPBridgedPlugin {
     let identifier = "VaultPlugin", jsName = "ShensiSecureVault"
-    let pluginMethods = ["get", "set", "remove"].map(method)
+    let pluginMethods: [CAPPluginMethod] = ["get", "set", "remove"].map(shensiBridgeMethod)
     func query(_ call: CAPPluginCall) throws -> [String: Any] {
         guard let name = call.getString("key"), !name.isEmpty, name.utf8.count <= 512,
               name.rangeOfCharacter(from: .controlCharacters) == nil else { throw LocalFailure("无效凭据名称") }
