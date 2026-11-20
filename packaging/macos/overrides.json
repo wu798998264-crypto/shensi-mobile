@@ -304,6 +304,10 @@
     "sha256": "f9b8681f017f28bc4bf5f948daed66eab19fb171df432bcb1bce3120747ffd26"
   },
   {
+    "path": "resources/plugins/native-extension-trust.json",
+    "sha256": "c272923b81fe1d905a9e34ba170595d1db4e7debc6f636522230fd7bdd696621"
+  },
+  {
     "path": "packages/ui/card-interactions.css",
     "sha256": "348c529cd92e5f5fd56e49ef5e367212169441c1a1e8c7c898decb2c623fe9e7"
   },
