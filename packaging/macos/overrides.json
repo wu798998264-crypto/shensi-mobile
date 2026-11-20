@@ -97,7 +97,7 @@
   },
   {
     "path": "packages/ui/official-ui.js",
-    "sha256": "91f21923104a08fcafcd5bdbab2abcc362b66618346753623d59921c883abccd"
+    "sha256": "dd433b2c0fcb83ddb902702d4620a1374184d0053f1bc8ccb4238a7f583d6ad3"
   },
   {
     "path": "packages/ui/tutorial.js",
