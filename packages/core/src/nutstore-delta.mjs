@@ -1,5 +1,31 @@
 import {nutstoreRetryAfter,pacedNutstoreFetch} from './nutstore-request-gate.mjs';
 const fault=(message,code='NUTSTORE_DELTA_INVALID')=>Object.assign(Error(message),{code});
+export async function readNutstoreBytes(response,limit,tooLarge){
+ const stream=response.body;
+ if(Number(response.headers.get('content-length'))>limit){
+  await stream?.cancel().catch(()=>{});
+  throw tooLarge();
+ }
+ if(!stream)return new Uint8Array();
+ const reader=stream.getReader(),parts=[];
+ let size=0;
+ try{
+  for(;;){
+   const {done,value}=await reader.read();
+   if(done)break;
+   size+=value.byteLength;
+   if(size>limit)throw tooLarge();
+   parts.push(value);
+  }
+ }catch(error){
+  await reader.cancel().catch(()=>{});
+  throw error;
+ }finally{reader.releaseLock();}
+ const bytes=new Uint8Array(size);
+ let offset=0;
+ for(const part of parts){bytes.set(part,offset);offset+=part.byteLength;}
+ return bytes;
+}
 const escape=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const decode=value=>value.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi,(_,v)=>v[0]==='#'?String.fromCodePoint(v[1].toLowerCase()==='x'?parseInt(v.slice(2),16):Number(v.slice(1))):({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'"})[v]);
 const scalar=(source,name)=>{const values=[...source.matchAll(new RegExp('<(?:[\\w-]+:)?'+name+'(?:\\s[^>]*)?>([^<]*)<\\/(?:[\\w-]+:)?'+name+'>','g'))];if(values.length!==1)throw fault('坚果云增量响应缺少唯一字段：'+name);return decode(values[0][1]);};
@@ -41,8 +67,7 @@ export function createNutstoreDeltaClient({account,password,fetchImpl=fetch}){
   if(typeof folder!=='string'||!folder||folder.includes('/')||folder.length>2048)throw fault('增量扫描根目录无效');
   const response=await fetchImpl('https://dav.jianguoyun.com/nsdav/'+operation,{method:'POST',redirect:'error',credentials:'omit',headers:{Authorization:auth,'Content-Type':'application/xml'},body:'<?xml version="1.0" encoding="utf-8"?><s:delta xmlns:s="http://ns.jianguoyun.com"><s:folderName>'+escape(folder)+'</s:folderName>'+(cursor===undefined?'':'<s:cursor>'+escape(cursor)+'</s:cursor>')+'</s:delta>',signal:AbortSignal.timeout(30000)});
   if(response.status!==200){await response.body?.cancel().catch(()=>{});const limited=[429,503].includes(response.status);throw Object.assign(fault('坚果云增量读取失败（HTTP '+response.status+'）',response.status===401?'WAITING_CREDENTIALS':limited?'RETRY_WAIT':'WEBDAV_HTTP_'+response.status),{status:response.status,...limited?{retryAfterMs:nutstoreRetryAfter(response.headers.get('retry-after'))}:{}});}
-  const chunks=[];let size=0;for await(const chunk of response.body||[]){size+=chunk.length;if(size>4*1024*1024)throw fault('坚果云增量清单过大，未采用截断内容');chunks.push(chunk);}
-  const bytes=new Uint8Array(size);let offset=0;for(const c of chunks){bytes.set(c,offset);offset+=c.length;}
+  const bytes=await readNutstoreBytes(response,4*1024*1024,()=>fault('坚果云增量清单过大，未采用截断内容'));
   return parseNutstoreDelta(new TextDecoder('utf-8',{fatal:true}).decode(bytes),{latest:operation==='latestDeltaCursor'});
  }
  return {latest:folder=>request('latestDeltaCursor',folder),changes:(folder,cursor)=>request('delta',folder,cursor)};

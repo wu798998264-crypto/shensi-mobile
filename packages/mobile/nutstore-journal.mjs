@@ -2,7 +2,7 @@ import {createSyncRevisionJournal,syncDigest,syncRemoteRoot} from '../core/src/s
 import {parseWebDavMultiStatus} from '../core/src/webdav-listing.mjs';
 import {nextWebDavPage} from '../core/src/webdav-pagination.mjs';
 import {nutstoreRetryAfter,pacedNutstoreFetch} from '../core/src/nutstore-request-gate.mjs';
-import {createNutstoreDeltaClient} from '../core/src/nutstore-delta.mjs';
+import {createNutstoreDeltaClient,readNutstoreBytes} from '../core/src/nutstore-delta.mjs';
 import {createJournalScanCache} from '../core/src/sync-journal-scan-cache.mjs';
 const BASE='https://dav.jianguoyun.com/dav/',MAX=8*1024*1024;
 const fault=(message,code)=>Object.assign(Error(message),{code});
@@ -16,7 +16,7 @@ export function createMobileNutstoreJournal({account,password,remoteRoot,deviceI
   const response=await fetchImpl(url||urlFor(path),{method,headers:{Authorization:authorization,...headers},body,redirect:'error',credentials:'omit',signal:AbortSignal.timeout(95000)});
   if(!expected.includes(response.status)){await response.body?.cancel().catch(()=>{});const limited=[429,503].includes(response.status),code=response.status===401?'WAITING_CREDENTIALS':limited?'RETRY_WAIT':'WEBDAV_HTTP_'+response.status;throw Object.assign(fault(response.status===401?'坚果云账号或应用密码无效':limited?'坚果云暂时繁忙，已停止本次传输，请等待冷却后重试；不会自动重复上传':'坚果云请求失败（HTTP '+response.status+'）',code),{status:response.status,...limited?{retryAfterMs:nutstoreRetryAfter(response.headers.get('retry-after'))}:{}});}if(!['GET','PROPFIND'].includes(method))await response.body?.cancel().catch(()=>{});return response;
  }
- async function bytes(response,max=MAX){const parts=[];let size=0;if(Number(response.headers.get('content-length'))>max){await response.body?.cancel().catch(()=>{});throw fault('同步文件超过传输上限','WEBDAV_RESPONSE_TOO_LARGE');}for await(const chunk of response.body||[]){size+=chunk.length;if(size>max)throw fault('同步文件超过传输上限','WEBDAV_RESPONSE_TOO_LARGE');parts.push(chunk);}const result=new Uint8Array(size);let offset=0;for(const part of parts){result.set(part,offset);offset+=part.length;}return result;}
+ const bytes=(response,max=MAX)=>readNutstoreBytes(response,max,()=>fault('同步文件超过传输上限','WEBDAV_RESPONSE_TOO_LARGE'));
  const getBytes=async(path,max)=>bytes(await request('GET',path),max);
  const putBytes=async(path,body,contentType='application/octet-stream')=>{if(body.length>MAX)throw fault('当前移动端单文件上限8MiB；未截断或丢弃内容','MOBILE_SYNC_LIMIT');await request('PUT',path,{body,headers:{'Content-Type':contentType},expected:[200,201,204]});};
  const io={
