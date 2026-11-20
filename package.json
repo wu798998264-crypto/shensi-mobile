@@ -1,5 +1,7 @@
 {
-  "name": "shensi-mobile-workspace",
+  "name": "shensi-macos-packaging",
+  "version": "0.0.44",
   "private": true,
-  "type": "module"
+  "description": "Verified macOS packaging for the published Shensi application",
+  "devDependencies": {"electron-builder": "26.15.3"}
 }

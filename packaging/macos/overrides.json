@@ -1,0 +1,358 @@
+[
+  {
+    "path": "packages/core/src/account-service-endpoints.mjs",
+    "sha256": "38b2d365486ffbd13ee1504b4d103625a10f960c34c3a94e8c78a32fee24e445"
+  },
+  {
+    "path": "packages/ui/ui-glyph.js",
+    "sha256": "5ea20312d5136891c906166e09c4acbbd38ccf036069a97f5cd2de8c3647d246"
+  },
+  {
+    "path": "packages/ui/app.js",
+    "sha256": "4bd8d0bf229daa62df77b67581cb5388b12cdd51814806f81f0d532422e86c84"
+  },
+  {
+    "path": "packages/ui/book-picker.js",
+    "sha256": "f8da4375df162c4744bd728b1f2f67a0c3be9b196545fea609230de0ebc7890a"
+  },
+  {
+    "path": "packages/ui/recycle-bin.js",
+    "sha256": "e8ad79446f7c44fe9303f9821fbffa338b1d2f7611363e8a65570240564b4612"
+  },
+  {
+    "path": "packages/ui/editor-colors.js",
+    "sha256": "6f333bfe3fac6bcad407a0d919aac7579e5cec935209e8e816c53cc567e1db0f"
+  },
+  {
+    "path": "packages/ui/generation-picker.js",
+    "sha256": "51fe28901c72afe5c5c8f223a88704a9bdc46b9e47d180849bace7fdb008e7b7"
+  },
+  {
+    "path": "packages/ui/media-ui.js",
+    "sha256": "59cadb524b8aa79f9a5fa614200a92efaac55a1eeeb39b2d9ebf3166f90a3a5d"
+  },
+  {
+    "path": "packages/ui/chat-layout.js",
+    "sha256": "1b77fbd8cf5c28f737c863dbfa7edebb3fad968033af2ebc1ac4fe0a367df11f"
+  },
+  {
+    "path": "packages/ui/selection-edit.js",
+    "sha256": "f6fff6ebe522787b34d62d4783605bfe81b19c3118c76c0cc0e28128cfd26343"
+  },
+  {
+    "path": "packages/ui/writing-timer.js",
+    "sha256": "ebf3a2d3eb522bc1f8102a847ab243a84fcd15b4ca92491319d407a121a4a92e"
+  },
+  {
+    "path": "packages/ui/original-icons.js",
+    "sha256": "1b0f67286e4070112cb36cba45acb57d425f20eaf942da50a5b7356c731329ea"
+  },
+  {
+    "path": "packages/ui/styles.css",
+    "sha256": "4b32d8d148f2ec9ca55008b520c53a535e3c5dab3eca3d93a316adfc9b7d4adb"
+  },
+  {
+    "path": "packages/core/src/native-extensions.mjs",
+    "sha256": "618d57fce6e9283994b98638b8840751819a8e9067495f37e1f87c6fea7cc344"
+  },
+  {
+    "path": "packages/core/src/public-extension-catalog.mjs",
+    "sha256": "060513c1d60de965f8a332d00594f80a4f8624cec1b8764536ab69f4cfaa1782"
+  },
+  {
+    "path": "packages/thirdparty/speech-engine.mjs",
+    "sha256": "11bce48b22999e38d02632eec8aca196a8025f1dfcefbb4417fb669478965a92"
+  },
+  {
+    "path": "packages/ui/generation-settings.js",
+    "sha256": "431fa288cde2e89c191726c326c5705699643658cbe15ab8dc017923925c1903"
+  },
+  {
+    "path": "packages/ui/core-plugin-copy.js",
+    "sha256": "8366d4439bdb912789d2a3824c60f05bf09ac83be1adeb85a443fcd8aa722c15"
+  },
+  {
+    "path": "packages/official/catalog.mjs",
+    "sha256": "67f0fcd133aa6c5349157acbc9c6feb74b8b4d35209a44d95b2585b0f61ffa00"
+  },
+  {
+    "path": "packages/official/host.mjs",
+    "sha256": "53bf4904fe3995fce5309d3cc9d439263b3b382f4c3f8dbd6173b66fb0e82655"
+  },
+  {
+    "path": "packages/official/selection-edits.mjs",
+    "sha256": "9a2db9daa246ed9a776a8562f3f92d2abb29e680b60bdf374ae6aa917814fe0f"
+  },
+  {
+    "path": "packages/ui/plugin-presentation.js",
+    "sha256": "75bfd39095f03185b3cba8a11d8722830912790e0dac112ab1745c63c3eae63f"
+  },
+  {
+    "path": "packages/ui/settings.js",
+    "sha256": "950d1a10f9084e789de048b291a2f2e138dc360f9859468caface4ffbd386ebd"
+  },
+  {
+    "path": "packages/ui/extensions.js",
+    "sha256": "8aafb08dbeebd795867add28a141baa8355b9c993c071c8cd243c813e289079f"
+  },
+  {
+    "path": "packages/ui/official-ui.js",
+    "sha256": "91f21923104a08fcafcd5bdbab2abcc362b66618346753623d59921c883abccd"
+  },
+  {
+    "path": "packages/ui/tutorial.js",
+    "sha256": "a92fa631760116f3ab80f8c68844388a8b7b481a8fd80ca229fa7fc09fa19ba0"
+  },
+  {
+    "path": "packages/official/model-defaults.mjs",
+    "sha256": "b5e31474cf2c70f19d7f7f07a3b56aa103735dce713b92e070e5d993689b568c"
+  },
+  {
+    "path": "packages/official/chat.mjs",
+    "sha256": "b40bb7cdc024e45ff3c8b665da1cfd12f6801583416e9ce6f551eb611ea7b7cd"
+  },
+  {
+    "path": "packages/official/agent.mjs",
+    "sha256": "605425821c50e2d11d1b9714cf44654d4d81d9b3496714f3957b34d7be443f86"
+  },
+  {
+    "path": "packages/core/src/service.mjs",
+    "sha256": "539878b4104557da5983b0d6aabc1465828b5b490a3732872a0632f6c4b30959"
+  },
+  {
+    "path": "packages/ui/card-model-defaults.js",
+    "sha256": "26ed8116005e84a32e3cc76342939f6a740914a6fece6c31187dd9f85c3e5142"
+  },
+  {
+    "path": "packages/ui/canvas-model.js",
+    "sha256": "a5b9337e5bdffeadb8ce18d1e8b39c752198645ffbbf6dd3a6a4c55d54cc0416"
+  },
+  {
+    "path": "packages/ui/card-duplicate.js",
+    "sha256": "8778b3e0ee95e384286fac3fefe8b5e4e3c8d90bfaf7ae399364e603d8a981e7"
+  },
+  {
+    "path": "packages/ui/generation-sources.js",
+    "sha256": "b537fd5424dfa0ac95b99cdec675a919533691d4a66ccf6fc31f82a8ad900082"
+  },
+  {
+    "path": "packages/ui/model-authorization-source.js",
+    "sha256": "0b745995ebfa2ae1987c065bde33e96f2886fcdeea0ffe36ec1ee820db954457"
+  },
+  {
+    "path": "packages/ui/models-ui.js",
+    "sha256": "f164a4004ee8d076726f078bad8292009e60225f0389ac8f46950c307545d3b8"
+  },
+  {
+    "path": "packages/ui/model-verification.js",
+    "sha256": "7f043a8ed8e0f3df7d73ad1804451715c016330b6897ba66517ea5ed81c2a994"
+  },
+  {
+    "path": "packages/official/models.mjs",
+    "sha256": "20cf61ccdf29a3bd6fb02ccd532dd98796e36e52cd4c7eabc33b7cd49a4ffb74"
+  },
+  {
+    "path": "packages/official/model-verification.mjs",
+    "sha256": "40e57da2d1caaffb5be363b9b27858d8e4ba62f4a9fe33216f5c8f6e97ca1412"
+  },
+  {
+    "path": "packages/official/dreamina-account-migration.mjs",
+    "sha256": "300d223a460b43045e77fc053614a88ae6ff2544f6ab84e90c0e3f63bdfc7fe2"
+  },
+  {
+    "path": "packages/official/multimodal-account-migration.mjs",
+    "sha256": "4270fd5ebc98fee137684a22852758f64b54d43806e8d12a76d6469438a413be"
+  },
+  {
+    "path": "packages/ui/model-capabilities.js",
+    "sha256": "019df4ba6b8c0a1d86bad29191920c06487f0c6d1669e32e481ec9be41bc9dd0"
+  },
+  {
+    "path": "packages/ui/task-model-picker.js",
+    "sha256": "1534dcf408a2ece694bda0d8a76f94e928f6d0e96b5731a6b8896adfa1ec2349"
+  },
+  {
+    "path": "packages/ui/text-model-selection.js",
+    "sha256": "759625f9cc16ad5f2e45fbdbaa0018f6b3352a1e7e9877fbd87c883a1b251add"
+  },
+  {
+    "path": "packages/ui/generation-parameters.js",
+    "sha256": "633e064844320c0b6f1479d89abd1f880a20650febfcf9c5de0b65e27177d47b"
+  },
+  {
+    "path": "packages/ui/generation-controls.js",
+    "sha256": "ea059287661394f935aa8e930782ddf171e74836ba510fa69fb86dc72602d86d"
+  },
+  {
+    "path": "packages/official/chushou-references.mjs",
+    "sha256": "b585a5a46e1b98569943499a03c0654dfc99a7bb06c324b5db5e2ed7618c69e1"
+  },
+  {
+    "path": "packages/ui/editor-colors.css",
+    "sha256": "4bd143cc3f28daecbd2cbffe6b3218174bebd916b94054e39d4ef475171e47ab"
+  },
+  {
+    "path": "packages/official/legacy/server/agent-tool-output.mjs",
+    "sha256": "66e1564c8e25441548ccaac639315977ca3bc24bb0aa4f5275e8315ccf8cdad2"
+  },
+  {
+    "path": "packages/official/legacy/server/codex-workspace-tools.mjs",
+    "sha256": "23d2741ce3efdc58dab8f9827375b3331dfdbe91529c0caaaf90204ae03aa2b5"
+  },
+  {
+    "path": "packages/official/legacy/server/shensi-codex-agent-runtime.mjs",
+    "sha256": "28fcc452c30664d12ea620619b1867e0f1d80b613cfefe805fddaedee85606ab"
+  },
+  {
+    "path": "packages/official/legacy/server/codex-provider-bridge.mjs",
+    "sha256": "6912dad5afe127ab1172185dab5cd6aaf9e5cbf32a5eec92b1db99dd8170551b"
+  },
+  {
+    "path": "packages/ui/model-external-browser.js",
+    "sha256": "7f9ad725816fb60339a117c9d0f5232d181676dd0e184a7f1825e774f267fdf4"
+  },
+  {
+    "path": "packages/ui/gpt-model-policy.js",
+    "sha256": "f8e005ba3dda2afdc90d13184644477013b81ec82ec767f8029a55bf33282910"
+  },
+  {
+    "path": "packages/ui/model-catalog.js",
+    "sha256": "15a3d229d1b1649f25163548ec91f9b8d2bba5975449e58ca2d28bc337b9ff64"
+  },
+  {
+    "path": "packages/official/model-catalog.mjs",
+    "sha256": "ef30000d6484f1069cc5733bf515e5a454f1bb62d8edb7662c702ce70e8aa8ab"
+  },
+  {
+    "path": "packages/official/legacy/server/opencode-agent-runner.mjs",
+    "sha256": "3c098f13a74f8ac8ad7df25890a8bf14e5d1617e8dfdfec81c6a6c16a9b75bc2"
+  },
+  {
+    "path": "packages/official/deepseek-api.mjs",
+    "sha256": "7ff5293e8c7721e9f49eaba54de68420cf677887bbafeb9e6474633f744b4d74"
+  },
+  {
+    "path": "packages/official/legacy/cli/deepseek-opencode-config.mjs",
+    "sha256": "1ef940b38f0e205bbd09750907b64be7543c29a17bdfaed7a2cb9d628d49a5db"
+  },
+  {
+    "path": "packages/ui/account-auth.js",
+    "sha256": "50eedd4032510a17983ea7f0e042c1c10b8b232c3d451f610e3bca0aa2308a76"
+  },
+  {
+    "path": "packages/ui/account-security.js",
+    "sha256": "e4c6d947864b4c906f60ba481de6e07a1c97b78c7627ad97454de64dca1a15ef"
+  },
+  {
+    "path": "packages/ui/about-page.js",
+    "sha256": "3821de56158f6989605a58c3eaedcd13e5e63f986dc29dc2f1a1f1b0e1b5b6bc"
+  },
+  {
+    "path": "packages/ui/app-updates.js",
+    "sha256": "05ea94d86c6e20f148b2367b856207c7bbeb18947a3f5bf9fa94ec7713269302"
+  },
+  {
+    "path": "packages/ui/localization.js",
+    "sha256": "5953dff8b009620d2585e14acb5452cc546cb3836f35c5e8aa97b294e10e1a05"
+  },
+  {
+    "path": "packages/ui/plugin-storage-settings.js",
+    "sha256": "130b0ed0c1b172bf9f31c35d93927421f82e7a3194837998c2903fe8bdb3e519"
+  },
+  {
+    "path": "packages/ui/system-notices.js",
+    "sha256": "f4449eb5da30ad10e52c97a645b14cde00d2635000d8fd890fc01c76f8544742"
+  },
+  {
+    "path": "packages/ui/membership-ui.js",
+    "sha256": "b629968fb0ec8850955953288be750d4d88872fea5c137bfb9335aa9da30d68e"
+  },
+  {
+    "path": "packages/core/src/release-download.cjs",
+    "sha256": "3b900fd3f0642a9768e7a134b86abbdb4f0cb2ca1ac87798a412da14030f3952"
+  },
+  {
+    "path": "packages/core/src/update-service.mjs",
+    "sha256": "bc0dfb4f27bcccc5ea495040ae38a73e78b9da8a9e69f6e9e23970f74fbc1963"
+  },
+  {
+    "path": "apps/desktop/doubao-driver.mjs",
+    "sha256": "ae8c7746a96eb85f3154495444c8cde3c2aa5a3bf2f9906bc8b671c1c3351fd8"
+  },
+  {
+    "path": "packages/thirdparty/doubao-tasks.mjs",
+    "sha256": "fd3e3e0ca4bae1f079394ca47386b8b55631bf72d16e094b168d65ecd00f733b"
+  },
+  {
+    "path": "packages/thirdparty/doubao-media.mjs",
+    "sha256": "ca99d0dd13463b4b1fa37dec321ff69ec8045577a4526f0f4a1a1aafabe6cdca"
+  },
+  {
+    "path": "packages/ui/media-card-job.js",
+    "sha256": "5d97267e10a9d3926574c663d0f8e6a2da40fe280f620888efc7b7bba0ad8aba"
+  },
+  {
+    "path": "packages/core/legacy/model-presets.js",
+    "sha256": "e1f380aba8abddf250f02a0e30bbbcae103f101640d82177222f5c2b00e66bd5"
+  },
+  {
+    "path": "packages/official/legacy/model-presets.js",
+    "sha256": "5ce130cc8f148c48dfe24c59173115ec56bbdfe42d14ebab225a49686b572e4c"
+  },
+  {
+    "path": "packages/official/legacy/server/external-cli-agent-runner.mjs",
+    "sha256": "f9b8681f017f28bc4bf5f948daed66eab19fb171df432bcb1bce3120747ffd26"
+  },
+  {
+    "path": "packages/ui/card-interactions.css",
+    "sha256": "348c529cd92e5f5fd56e49ef5e367212169441c1a1e8c7c898decb2c623fe9e7"
+  },
+  {
+    "path": "packages/ui/media-card-time.js",
+    "sha256": "2dd6b25a777e401f7282077c161d201c872cdd835ef4b90690779244435a1a1f"
+  },
+  {
+    "path": "packages/ui/media-task-policy.js",
+    "sha256": "94ba7266f1bd037d67fe7bc743c6ae5c782c7755a9888f28acc4831a0a640ea6"
+  },
+  {
+    "path": "packages/core/src/plugin-marketplace.mjs",
+    "sha256": "50a171bc7ec2dbd7ee20a00f4b417bafe6873560383a9465f9aaeb5bdc27a57f"
+  },
+  {
+    "path": "packages/official/generation-models.mjs",
+    "sha256": "c837097eaec4242cf6bde3c068e0c51ece8049a287d826dd452d82b2fda69366"
+  },
+  {
+    "path": "packages/official/media.mjs",
+    "sha256": "99f2d8e70a025cad5e67c9d80a722ad90e3d03ce0d5a6e8f17d9925d6841580c"
+  },
+  {
+    "path": "packages/official/membership.mjs",
+    "sha256": "de899a24196ea9c725ec12571edc0cdaf4dbb2f014d9d33bb75a4ae8689506bd"
+  },
+  {
+    "path": "packages/official/legacy/dreamina-image-options.js",
+    "sha256": "caf1613f8b9993d1be0c14833ecbfd5e49799596855f23b6ad5a160c805e2e5b"
+  },
+  {
+    "path": "packages/thirdparty/map-workshop.mjs",
+    "sha256": "bd86e4c67c75a8cf40605f49b89c7e13094239390abfd4bedbc221d98d7ac4ce"
+  },
+  {
+    "path": "packages/mobile/account-client.mjs",
+    "sha256": "bf949e50aa3db16b0ca648a89710be723354502ddc4288d26d13075c7ce4c467"
+  },
+  {
+    "path": "packages/mobile/cloud-sync-client.mjs",
+    "sha256": "056f4cb52f7ab0d9129130cc0c4ffa6c3ebc3ebf5d41aba46dbb5a3bab8a96bc"
+  },
+  {
+    "path": "packages/mobile/marketplace-client.mjs",
+    "sha256": "80294af76e5dcd9e4bc94453bfb45c5371d82870bf94955c7db159a5d85df1f2"
+  },
+  {
+    "path": "packages/mobile/network.mjs",
+    "sha256": "3991df2396d390e4a6b40282aa881a6028034b58a0de1e16413b6f1060efbcb6"
+  }
+]

@@ -1,0 +1,4 @@
+overrides/** -text
+extensions/** -text
+shortdrama/** -text
+*.sh text eol=lf
