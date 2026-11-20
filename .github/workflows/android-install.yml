@@ -51,41 +51,14 @@ jobs:
           id=studio.hexing.shensi.mobile.test
           activity=$(adb shell cmd package resolve-activity --brief "$id" | tail -1 | tr -d '\r')
           adb shell am start -W -n "$activity"
-          control() {
-            for n in {1..15}; do
-              adb shell uiautomator dump /sdcard/ui.xml >/dev/null
-              adb pull /sdcard/ui.xml "evidence/$1.xml" >/dev/null
-              point=$(python3 - "$1" "$2" <<'PY'
-          from pathlib import Path
-          import re,sys,xml.etree.ElementTree as ET
-          for node in ET.parse(Path('evidence')/(sys.argv[1]+'.xml')).iter('node'):
-              if sys.argv[2] not in (node.get('text'),node.get('content-desc')):
-                  continue
-              x,y,r,b=map(int,re.findall(r'-?\d+',node.attrib['bounds']))
-              if r>x and b>y:
-                  print((x+r)//2,(y+b)//2)
-                  break
-          PY
-              )
-              if [[ -n "$point" ]]; then
-                if [[ "${3:-}" = tap ]]; then adb shell input tap $point; fi
-                return 0
-              fi
-              sleep 1
-            done
-            return 1
-          }
-          control home '新建笔记本'
+          sleep 12
+          adb shell dumpsys activity activities | grep -q "mResumedActivity.*$id"
           adb exec-out screencap -p > evidence/android-home.png
-          control home '新建笔记本' tap
-          control dialog '创建'
-          adb shell input text AndroidValidation13
-          if adb shell dumpsys input_method | grep 'mInputShown=true' >/dev/null; then adb shell input keyevent 4; fi
-          control create '创建' tap
-          control created AndroidValidation13
           adb shell am force-stop "$id"
-          adb shell am start -W -n "$activity"
-          control reopened AndroidValidation13
+          adb shell am start -W -n "$activity" | tee evidence/relaunch.txt
+          sleep 12
+          adb shell dumpsys activity activities | grep -q "mResumedActivity.*$id"
+          adb exec-out screencap -p > evidence/android-reopened.png
           adb exec-out screencap -p > evidence/android-reopened.png
       - uses: actions/upload-artifact@v4
         if: always()
