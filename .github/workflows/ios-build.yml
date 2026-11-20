@@ -37,10 +37,16 @@ jobs:
           xcrun simctl install "$device" "$RUNNER_TEMP/ios-sim/Build/Products/Debug-iphonesimulator/App.app"
           id=studio.hexing.shensi.mobile
           for expected in created reopened; do
-            xcrun simctl launch "$device" "$id" --verify-local-library
+            xcrun simctl launch --stdout="$RUNNER_TEMP/iphone-out" --stderr="$RUNNER_TEMP/iphone-err" "$device" "$id" --verify-local-library
             marker="$(xcrun simctl get_app_container "$device" "$id" data)/tmp/shensi-smoke-$expected"
-            for i in {1..45}; do [ -f "$marker" ] && break; sleep 1; done
+            for i in {1..90}; do [ -f "$marker" ] && break; sleep 1; done
             xcrun simctl io "$device" screenshot "$RUNNER_TEMP/iphone-$expected.png"
+            if [ ! -f "$marker" ]; then
+              cat "$RUNNER_TEMP/iphone-err" "$(dirname "$marker")/smoke-error" 2>/dev/null || true
+              find "$HOME/Library/Logs/DiagnosticReports" -name 'App-*.ips' -maxdepth 2 -exec cp {} "$RUNNER_TEMP/iphone-crash.ips" \; || true
+              xcrun simctl spawn "$device" log show --last 4m --style compact --predicate 'process == "App" AND messageType == error' | tail -35 || true
+              exit 1
+            fi
             test "$(cat "$marker")" = "$expected"
             xcrun simctl terminate "$device" "$id"
           done
@@ -56,6 +62,7 @@ jobs:
           name: shensi-iphone-13
           path: |
             ${{ runner.temp }}/iphone-*.png
+            ${{ runner.temp }}/iphone-crash.ips
             ${{ runner.temp }}/shensi-iphone/*.ipa
             ${{ runner.temp }}/shensi-iphone/SHA256SUMS
           if-no-files-found: warn

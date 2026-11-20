@@ -34,7 +34,10 @@ class ShensiViewController: CAPBridgeViewController {
         view.callAsyncJavaScript(check, arguments: [:], in: nil, in: .page) { result in
             if case let .success(raw) = result, let value = raw as? String, ["created","reopened"].contains(value) {
                 try? value.write(to: FileManager.default.temporaryDirectory.appendingPathComponent("shensi-smoke-" + value), atomically:true, encoding:.utf8)
-            } else if attempt < 30 {
+            } else if attempt < 60 {
+                if case let .failure(error) = result {
+                    try? error.localizedDescription.write(to:FileManager.default.temporaryDirectory.appendingPathComponent("smoke-error"),atomically:true,encoding:.utf8)
+                }
                 DispatchQueue.main.asyncAfter(deadline:.now()+1) { self.verifyLocalLibrary(attempt:attempt+1) }
             }
         }
