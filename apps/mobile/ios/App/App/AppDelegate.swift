@@ -1,4 +1,5 @@
 import UIKit
+import WebKit
 import Capacitor
 import CapApp_SPM
 
@@ -30,7 +31,7 @@ class ShensiViewController: CAPBridgeViewController {
         await invoke('ShensiSecureVault','remove',{key});
         return before.revision===0?'created':'reopened';
         """
-        view.callAsyncJavaScript(check, arguments: [:], in: nil, contentWorld: .page) { result in
+        view.callAsyncJavaScript(check, arguments: [:], in: nil, in: .page) { result in
             if case let .success(raw) = result, let value = raw as? String, ["created","reopened"].contains(value) {
                 try? value.write(to: FileManager.default.temporaryDirectory.appendingPathComponent("shensi-smoke-" + value), atomically:true, encoding:.utf8)
             } else if attempt < 30 {
