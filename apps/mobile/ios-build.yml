@@ -63,7 +63,7 @@ jobs:
           app="$RUNNER_TEMP/ios-device/Build/Products/Release-iphoneos/App.app"
           test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")" = studio.hexing.shensi.mobile
           test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$app/Info.plist")" = 13
-          lipo -verify_arch arm64 "$app/App"
+          lipo "$app/App" -verify_arch arm64
           xcrun vtool -show-build "$app/App" | grep -E 'platform IOS$'
       - name: Export signed Ad Hoc installer
         env:
