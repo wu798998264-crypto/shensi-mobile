@@ -3,13 +3,22 @@ import {writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 
 // Use the actual host theme function and browser UI, with isolated profiles.
-export async function verifyBrowserThemes({owner,run,wait,evidence,nativeTheme}){
+export async function verifyBrowserThemes({owner,run,wait,evidence,nativeTheme,api}){
  const customThemes=[
   {id:'custom-browser-violet',name:'紫夜',colors:{topbar:'#211c30',sidebar:'#211c30',editor:'#181421',chat:'#181421',text:'#f0eaf8',accent:'#bb9eef'}},
   {id:'custom-browser-blue',name:'浅蓝',colors:{topbar:'#e1edf5',sidebar:'#e1edf5',editor:'#f2f8fc',chat:'#f2f8fc',text:'#203748',accent:'#235d96'}}
  ];
  await run('(async()=>{window.browserThemePresentation=(await import("/preferences.js")).applyPresentation;window.browserThemeRoot=document.querySelector(".browser-workspace");window.browserThemeAddress=document.querySelector(".browser-address");})()');
  const rows=[],initialSource=nativeTheme.themeSource;
+ const original=(await api('settings/preferences')).preferences || {theme:'light'};
+ async function selectPreferences(preferences) {
+  const current=await api('settings/preferences');
+  await api('settings/preferences',{preferences,expectedRevision:current.revision});
+  await run('document.querySelector(\'[data-action="settings"]\').click()');
+  await wait(()=>run('document.querySelector("#settings-screen")?.hidden===false'));
+  await run('document.querySelector(\'[data-setting-action="close"]\').click()');
+  await wait(()=>run('document.querySelector("#settings-screen")?.hidden===true'));
+ }
  const screenshot=async name=>{await run('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');await new Promise(r=>setTimeout(r,150));await writeFile(join(evidence,name),(await owner.webContents.capturePage()).toPNG());};
  const palette=()=>run(`(()=>{const s=getComputedStyle(document.documentElement),resolve=v=>{const c=document.createElement('span');c.style.color=v;document.body.append(c);const value=getComputedStyle(c).color;c.remove();return value;};return {side:resolve(s.getPropertyValue('--topbar').trim()||s.getPropertyValue('--side')),bg:resolve(s.getPropertyValue('--bg')),scheme:s.colorScheme};})()`);
  const sample=async(selector,pseudo='')=>run(`(()=>{
@@ -28,7 +37,9 @@ export async function verifyBrowserThemes({owner,run,wait,evidence,nativeTheme})
     await wait(()=>run('matchMedia("(prefers-color-scheme: dark)").matches==='+String(theme==='system-dark')));
     await run('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
    }
-   await run(`browserThemeAddress.focus();browserThemeAddress.value='https://example.com/unsaved';browserThemeAddress.setSelectionRange(8,15);browserThemePresentation(${JSON.stringify({theme:theme.startsWith('system-')?'system':theme,customThemes})});void 0`);
+   await run("browserThemeAddress.focus();browserThemeAddress.value='https://example.com/unsaved';browserThemeAddress.setSelectionRange(8,15)");
+   await selectPreferences({...original,theme:theme.startsWith('system-')?'system':theme,customThemes});
+   await wait(()=>run('document.documentElement.dataset.theme==='+JSON.stringify(theme.replace(/^system-/,'') ) ));
    const p=await palette();assert.equal(await run('getComputedStyle(document.querySelector(".browser-toolbar")).backgroundColor'),p.side,theme+' toolbar surface');
    assert.equal(await run('getComputedStyle(document.querySelector(".browser-tabs")).backgroundColor'),p.side,theme+' tab surface');
    assert.equal(await run('getComputedStyle(document.querySelector(".browser-page")).backgroundColor'),p.bg,theme+' blank page surface');
@@ -40,7 +51,7 @@ export async function verifyBrowserThemes({owner,run,wait,evidence,nativeTheme})
    owner.webContents.sendInputEvent({type:'mouseMove',...point});await run('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');samples.push(await sample('[data-browser-action=downloads]'));
    for(const kind of ['accounts','bookmarks','downloads']){
     await run(`document.querySelector('[data-browser-action=${kind}]').click()`);await wait(()=>run('!!document.querySelector(".browser-popover")'));
-    assert.equal(await run('getComputedStyle(document.querySelector(".browser-popover")).backgroundColor'),p.bg);
+    assert.equal(await run('getComputedStyle(document.querySelector(".browser-popover")).backgroundColor'),p.bg,theme+' '+kind+' popover background');
     for(const selector of ['.browser-popover header strong','.browser-popover header button',...(kind==='accounts'?['.browser-account.active strong','.browser-account.active>span:not(.browser-avatar)','.browser-accounts footer button']:kind==='bookmarks'?['.browser-bookmarks summary']:['.browser-downloads>p'])])samples.push(await sample(selector));
     if(kind==='accounts'&&['light','dark','custom-browser-violet'].includes(theme))await screenshot('browser-'+theme+'-profiles.png');
     owner.webContents.sendInputEvent({type:'keyDown',keyCode:'Escape'});owner.webContents.sendInputEvent({type:'keyUp',keyCode:'Escape'});await wait(()=>run('!document.querySelector(".browser-popover")'));
@@ -50,6 +61,6 @@ export async function verifyBrowserThemes({owner,run,wait,evidence,nativeTheme})
    if(['light','dark','custom-browser-violet'].includes(theme))await screenshot('browser-'+theme+'.png');
   }
   await writeFile(join(evidence,'browser-themes.json'),JSON.stringify({passed:true,themes:rows,liveSwitchPreservedInput:true,realProviderRequests:0,installedAcceptance:false},null,2));
- }finally{nativeTheme.themeSource=initialSource;await run('browserThemePresentation({theme:"light"});browserThemeAddress.blur();browserThemeAddress.value="";void 0');}
+ }finally{nativeTheme.themeSource=initialSource;await selectPreferences(original);await run('browserThemeAddress.blur();browserThemeAddress.value="";void 0');}
  return rows;
 }

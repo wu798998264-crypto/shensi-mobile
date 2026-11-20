@@ -1,0 +1,63 @@
+name: Verify delivered Android APK
+on:
+  push:
+    branches: [codex/latest-packages-20261120-13]
+    paths: [".github/workflows/android-install.yml"]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  installed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: shensi-mobile-foundation
+          run-id: 44693040746
+          github-token: ${{ github.token }}
+          path: received
+      - name: Launch delivered application on clean Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          apk=received/apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          echo "1a963ec5a3e3928731b5a9b1a5c875f15393bca973f2313199b41023ee30f432  $apk" | sha256sum -c -
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          sudo setfacl -m "u:$(id -un):rw" /dev/kvm
+          image='system-images;android-35;google_apis;x86_64'
+          sdkmanager "$image" >/dev/null
+          echo no | avdmanager create avd -n shensi -k "$image" -d pixel_6
+          emulator -avd shensi -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          adb wait-for-device
+          for n in {1..120}; do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 2; done
+          adb shell wm dismiss-keyguard
+          adb install "$apk"
+          id=studio.hexing.shensi.mobile.test
+          activity=$(adb shell cmd package resolve-activity --brief "$id" | tail -1 | tr -d '\r')
+          adb shell am start -W -n "$activity"
+          for n in {1..20}; do
+            adb shell uiautomator dump /sdcard/ui.xml >/dev/null
+            adb pull /sdcard/ui.xml evidence/home.xml >/dev/null
+            grep -q '新建笔记本' evidence/home.xml && break
+            sleep 2
+          done
+          adb exec-out screencap -p > evidence/android-home.png
+          grep -q '新建笔记本' evidence/home.xml
+          adb shell am force-stop "$id"
+          adb shell am start -W -n "$activity"
+          for n in {1..20}; do
+            adb shell uiautomator dump /sdcard/ui.xml >/dev/null
+            adb pull /sdcard/ui.xml evidence/reopened.xml >/dev/null
+            grep -q '新建笔记本' evidence/reopened.xml && break
+            sleep 2
+          done
+          grep -q '新建笔记本' evidence/reopened.xml
+          adb exec-out screencap -p > evidence/android-reopened.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-installed-evidence
+          path: evidence
+          retention-days: 14
