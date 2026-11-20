@@ -18,7 +18,7 @@ export function mountServicePanels(root,{account,nutstore,marketplace,cloud,docu
  button('坚果云',()=>{
   const {d,status,run}=dialog('坚果云同步'),menu=el('section'),detail=el('section');menu.className='m7-sync-menu';d.classList.add('native-nutstore');d.append(menu,detail);let connection={configured:false};
   const menuRow=(label,icon,action)=>{const b=el('button');b.type='button';b.className='m7-menu-row';b.innerHTML=mobileShellIcon(icon);b.append(el('span',label));b.onclick=action;return b;};
-  const note=()=>el('p',notebookSyncScopeText+' 快照上限8MiB，媒体分块传输；后台休眠后待再次打开应用继续。');
+  const note=()=>el('p',notebookSyncScopeText+' 完整快照上限64MiB，大库分块传输，两端需使用支持分块的新版；后台休眠后待再次打开应用继续。');
   function transfers(){
    const upload=menuRow('上传当前笔记本','refresh',()=>run(async()=>{if(!canTransfer())throw Error('请先保存当前编辑');const id=currentNotebook();if(!id)throw Error('请先选择笔记本');const result=await nutstore.uploadNotebook(id);status.textContent=result.unchanged?'本地与云端内容一致':'上传完成，已下载回读并核对摘要';})),refresh=menuRow('查看云端版本','check',()=>run(async()=>{const result=await nutstore.listNotebooks();list.replaceChildren();for(const entry of result.items){const row=el('section'),download=el('button','下载并核对版本');row.className='service-row';row.append(el('strong',entry.logicalPath.replace(/^notebooks\//,'')),el('small',(entry.conflicted?'并发版本 · ':'')+entry.updatedAt),download);download.onclick=()=>run(async()=>{if(!canTransfer())throw Error('请先保存当前编辑');await nutstore.downloadNotebook(entry);await refreshWorkspace();status.textContent='下载完成，正文与历史已保存回读；原资料保留';});list.append(row);}status.textContent=result.items.length?'请选择需要下载的版本':'双端快照目录暂无笔记本';})),list=el('section');
    detail.replaceChildren(upload,refresh,menuRow('查看并处理冲突','check',syncConflicts),note(),list);

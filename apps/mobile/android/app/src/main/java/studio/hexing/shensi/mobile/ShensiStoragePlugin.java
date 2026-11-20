@@ -36,7 +36,7 @@ public class ShensiStoragePlugin extends ShensiLocalPlugin {
         Object revision = call.getData().opt("expectedRevision");
         Long expected = revision instanceof Integer || revision instanceof Long ? ((Number) revision).longValue() : null;
         String value = call.getString("value");
-        if (expected == null || expected < 0 || expected >= 9007199254740991L || value == null || value.getBytes(StandardCharsets.UTF_8).length > 8 * 1024 * 1024) {
+        if (expected == null || expected < 0 || expected >= 9007199254740991L || value == null || value.getBytes(StandardCharsets.UTF_8).length > 64 * 1024 * 1024) {
             call.reject("事务版本或大小无效", "INVALID_TRANSACTION"); return;
         }
         try { new JSONObject(value); } catch (Exception e) { call.reject("笔记本必须为有效JSON", "INVALID_TRANSACTION"); return; }

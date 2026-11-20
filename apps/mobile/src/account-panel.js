@@ -5,9 +5,9 @@ const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined
 // Native secure-vault client, or encrypted desktop preview bridge. No sample login.
 export function mountMobileAccountPanel({d,status,run},account){
  d.classList.add('mobile-account-dialog');
- const loginArea=el('section'),identity=el('section'),actions=el('section'),rights=el('p'),reviewStatus=el('p'),refresh=el('button','核验账号与权益'),edit=el('button','编辑笔名与头像'),logout=el('button','退出登录');
+  const loginArea=el('section'),identity=el('section'),actions=el('section'),rights=el('p'),billing=el('section'),reviewStatus=el('p'),refresh=el('button','核验账号与权益'),edit=el('button','编辑笔名与头像'),logout=el('button','退出登录');
  loginArea.className='account-login';identity.className='mobile-account-identity';actions.className='mobile-account-actions';reviewStatus.className='account-profile-review';
- actions.append(refresh,edit,logout);d.append(identity,loginArea,actions,reviewStatus,rights,el('p','购买算力套餐 / VIP：暂未开放，不能支付。'));
+  billing.className='mobile-account-billing';actions.append(refresh,edit,logout);d.append(identity,loginArea,actions,reviewStatus,rights,billing);
  let current={status:'signed_out'},auth,disposed=false;
  const method={'login':'login','register':'register','recovery-question':'recoveryQuestion','recover':'recover','email-code':'sendEmailCode','email-login':'emailLogin','profile-status':'profile','profile':'updateProfile'};
  // Profile submissions run in their own dialog, so reconcile failures here too.
@@ -27,7 +27,7 @@ export function mountMobileAccountPanel({d,status,run},account){
    auth=mountAccountAuth(loginArea,{call,rememberStore:account.rememberedAccount||{get:async()=>null,set:async()=>{}},authenticated:async()=>{show(await account.status());try{await showReview();}catch(error){status.textContent='已登录；资料审核状态暂无法读取：'+error.message;}}});
   }
  }
- refresh.onclick=()=>void runAccount(async()=>{const r=await account.entitlements();show(r);const m=r.membership?.membership||r.membership;rights.textContent=[m?(m.entitled?'会员：'+(m.expiresAt?new Date(m.expiresAt).toLocaleDateString()+' 到期':'永久有效'):'尚无有效会员'):'会员权益暂无法核验',r.quota?'可用积分 '+r.quota.available+' · 预留 '+r.quota.reserved:'积分暂无法核验',r.cloudSyncStatus?.message,...Object.values(r.serviceErrors||{})].filter(Boolean).join(' · ');await showReview();});
+  refresh.onclick=()=>void runAccount(async()=>{const r=await account.entitlements();show(r);const m=r.membership?.membership||r.membership;rights.textContent=[m?(m.entitled?'会员：'+(m.expiresAt?new Date(m.expiresAt).toLocaleDateString()+' 到期':'永久有效'):'尚无有效会员'):'会员权益暂无法核验',r.quota?'可用积分 '+r.quota.available+' · 预留 '+r.quota.reserved:'积分暂无法核验',r.cloudSyncStatus?.message,...Object.values(r.serviceErrors||{})].filter(Boolean).join(' · ');billing.replaceChildren();for(const plan of r.billing?.offers||[]){const row=el('div'),label=el('span',plan.name+' · '+plan.price+' '+plan.currency),button=el('button','打开支付');button.onclick=()=>void runAccount(async()=>{const order=await account.billingPurchase({skuId:plan.skuId,quote:plan.quote,requestId:'purchase-'+crypto.randomUUID()});if(order.order?.checkout)window.open(order.order.checkout,'_blank','noopener');});row.append(label,button);billing.append(row);}await showReview();});
  edit.onclick=()=>void runAccount(()=>security.profile());
  logout.onclick=()=>void runAccount(async()=>show(await account.logout()));
  d.addEventListener('close',()=>{disposed=true;auth?.dispose();},{once:true});

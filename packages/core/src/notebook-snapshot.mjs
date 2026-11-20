@@ -3,7 +3,8 @@ import {stableVersionJson} from '../legacy/version-integrity.js';
 import {validateMediaReceipt} from '../../mobile/media-contract.mjs';
 import {notebookMediaReferences,validateNotebookMediaPaths,documentMediaPaths} from './notebook-media-paths.mjs';
 
-export const CLOUD_NOTEBOOK_LIMIT=8*1024*1024;
+// Aggregate document/history budget. WebDAV requests remain bounded chunks.
+export const CLOUD_NOTEBOOK_LIMIT=64*1024*1024;
 const validId=s=>typeof s==='string'&&/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(s)&&!['__proto__','constructor','prototype'].includes(s);
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const hasMedia=doc=>doc?.canvas||doc?.coreMediaArtifacts?.length||/<(?:img|audio|video|source|iframe|object)\b|data-attachment-path\s*=/i.test(String(doc?.html||'')+String(doc?.coreRichText?.html||''))||/!\[\[|!\[[^\]]*\]\(|\]\((?:\.\/)?(?:attachments|assets|\.shensi)\//i.test(String(doc?.markdown||''));
@@ -18,7 +19,7 @@ export function notebookMedia(state){
   if(!Array.isArray(doc.canvas.nodes)||!Array.isArray(doc.canvas.edges))throw Error('白板结构不完整');
   const ids=new Set();for(const node of doc.canvas.nodes){
    if(!record(node)||!validId(node.id)||ids.has(node.id)||!['text','group','file','image','audio','video'].includes(node.type))throw Error('此白板含尚未接通的卡片类型，原卡片保留');ids.add(node.id);
-   if(node.type==='file'||['image','audio','video'].includes(node.type)){if(!node.file&&!node.localMedia)throw Error('白板媒体卡片缺少素材路径');if(node.localMedia){const receipt=validateMediaReceipt(node.localMedia),previous=media.get(receipt.id);if(previous&&JSON.stringify(previous)!==JSON.stringify(receipt))throw Error('同一附件身份指向不同内容，未修改历史');media.set(receipt.id,receipt);}}
+   if(node.type==='file'||['image','audio','video'].includes(node.type)){if(!node.file&&!node.localMedia)throw Error('白板媒体卡片缺少素材路径');if(node.localMedia){const receipt=validateMediaReceipt(node.localMedia),previous=media.get(receipt.id);if(previous&&stableVersionJson(previous)!==stableVersionJson(receipt))throw Error('同一附件身份指向不同内容，未修改历史');media.set(receipt.id,receipt);}}
    else if(node.localMedia)throw Error('白板附件归属无效');
   }
   for(const edge of doc.canvas.edges)if(!record(edge)||!ids.has(edge.fromNode)||!ids.has(edge.toNode))throw Error('白板连线引用不完整');
@@ -29,7 +30,7 @@ export function notebookMedia(state){
  for(const item of state.coreRestoreLog||[])inspect(item.document);
  const mappings=validateNotebookMediaPaths(state.coreSyncMediaPaths),references=notebookMediaReferences(state);
  if(Object.keys(mappings).some(path=>!references.paths.includes(path)))throw Error('白板媒体清单包含无归属路径');
- for(const receipt of [...references.receipts,...references.paths.map(path=>{if(!Object.hasOwn(mappings,path))throw Error('白板历史素材路径尚未映射，不能遗漏原文件');return mappings[path];})]){const prior=media.get(receipt.id);if(prior&&JSON.stringify(prior)!==JSON.stringify(receipt))throw Error('同一附件身份指向不同内容，未修改历史');media.set(receipt.id,validateMediaReceipt(receipt));}
+ for(const receipt of [...references.receipts,...references.paths.map(path=>{if(!Object.hasOwn(mappings,path))throw Error('白板历史素材路径尚未映射，不能遗漏原文件');return mappings[path];})]){const prior=media.get(receipt.id);if(prior&&stableVersionJson(prior)!==stableVersionJson(receipt))throw Error('同一附件身份指向不同内容，未修改历史');media.set(receipt.id,validateMediaReceipt(receipt));}
  return [...media.values()].sort((a,b)=>a.id.localeCompare(b.id));
 }
 export function validateCloudNotebook(value){
@@ -48,7 +49,7 @@ export function validateCloudNotebook(value){
  for(const [id,versions]of Object.entries(state.histories)){if(!validId(id)||!Array.isArray(versions))throw Error('历史版本结构无效');for(const version of versions){if(!version?.document||version.document.id!==undefined&&version.document.id!==id||version.scopeId&&version.scopeId!==id)throw Error('历史文档身份无效');assertVersion(version);if(!withMedia&&hasMedia(version.document))throw Error('历史版本含附件；不会生成缺少原文件的快照');}}
  if(state.coreRestoreLog!==undefined&&!Array.isArray(state.coreRestoreLog))throw Error('恢复记录结构无效');
  for(const item of state.coreRestoreLog||[])if(!withMedia&&hasMedia(item.document))throw Error('恢复记录含附件，不能只同步索引');
- if(withMedia&&JSON.stringify(notebookMedia(state))!==JSON.stringify(value.media))throw Error('白板媒体清单不完整或与历史引用不符');
+ if(withMedia&&stableVersionJson(notebookMedia(state))!==stableVersionJson(value.media))throw Error('白板媒体清单不完整或与历史引用不符');
  const folders=state.coreFolders||[];if(!Array.isArray(folders))throw Error('目录结构无效');const byId=new Map();
  for(const f of folders){if(!validId(f?.id)||byId.has(f.id)||typeof f.name!=='string'||!f.name.trim()||f.name.length>120||/[\\/\x00-\x1f]/.test(f.name)||['.','..'].includes(f.name)||f.parentId&&!validId(f.parentId))throw Error('目录名称或身份无效');byId.set(f.id,f);}
  for(const f of folders){const seen=new Set([f.id]);let parent=f.parentId;while(parent){if(seen.has(parent)||!byId.has(parent))throw Error('目录引用循环或缺失');seen.add(parent);parent=byId.get(parent).parentId;}}
@@ -66,7 +67,7 @@ export function validateCloudNotebook(value){
  }
  if(state.coreSyncRetainedAt!==undefined&&!record(state.coreSyncRetainedAt))throw Error('同步历史保留记录无效');
  for(const [id,entries]of Object.entries(state.coreSyncRetainedAt||{}))if(!validId(id)||!record(entries)||Object.entries(entries).some(([key,value])=>!validId(key)||typeof value!=='string'||!Number.isFinite(Date.parse(value))))throw Error('同步历史保留时间无效');
- if(new TextEncoder().encode(JSON.stringify(value)).length>CLOUD_NOTEBOOK_LIMIT)throw Error('当前快照上限为8MiB，未删减历史');
+ if(new TextEncoder().encode(JSON.stringify(value)).length>CLOUD_NOTEBOOK_LIMIT)throw Error('当前完整笔记本快照超过64MiB，未删减正文或历史');
  return state;
 }
 

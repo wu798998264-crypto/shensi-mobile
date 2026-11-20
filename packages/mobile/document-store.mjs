@@ -3,6 +3,7 @@ import {sha256HexSync,stableVersionJson} from '../core/legacy/version-integrity.
 import {renderMarkdown} from './rich-text.mjs';
 import {validateMediaReceipt,MAX_IMPORT_FILES,MAX_TEXT_BYTES} from './media-contract.mjs';
 import {syncDocumentContent} from '../core/src/sync-notebook-merge.mjs';
+import {CLOUD_NOTEBOOK_LIMIT} from '../core/src/notebook-snapshot.mjs';
 
 const fail=(message,code='INVALID_DOCUMENT')=>Object.assign(new Error(message),{code});
 const clone=structuredClone;
@@ -25,7 +26,7 @@ export function createMobileDocumentStore({storage}={}){
   return {revision:row.revision,state};
  }
  async function persist(key,current){
-  const value=JSON.stringify(current.state);if(new TextEncoder().encode(value).byteLength>8*1024*1024)throw fail('笔记本超过当前移动内核8MiB上限，未删除正文或历史','STORAGE_LIMIT');
+  const value=JSON.stringify(current.state);if(new TextEncoder().encode(value).byteLength>CLOUD_NOTEBOOK_LIMIT)throw fail('完整笔记本超过64MiB安全上限，未删除正文或历史','STORAGE_LIMIT');
   const saved=await storage.compareAndSwap(key,current.revision,value);
   if(saved.revision!==current.revision+1||saved.value!==value)throw fail('事务提交回读不一致，请重新读取，不要重复提交','STORAGE_RECEIPT_INVALID');
   return {revision:saved.revision,state:clone(current.state)};

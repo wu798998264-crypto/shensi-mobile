@@ -21,8 +21,11 @@ export function checkpoint(state,documentId,{source='user',operationType='snapsh
   const entries=state.histories[documentId]??=[];
   // Compare against the latest checkpoint. Returning to an older text is still
   // a new revision when a different version was saved in between.
-  const latest=entries[0];
-  const existing=latest?.document&&stable(snapshotDocument(latest.document))===signature&&(!latest.integritySchemaVersion||verifyHistoryEntryIntegrity(latest).ok)?latest:null;
+  // Sync is not an edit: a device may deliberately display an older retained
+  // version. Do not create a fresh checkpoint on every cross-device exchange.
+  // Explicit user saves still compare only with the latest checkpoint.
+  const candidates=source==='sync'&&operationType==='snapshot'?entries:entries.slice(0,1);
+  const existing=candidates.find(entry=>entry?.document&&stable(snapshotDocument(entry.document))===signature&&(!entry.integritySchemaVersion||verifyHistoryEntryIntegrity(entry).ok));
   if(existing)return {versionId:existing.id,created:false,promoted:false};
   const time=new Date().toISOString();
   const entry=stampHistoryEntryIntegrity({id:'core-history-'+randomUUID(),title:document.title,name:reason,time,createdAt:time,document:snapshot,scopeType:'document',scopeId:documentId,...(beforeContent===undefined?{}:{beforeContent})},{source,operationType,reason,parentVersionId:entries[0]?.id||''});

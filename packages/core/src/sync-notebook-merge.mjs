@@ -3,6 +3,7 @@ import {stableVersionJson,sha256HexSync,stampHistoryEntryIntegrity} from '../leg
 import {validateCloudNotebook,portableNotebookSnapshot} from './notebook-snapshot.mjs';
 const clone=structuredClone,signature=doc=>stableVersionJson(snapshotDocument(doc));
 const contentSignature=doc=>{const value=snapshotDocument(doc);for(const field of ['id','moduleId','documentKind'])delete value[field];value.deleted=!!value.deleted;if(value.canvas){if(!value.canvas.assets?.length)delete value.canvas.assets;value.canvas.settings={snapToGrid:true,gridSize:20,...value.canvas.settings};for(const node of value.canvas.nodes||[])if(node.localMedia)delete node.file;}return stableVersionJson(value);};
+export const syncDocumentVersion=doc=>sha256HexSync(contentSignature(doc));
 export const syncDocumentContent=doc=>stableVersionJson(doc?[doc.title,doc.markdown,doc.html,doc.canvas?.nodes,doc.canvas?.edges,!!doc.deleted]:null);
 const time=value=>{const n=typeof value==='number'?value:Date.parse(value);return Number.isFinite(n)&&n>0?n:0;};
 export function documentSyncTime(state,id){

@@ -1,4 +1,4 @@
-export const notebookSyncScopeText='同一笔记本保留一个当前版本。同步本机已有笔记本的正文、白板、提示词与参考顺序、受管理的图音视频及完整历史；先核对云端再上传，冲突和删除需确认。云端新笔记本首次下载仍需手动选择；暂不含PDF等普通附件、工作区附件、插件配置和账号凭据。';
+export const notebookSyncScopeText='各设备可采用不同当前版本，双方版本均保留历史。同步本机已有笔记本的正文、白板、提示词与参考顺序、受管理的图音视频及完整历史；先核对云端再上传，冲突需选择，删除需单独确认。云端新笔记本首次下载仍需手动选择；暂不含PDF等普通附件、工作区附件、插件配置和账号凭据。';
 
 export function mountNotebookAutoSwitch(parent,{status,configure,onError=()=>{}}){
  const label=document.createElement('label'),check=document.createElement('input'),hint=document.createElement('small');

@@ -1,6 +1,7 @@
+import {ACCOUNT_SERVICE_URL} from '../core/src/account-service-endpoints.mjs';
 export function allowedMobileServiceUrl(raw){
  const url=new URL(raw);
- const account=url.origin==='https://api.hexing.studio'&&url.pathname.startsWith('/skill/');
+ const account=url.origin===ACCOUNT_SERVICE_URL&&/^\/(?:v1\/|health$|admin(?:\/|$))/.test(url.pathname);
  const nutstore=url.origin==='https://dav.jianguoyun.com'&&(url.pathname==='/dav'||url.pathname.startsWith('/dav/')||!url.search&&['/nsdav/delta','/nsdav/latestDeltaCursor'].includes(url.pathname));
  if(url.username||url.password||url.hash||!account&&!nutstore)throw Error('不允许连接此服务地址');
  return url.href;
@@ -23,7 +24,7 @@ export function nativeFetchAdapter(http,cloudTransport){
    const bytes=decode(result.base64);if(bytes.length>8*1024*1024)throw Error('坚果云响应超过当前原生桥限制');
    return new Response([204,205,304].includes(result.status)?null:bytes,{status:result.status,headers:result.headers});
   }
-  if(new URL(url).pathname.match(/^\/skill\/v1\/cloud-sync\/(files|uploads)\/[a-zA-Z0-9_-]+\/chunks\/\d+$/)){
+  if(new URL(url).pathname.match(/^(?:\/skill)?\/v1\/cloud-sync\/(files|uploads)\/[a-zA-Z0-9_-]+\/chunks\/\d+$/)){
    if(!cloudTransport)throw Error('原生云文件传输桥尚未接入');
    const headers=new Headers(options.headers),body=options.body;
    if(body&&!(body instanceof Uint8Array)||body?.length>4*1024*1024)throw Error('云端分块类型或大小无效');
@@ -32,7 +33,7 @@ export function nativeFetchAdapter(http,cloudTransport){
    const bytes=decode(result.base64);if(bytes.length>4*1024*1024)throw Error('云端分块超过限制');
    return new Response(bytes,{status:result.status});
   }
-  const emailCode=new URL(url).pathname==='/skill/v1/auth/email-code';
+  const emailCode=/^(?:\/skill)?\/v1\/auth\/email-code$/.test(new URL(url).pathname);
   const result=await http.request({url,method:options.method||'GET',headers:options.headers||{},data:options.body,responseType:'text',disableRedirects:true,connectTimeout:15000,readTimeout:emailCode?30000:20000});
   if(options.signal?.aborted)throw Error(emailCode?'验证码发送结果未确认，请先检查邮箱，不要立即重发':'请求已取消');
   if(result.status>=300&&result.status<400)throw Error('服务重定向被拒绝，未转发凭据');

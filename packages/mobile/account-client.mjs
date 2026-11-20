@@ -2,10 +2,12 @@
 // No browser/localStorage fallback, Node dependency, generation or purchase endpoint.
 import {createCloudFileClient} from './cloud-sync-client.mjs';
 import {cloudSyncStatus as readCloudStatus} from '../core/src/cloud-sync-status.mjs';
-export const ACCOUNT_ISSUER='https://api.hexing.studio/skill';
+import {ACCOUNT_SERVICE_URL,LEGACY_ACCOUNT_SERVICE_URL,accountEndpoint} from '../core/src/account-service-endpoints.mjs';
+export {ACCOUNT_SERVICE_URL,LEGACY_ACCOUNT_SERVICE_URL};
+export const ACCOUNT_ISSUER=ACCOUNT_SERVICE_URL;
 const failure=(message,code,status)=>Object.assign(new Error(message),{code,...status?{status}: {}});
 const publicUser=user=>({id:String(user.id),account:String(user.account||''),displayName:String(user.displayName||'神思用户'),email:String(user.email||''),emailVerifiedAt:Number(user.emailVerifiedAt)||0,hasPassword:user.hasPassword===true,avatar:typeof user.avatar==='string'&&user.avatar.length<=180000&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(user.avatar)?user.avatar:''});
-const messages={EMAIL_UNAVAILABLE:'邮箱服务暂不可用，请稍后重试或使用密码登录',EMAIL_SEND_FAILED:'验证码邮件未能发送，请稍后重试',EMAIL_RATE_LIMIT:'发送过于频繁，请稍后重试',EMAIL_DAILY_LIMIT:'今日验证码发送次数已达上限',EMAIL_BUSY:'验证码正在发送，请稍候',EMAIL_CODE_INVALID:'验证码错误或已过期，请重新获取',EMAIL_BIND_REQUIRED:'该邮箱尚未验证绑定，请先用原账号密码登录',EMAIL_INVALID:'请输入有效邮箱'};
+const messages={EMAIL_DOMAIN_TYPO:'请核对收件地址，QQ 邮箱的后缀是 qq.com。',EMAIL_UNAVAILABLE:'邮箱服务暂不可用，请稍后重试或使用密码登录',EMAIL_SEND_FAILED:'验证码邮件未能发送，请稍后重试',EMAIL_RATE_LIMIT:'发送过于频繁，请稍后重试',EMAIL_DAILY_LIMIT:'今日验证码发送次数已达上限',EMAIL_BUSY:'验证码正在发送，请稍候',EMAIL_CODE_INVALID:'验证码错误或已过期，请重新获取',EMAIL_BIND_REQUIRED:'该邮箱尚未验证绑定，请先用原账号密码登录',EMAIL_INVALID:'请输入有效邮箱'};
 const invalidCatalog=()=>failure('官方模型目录响应无效，请重新核验','INVALID_RESPONSE');
 function publicModel(value,allowLoopback){
  if(!value||!/^[a-zA-Z0-9_.-]{1,80}$/.test(value.id)||!['text','image','video','audio'].includes(value.channel)||!['chat_completions','responses','anthropic_messages'].includes(value.protocol))throw invalidCatalog();
@@ -18,19 +20,28 @@ function publicModel(value,allowLoopback){
 }
 export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=ACCOUNT_ISSUER,allowLoopbackForTests=false,timeoutMs=15000}={}){
  if(!secureVault||!['get','set','remove'].every(k=>typeof secureVault[k]==='function'))throw failure('需要系统安全凭据库，不允许降级为浏览器缓存','SECURE_VAULT_REQUIRED');
- const url=new URL(issuer);
- if(url.username||url.password||url.search||url.hash||!(url.protocol==='https:'||allowLoopbackForTests&&url.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(url.hostname)))throw failure('账户地址必须为无凭据的安全地址','INVALID_ISSUER');
- issuer=url.href.replace(/\/$/,'');const key='shensi.account.session:'+issuer;
+ let address;try{address=accountEndpoint(issuer,{allowLoopback:allowLoopbackForTests});}catch(error){throw failure(error.message,'INVALID_ISSUER');}
+ const {serviceBaseUrl}=address;
+ issuer=address.issuer;
+ const key='shensi.account.session:'+issuer;
  let session=null,loaded=false,verified=false,lastError='',queue=Promise.resolve();
  const persistSession=value=>secureVault.set(key,JSON.stringify({...value,user:{...value.user,avatar:''}}));
  const serial=fn=>{const next=queue.catch(()=>{}).then(fn);queue=next;return next;};
- const state=()=>({issuer,status:!session?'signed_out':verified?'verified':'verification_required',user:session?publicUser(session.user):null,lastError});
- async function load(){if(loaded)return;const raw=await secureVault.get(key);if(raw){try{const v=JSON.parse(raw);if(v.issuer!==issuer||!v.user?.id||typeof v.token!=='string'||!v.token||v.token.length>16384)throw Error();session=v;}catch{throw failure('保存的账户会话无效，请清除后重新登录','INVALID_SESSION');}}loaded=true;}
+ const state=()=>({issuer,serviceBaseUrl,status:!session?'signed_out':verified?'verified':'verification_required',user:session?publicUser(session.user):null,lastError});
+ async function load(){
+  if(loaded)return;
+  const raw=await secureVault.get(key);
+  if(raw){try{const v=JSON.parse(raw);if(v.issuer!==issuer||!v.user?.id||typeof v.token!=='string'||!v.token||v.token.length>16384)throw Error();session=v;}catch{throw failure('保存的账户会话无效，请清除后重新登录','INVALID_SESSION');}}
+  loaded=true;
+ }
  async function request(path,{token,body}={}){
   // SMTP acknowledgement can consume 12s server-side. Leave network margin
   // without retrying a send whose outcome might already be accepted.
   const deadline=path==='/v1/auth/email-code'?Math.max(timeoutMs,30000):timeoutMs;
-  let response;try{response=await fetchImpl(issuer+path,{method:body===undefined?'GET':'POST',redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(deadline),headers:{Accept:'application/json',...(body===undefined?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body)});}catch{throw failure(path==='/v1/auth/email-code'?'验证码发送结果尚未确认，请先检查收件箱与垃圾邮件，稍后再试。':'账户服务连接失败或超时，请检查网络后重试','ACCOUNT_UNAVAILABLE');}
+  let response;
+  try{
+   response=await fetchImpl(serviceBaseUrl+path,{method:body===undefined?'GET':'POST',redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(deadline),headers:{Accept:'application/json',...(body===undefined?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+  }catch{throw failure(path==='/v1/auth/email-code'?'验证码发送结果尚未确认，请先检查收件箱与垃圾邮件，稍后再试。':'账户服务连接失败或超时，请检查网络后重试','ACCOUNT_UNAVAILABLE');}
   // Do not echo raw upstream errors: a proxy could reflect a password or token.
   const reader=response.body?.getReader();let size=0,text='';const decoder=new TextDecoder();
   if(!reader&&response.ok)throw failure('账户服务未返回数据','INVALID_RESPONSE');
@@ -53,7 +64,7 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
   const next={issuer,token:result.token,user:publicUser(me.user)};await persistSession(next);session=next;loaded=true;verified=true;lastError='';return state();
  }
  return {
-  cloudFiles:({journal,expectedMemberId}={})=>createCloudFileClient({issuer,journal,expectedMemberId,fetchImpl,allowLoopbackForTests,getSession:()=>serial(async()=>{await load();if(!session)throw failure('请先登录神思账号','LOGIN_REQUIRED');return structuredClone(session);})}),
+  cloudFiles:({journal,expectedMemberId}={})=>createCloudFileClient({issuer:serviceBaseUrl,journal,expectedMemberId,fetchImpl,allowLoopbackForTests,getSession:()=>serial(async()=>{await load();if(!session)throw failure('请先登录神思账号','LOGIN_REQUIRED');return structuredClone(session);})}),
   status:()=>serial(async()=>{await load();return state();}),
   refresh:()=>serial(verify),
   rememberedAccount:{get:async()=>{const raw=await secureVault.get(key+':name');if(!raw)return null;const saved=JSON.parse(raw);return {account:String(saved.account||'').slice(0,256),email:String(saved.email||'').slice(0,254)};},set:async value=>{if(value)await secureVault.set(key+':name',JSON.stringify({account:String(value.account||'').slice(0,256),email:String(value.email||'').slice(0,254)}));else await secureVault.remove(key+':name');}},
@@ -94,7 +105,7 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
    if(responses.some(value=>value.status==='rejected'&&value.reason.status===401))await verify();
    const values={},serviceErrors={};responses.forEach((result,index)=>{if(result.status==='fulfilled')values[names[index]]=result.value;else serviceErrors[names[index]]=result.reason.message;});
    const cloud=values.cloud||{state:'unavailable',message:serviceErrors.cloud,checkedAt:new Date().toISOString()};
-   return {...state(),membership:values.membership||null,quota:values.quota||null,cloudSyncStatus:cloud,serviceErrors,services:{purchaseAvailable:values.billing?.paymentEnabled===true,cloudSyncAvailable:cloud.state==='available'},checkedAt:new Date().toISOString()};
+   return {...state(),membership:values.membership||null,quota:values.quota||null,billing:values.billing||null,cloudSyncStatus:cloud,serviceErrors,services:{purchaseAvailable:values.billing?.paymentEnabled===true,cloudSyncAvailable:cloud.state==='available'},checkedAt:new Date().toISOString()};
   }),
   officialModels:()=>serial(async()=>{
    await verify();
@@ -116,6 +127,8 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
     return result('available',compute,models);
    }catch(error){if(error.status===401)await verify();throw error;}
   }),
+  billingPurchase:body=>serial(async()=>{await verify();return request('/v1/billing/orders',{token:session.token,body});}),
+  billingReconcile:id=>serial(async()=>{await verify();return request('/v1/billing/reconcile',{token:session.token,body:{id}});}),
   logout:()=>serial(async()=>{
    // Clear local authentication even when remote revocation is unavailable.
    try{await load();}catch{session=null;}const token=session?.token;session=null;verified=false;loaded=false;lastError='';

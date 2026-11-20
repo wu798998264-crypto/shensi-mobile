@@ -1,6 +1,7 @@
 // Shared desktop/native login UI. Remembered names never contain passwords or codes.
 const nameStore={get:async()=>null,set:async()=>{}};
 export function mountAccountAuth(root,{call,authenticated,rememberStore=nameStore}){
+ root.dataset.coreLocalize='';
  let mode='password',busy=false,countdown=0,timer,challenge=null,disposed=false,touched=false;
  const field=(label,name,type='text',extra='')=>`<label>${label}<span class="account-password-field"><input name="${name}" type="${type}" required ${extra}>${type==='password'?`<button type="button" data-auth-reveal="${name}" aria-label="按住显示密码">◉</button>`:''}</span></label>`;
  root.innerHTML=`<nav class="account-login-tabs" role="tablist">${[['password','账号密码'],['email','邮箱验证码']].map(([id,label])=>`<button type="button" role="tab" data-auth-mode="${id}" aria-selected="${id===mode}">${label}</button>`).join('')}</nav>
@@ -38,7 +39,7 @@ export function mountAccountAuth(root,{call,authenticated,rememberStore=nameStor
   if(event.target.closest('[data-auth-register-close]')){registerDialog.close();status=mainStatus;return;}
   const tab=event.target.closest('[data-auth-mode]');if(tab){switchMode(tab.dataset.authMode);return;}
   if(event.target.closest('[data-auth-question-load]'))void run(async()=>{const result=await call('recovery-question',{account:input('recoverAccount').value.trim()});root.querySelector('[data-auth-question]').textContent=result.securityQuestion||result.question||'';status.textContent='请回答密保问题。';});
-  if(event.target.closest('[data-auth-code]')){if(countdown||!input('email').reportValidity())return;void run(async()=>{const address=email();status.textContent='正在发送验证码，请稍候…';const result=await call('email-code',{email:address});if(!result.challengeId)throw Error('验证码服务未返回校验编号');const lifetime=Number(result.expiresInSeconds);if(!Number.isFinite(lifetime)||lifetime<=0||lifetime>600)throw Error('验证码有效期无效或已过期，请稍后重新获取。');challenge={email:address,id:result.challengeId,expiresAt:Date.now()+lifetime*1000};status.textContent='验证码已发送，请查收。';coolDown(result.retryAfterSeconds||60);});}
+  if(event.target.closest('[data-auth-code]')){if(countdown||!input('email').reportValidity())return;void run(async()=>{const address=email();if(/@qq\.conm$/i.test(address))throw Error('请核对收件地址，QQ 邮箱的后缀是 qq.com。');status.textContent='正在发送验证码，请稍候…';const result=await call('email-code',{email:address});if(!result.challengeId)throw Error('验证码服务未返回校验编号');const lifetime=Number(result.expiresInSeconds);if(!Number.isFinite(lifetime)||lifetime<=0||lifetime>600)throw Error('验证码有效期无效或已过期，请稍后重新获取。');challenge={email:address,id:result.challengeId,expiresAt:Date.now()+lifetime*1000};status.textContent='验证码已发送，请查收。';coolDown(result.retryAfterSeconds||60);});}
  };
  registerDialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();else status=mainStatus;});
  registration.onsubmit=event=>{event.preventDefault();void run(async()=>{await call('register',{account:input('registerAccount').value.trim(),displayName:input('displayName').value.trim(),contact:input('contact').value.trim(),password:input('registerPassword').value,securityQuestion:input('securityQuestion').value.trim(),securityAnswer:input('securityAnswer').value,remember:true});registerDialog.close();status=mainStatus;await done();});};

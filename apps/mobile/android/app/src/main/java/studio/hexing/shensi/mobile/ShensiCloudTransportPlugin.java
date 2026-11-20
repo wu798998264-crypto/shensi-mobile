@@ -92,9 +92,10 @@ public class ShensiCloudTransportPlugin extends ShensiLocalPlugin {
         HttpsURLConnection connection = null;
         try {
             URL url = new URL(call.getString("url", "")); String method = call.getString("method", "GET"), token = call.getString("token", "");
-            boolean upload = method.equals("PUT") && url.getPath().matches("/skill/v1/cloud-sync/uploads/[a-zA-Z0-9_-]{1,128}/chunks/[0-9]{1,5}");
-            boolean download = method.equals("GET") && url.getPath().matches("/skill/v1/cloud-sync/files/[a-zA-Z0-9_-]{1,128}/chunks/[0-9]{1,5}");
-            if (!url.getProtocol().equals("https") || !url.getHost().equals("api.hexing.studio") || url.getPort() != -1 || url.getUserInfo() != null || url.getQuery() != null || url.getRef() != null || (!upload && !download) || !token.matches("[A-Za-z0-9._~+/=-]{1,16384}")) throw new IllegalArgumentException();
+            boolean upload = method.equals("PUT") && url.getPath().matches("(?:/skill)?/v1/cloud-sync/uploads/[a-zA-Z0-9_-]{1,128}/chunks/[0-9]{1,5}");
+            boolean download = method.equals("GET") && url.getPath().matches("(?:/skill)?/v1/cloud-sync/files/[a-zA-Z0-9_-]{1,128}/chunks/[0-9]{1,5}");
+            boolean accountHost = url.getHost().equals("api.hexing.studio") && url.getPath().startsWith("/v1/");
+            if (!url.getProtocol().equals("https") || !accountHost || url.getPort() != -1 || url.getUserInfo() != null || url.getQuery() != null || url.getRef() != null || (!upload && !download) || !token.matches("[A-Za-z0-9._~+/=-]{1,16384}")) throw new IllegalArgumentException();
             byte[] body = null;
             if (upload) {
                 String data = call.getString("data", ""), digest = call.getString("sha256", "");

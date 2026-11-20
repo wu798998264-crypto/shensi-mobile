@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import {materializeMobileBranding} from '../../scripts/materialize-mobile-branding.mjs';
 import {fileURLToPath} from 'node:url';
 import {dirname,join} from 'node:path';
+import {assertPublicInput,assertPublicText} from '../../scripts/release-privacy-policy.mjs';
 const root=dirname(fileURLToPath(import.meta.url)),preview=process.argv.includes('--preview'),previewUi=process.argv.includes('--preview-ui'),out=join(root,preview?'preview-www':'www');
 if(preview&&previewUi)throw Error('不能同时选择 --preview 与 --preview-ui');
 await mkdir(out,{recursive:true});
@@ -12,7 +13,9 @@ for(const name of ['main.js','main.js.LEGAL.txt','app.css','design-preview.css',
 const assets=join(out,'assets');
 await mkdir(assets,{recursive:true});
 const entry=previewUi?'src/preview-ui.js':preview?'src/preview.js':'src/main.js';
-const result=await build({absWorkingDir:root,entryPoints:[join(root,entry)],bundle:true,format:'esm',platform:'browser',target:'chrome120',outfile:join(out,'main.js'),metafile:true,legalComments:'linked',sourcemap:false});
+const result=await build({absWorkingDir:root,entryPoints:[join(root,entry)],bundle:true,format:'esm',platform:'browser',target:['chrome120','safari15.4'],outfile:join(out,'main.js'),metafile:true,legalComments:'linked',sourcemap:false});
+for(const input of Object.keys(result.metafile.inputs))assertPublicInput(input.replace(/^(?:\.\.\/)+/,''));
+assertPublicText(await readFile(join(out,'main.js'),'utf8'),'mobile/main.js');
 if(previewUi){
   await copyFile(join(root,'src','preview-index.html'),join(out,'index.html'));
   await copyFile(join(root,'../..','docs/previews/creative-suite-20261027/preview.css'),join(out,'design-preview.css'));

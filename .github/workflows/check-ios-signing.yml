@@ -1,0 +1,20 @@
+name: Check iPhone signing configuration
+on:
+  push:
+    branches: [codex/latest-packages-20261120-13]
+    paths: [.github/workflows/check-ios-signing.yml]
+permissions: {}
+jobs:
+  signing-inputs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check presence of required signing inputs
+        env:
+          CERT_PRESENT: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 != '' }}
+          PASSWORD_PRESENT: ${{ secrets.IOS_P12_PASSWORD != '' }}
+          PROFILE_PRESENT: ${{ secrets.IOS_ADHOC_PROFILE_BASE64 != '' }}
+        run: |
+          echo "Distribution identity present = $CERT_PRESENT"
+          echo "Certificate password present = $PASSWORD_PRESENT"
+          echo "Ad Hoc profile present = $PROFILE_PRESENT"
+          test "$CERT_PRESENT/$PASSWORD_PRESENT/$PROFILE_PRESENT" = true/true/true

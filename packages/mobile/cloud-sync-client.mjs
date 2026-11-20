@@ -1,20 +1,21 @@
 // Shared desktop/mobile transfer contract. Native adapters own file IO and the
 // encrypted login store. Journals contain identities/hashes, never auth tokens.
+import {ACCOUNT_SERVICE_URL,accountEndpoint} from '../core/src/account-service-endpoints.mjs';
 const failure=(message,code,status)=>Object.assign(Error(message),{code,...status?{status}: {}});
 const id=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,128}$/.test(value);
 const digest=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const toHex=value=>Array.from(new Uint8Array(value),b=>b.toString(16).padStart(2,'0')).join('');
-export function createCloudFileClient({issuer='https://api.hexing.studio/skill',getSession,journal,fetchImpl=fetch,crypto=globalThis.crypto,allowLoopbackForTests=false,expectedMemberId}={}){
- const address=new URL(issuer);
- if(address.username||address.password||address.search||address.hash||!(address.protocol==='https:'||allowLoopbackForTests&&address.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(address.hostname)))throw failure('云同步地址不安全','CLOUD_SYNC_INVALID_ISSUER');
+export function createCloudFileClient({issuer=ACCOUNT_SERVICE_URL,getSession,journal,fetchImpl=fetch,crypto=globalThis.crypto,allowLoopbackForTests=false,expectedMemberId}={}){
+ let address;try{address=accountEndpoint(issuer,{allowLoopback:allowLoopbackForTests});}catch(error){throw failure(error.message,'CLOUD_SYNC_INVALID_ISSUER');}
+ const {serviceBaseUrl}=address;
+ issuer=address.issuer;
  if(typeof getSession!=='function'||!journal||!['get','set','remove'].every(key=>typeof journal[key]==='function')||!crypto?.subtle||!crypto.randomUUID)throw failure('云同步缺少安全登录或持久续传记录','CLOUD_SYNC_ADAPTER_REQUIRED');
- issuer=address.href.replace(/\/$/,'');const flights=new Set();
+ const flights=new Set();
  const hash=async bytes=>toHex(await crypto.subtle.digest('SHA-256',bytes));
  async function session(){const value=await getSession();if(value?.issuer!==issuer||!id(value.user?.id)||typeof value.token!=='string'||!value.token||value.token.length>16384)throw failure('请先登录此云空间的神思账号','CLOUD_SYNC_LOGIN_REQUIRED');if(expectedMemberId!==undefined&&value.user.id!==expectedMemberId)throw failure('登录账号已变化，未向新账号同步原笔记本','CLOUD_SYNC_ACCOUNT_CHANGED');return value;}
  const request=async(auth,path,{method='GET',body,bytes,sha256,signal,binary=false}={})=>{
   const current=await session();if(current.user.id!==auth.user.id||current.token!==auth.token)throw failure('登录账号已变化，原上传记录已保留','CLOUD_SYNC_ACCOUNT_CHANGED');
-  let response;try{response=await fetchImpl(issuer+path,{method,redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.any([AbortSignal.timeout(60000),...(signal?[signal]:[])]),headers:{Authorization:'Bearer '+auth.token,Accept:binary?'application/octet-stream':'application/json',...(bytes?{'Content-Type':'application/octet-stream','X-Content-SHA256':sha256}:body!==undefined?{'Content-Type':'application/json'}:{})},body:bytes||(body===undefined?undefined:JSON.stringify(body))});}
-  catch{throw failure(signal?.aborted?'同步已暂停，原上传可继续':'云同步连接中断，原上传记录已保留，请续传而非重复新建','CLOUD_SYNC_NETWORK_UNKNOWN');}
+  let response;try{response=await fetchImpl(serviceBaseUrl+path,{method,redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.any([AbortSignal.timeout(60000),...(signal?[signal]:[])]),headers:{Authorization:'Bearer '+auth.token,Accept:binary?'application/octet-stream':'application/json',...(bytes?{'Content-Type':'application/octet-stream','X-Content-SHA256':sha256}:body!==undefined?{'Content-Type':'application/json'}:{})},body:bytes||(body===undefined?undefined:JSON.stringify(body))});}catch{throw failure(signal?.aborted?'同步已暂停，原上传可继续':'云同步连接中断，原上传记录已保留，请续传而非重复新建','CLOUD_SYNC_NETWORK_UNKNOWN');}
   const chunks=[];let count=0;const limit=response.ok&&binary?4*1024*1024:512*1024;
   try{const reader=response.body.getReader();for(;;){const next=await reader.read();if(next.done)break;count+=next.value.byteLength;if(count>limit){await reader.cancel();throw failure('云同步响应超过限制','CLOUD_SYNC_INVALID_RESPONSE');}chunks.push(next.value);}}
   catch(error){if(error.code)throw error;throw failure('响应中断，原同步记录已保留','CLOUD_SYNC_NETWORK_UNKNOWN');}

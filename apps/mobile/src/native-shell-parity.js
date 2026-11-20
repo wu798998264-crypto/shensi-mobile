@@ -11,7 +11,7 @@ export function createNativeShell(root,actions){
  // Session-only composer drafts are distinct from document edits/history.
  // Bind each input to its original context, including IME input during a switch.
  const chatDrafts=new Map(),chatContext=()=>JSON.stringify([bookId,current?.id||null]);
- const head=el('header',undefined,{class:'phone-head'}),name=el('strong','神思笔记'),brand=el('div',undefined,{class:'native-brand'});brand.append(name);
+ const head=el('header',undefined,{class:'phone-head'}),name=el('strong','神思'),brand=el('div',undefined,{class:'native-brand'});brand.append(name);
  const mode=button('编辑','edit',()=>actions.edit(),{'data-action':'mode'}),more=button('文档详情与状态','more',()=>detailsMenu()),headActions=el('div');headActions.append(mode,more);head.append(button('展开目录','panel',()=>showDirectory()),brand,headActions);
  const content=el('section',undefined,{class:'phone-content document-content'}),notice=el('p','',{role:'status','aria-live':'polite',class:'notice',popover:'manual'});
  const nav=el('nav',undefined,{class:'phone-foot m3-nav'});nav.append(button('快速搜索','search',()=>search()),button('新建签页','new',()=>newMenu()),button('签页切换','tabs',()=>tabsMenu()),button('当前文档','doc',()=>documentMenu()));
@@ -98,6 +98,6 @@ export function createNativeShell(root,actions){
  let gesture;content.onpointerdown=e=>{if(e.target.closest('button,input,textarea,[contenteditable=true]'))return;gesture={x:e.clientX,y:e.clientY};};content.onpointerup=e=>{if(!gesture)return;const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;gesture=null;if(Math.abs(dx)>65&&Math.abs(dy)<60)dx<0?showDirectory():showPlugin(pluginChoice);};
  root.onkeydown=e=>{if(e.key==='Escape'&&!e.isComposing&&e.keyCode!==229&&!root.querySelector('dialog[open]'))closePanel();};
  return {content,notice,tree,select,addBook,mode,services,closePanel,showDirectory,button,row,renderBooks,
-  update({document,notebook,notebookId,editing,total,isFavorite}){const previousContext=chatContext();if(bookId&&bookId!==notebookId)tabs.clear();bookId=notebookId;current=document;favorite=!!isFavorite;bookName=notebook||'神思笔记';name.textContent=bookName;count.textContent=`当前笔记本共 ${total} 个文档（含白板）`;if(document)tabs.set(document.id,document);mode.disabled=!document||!!(document.locked||document.coreLocked||document.readOnly);mode.innerHTML=shellIcon(editing?'read':'edit');mode.setAttribute('aria-label',editing?'保存并阅读':'编辑');mode.title=mode.getAttribute('aria-label');if(!plugin.hidden&&previousContext!==chatContext())showPlugin(pluginChoice);}
+  update({document,notebook,notebookId,editing,total,isFavorite}){const previousContext=chatContext();if(bookId&&bookId!==notebookId)tabs.clear();bookId=notebookId;current=document;favorite=!!isFavorite;bookName=notebook||'神思';name.textContent=bookName;count.textContent=`当前笔记本共 ${total} 个文档（含白板）`;if(document)tabs.set(document.id,document);mode.disabled=!document||!!(document.locked||document.coreLocked||document.readOnly);mode.innerHTML=shellIcon(editing?'read':'edit');mode.setAttribute('aria-label',editing?'保存并阅读':'编辑');mode.title=mode.getAttribute('aria-label');if(!plugin.hidden&&previousContext!==chatContext())showPlugin(pluginChoice);}
  };
 }
