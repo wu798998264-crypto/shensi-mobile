@@ -1,8 +1,13 @@
 name: Verify delivered Android APK
 on:
-  push:
-    branches: [codex/latest-packages-20261120-13]
-    paths: [".github/workflows/android-install.yml"]
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Android debug build run ID
+        required: true
+      apk_sha256:
+        description: SHA-256 of delivered APK
+        required: true
 permissions:
   contents: read
   actions: read
@@ -14,16 +19,19 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: shensi-mobile-foundation
-          run-id: 44693040746
+          run-id: ${{ inputs.source_run }}
           github-token: ${{ github.token }}
           path: received
       - name: Launch delivered application on clean Android
         shell: bash
+        env:
+          APK_SHA256: ${{ inputs.apk_sha256 }}
         run: |
           set -euo pipefail
           mkdir -p evidence
           apk=received/apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-          echo "1a963ec5a3e3928731b5a9b1a5c875f15393bca973f2313199b41023ee30f432  $apk" | sha256sum -c -
+          [[ "$APK_SHA256" =~ ^[a-fA-F0-9]{64}$ ]]
+          echo "$APK_SHA256  $apk" | sha256sum -c -
           export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
           sudo setfacl -m "u:$(id -un):rw" /dev/kvm
           image='system-images;android-35;google_apis;x86_64'
@@ -54,12 +62,41 @@ jobs:
           sleep 12
           test -n "$(adb shell pidof "$id" | tr -d '\r')"
           adb exec-out screencap -p > evidence/android-home.png
+          control() {
+            for n in {1..15}; do
+              if ! adb shell uiautomator dump /sdcard/ui.xml >/dev/null || ! adb pull /sdcard/ui.xml "evidence/$1.xml" >/dev/null; then sleep 1; continue; fi
+              point=$(python3 - "$1" "$2" <<'PY'
+          import xml.etree.ElementTree as ET, re, sys
+          for node in ET.parse('evidence/'+sys.argv[1]+'.xml').iter('node'):
+              if sys.argv[2] in (node.get('text'),node.get('content-desc')):
+                  x,y,r,b=map(int,re.findall(r'-?\d+',node.attrib['bounds']))
+                  if r>x and b>y:
+                      print((x+r)//2,(y+b)//2)
+                      break
+          PY
+              )
+              if [[ -n "$point" ]]; then
+                if [[ "${3:-}" = tap ]]; then adb shell input tap $point; fi
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
+          control home '新建笔记本' tap
+          control dialog '创建'
+          adb shell input text Ink
+          sleep 1
+          control typed Ink
+          control form '创建' tap
+          control committed '新建文档'
+          control notebook Ink
           adb shell am force-stop "$id"
           adb shell am start -W -n "$activity" | tee evidence/relaunch.txt
           sleep 12
           test -n "$(adb shell pidof "$id" | tr -d '\r')"
           adb exec-out screencap -p > evidence/android-reopened.png
-          adb exec-out screencap -p > evidence/android-reopened.png
+          control reopened Ink
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -9,7 +9,7 @@ import {hydrateDocumentMedia} from './document-media.js';
 const element=(tag,text,attrs={})=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;for(const [key,value] of Object.entries(attrs))e.setAttribute(key,value);return e;};
 const uid=prefix=>prefix+'-'+crypto.randomUUID();
 const closeDialog=dialog=>{dialog.close();dialog.remove();};
-export async function mountFoundation(root,{documents,account,nutstore,marketplace,cloud,media,metadata,customApi,systemAppearance,hostLabel='ANDROID · 0.0.9 测试版'}={}){
+export async function mountFoundation(root,{documents,account,nutstore,marketplace,cloud,media,metadata,customApi,systemAppearance}={}){
  root.stopAutoSync?.();root.interfaceLanguage?.destroy();const language=await mountInterfaceLanguage(root,metadata);root.interfaceLanguage=language;let appearance=await metadata?.get('mobile-appearance')||'跟随系统';
  let notebooks=await documents.list(),notebookId=notebooks[0]?.id||'',current=notebookId?await documents.load(notebookId):null,documentId='',editing=false,pending=Promise.resolve(),failedDraft=false;
  let textarea,notice,tree,content,select,mode,noticeTimer,uploading=false;let draftRevision=0,favoritesOnly=false;const expandedFolders=new Set();
