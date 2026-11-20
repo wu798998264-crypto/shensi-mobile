@@ -55,6 +55,16 @@ jobs:
             test "$(cat "$marker")" = "$expected"
             xcrun simctl terminate "$device" "$id"
           done
+      - name: Compile release executable for physical iPhone
+        working-directory: apps/mobile/ios/App
+        run: |
+          set -euo pipefail
+          xcodebuild -scheme App -project App.xcodeproj -configuration Release -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/ios-device" CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/device-build.log" || { grep -E '(error:|fatal error:)' "$RUNNER_TEMP/device-build.log"; exit 1; }
+          app="$RUNNER_TEMP/ios-device/Build/Products/Release-iphoneos/App.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")" = studio.hexing.shensi.mobile
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$app/Info.plist")" = 13
+          lipo -verify_arch arm64 "$app/App"
+          xcrun vtool -show-build "$app/App" | grep -E 'platform IOS$'
       - name: Export signed Ad Hoc installer
         env:
           IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
