@@ -91,6 +91,9 @@ jobs:
           if-no-files-found: error
       - name: Verify real short-drama download and whiteboard handoff
         shell: bash
+        env:
+          SHENSI_TEST_HONGGUO_FIXTURE: villain
+          SHENSI_TEST_HONGGUO_SHARE_URL: 'https://novelquickapp.com/hongguo/ug/pages/video-list-share-ssr?video_series_id=7704683516834892825&vid=7704685770241477657'
         run: |
           set -euo pipefail
           app="$(find "$WORK/dist-$ARCH" -maxdepth 2 -name '*.app' -print -quit)"
