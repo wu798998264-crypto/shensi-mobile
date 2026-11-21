@@ -36,10 +36,10 @@
   },
   {
     "id": "thirdparty.doubao",
-    "version": "0.1.44",
-    "path": "thirdparty.doubao-0.1.44.plugin.json",
-    "size": 365698,
-    "sha256": "7367e1b36dcee9c9336b9c9f5eec4703366607ede245398064a9476e61f37e3f"
+    "version": "0.1.50",
+    "path": "thirdparty.doubao-0.1.50.plugin.json",
+    "size": 367245,
+    "sha256": "a2a4c32c1a8b6cc1798dadefd29e34c115cb1f5f9a13a401bbd62181affc03f3"
   },
   {
     "id": "thirdparty.character-chat",
@@ -64,10 +64,10 @@
   },
   {
     "id": "official.nutstore",
-    "version": "0.1.44",
-    "path": "official.nutstore-0.1.44.plugin.json",
+    "version": "0.1.50",
+    "path": "official.nutstore-0.1.50.plugin.json",
     "size": 216221,
-    "sha256": "391a1ca129223c9b7256306f61946f355a8f5caeac4c55d5b2151b032a515a5c"
+    "sha256": "6f461982a633cb3bcc9a78e9c3a344cce09dc67f96e6149365645e5aebdd59f2"
   },
   {
     "id": "thirdparty.calendar",

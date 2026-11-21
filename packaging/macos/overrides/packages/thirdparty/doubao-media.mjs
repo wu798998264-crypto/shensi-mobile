@@ -10,7 +10,7 @@ import {createMediaRejectionLog} from '../official/media-rejection-log.mjs';
 import {doubaoModel} from './doubao.mjs';
 import {canRetryDoubaoPreparation,canReadDoubaoOriginalResult,canRecoverPreparedDoubaoResult} from './doubao-tasks.mjs';
 import {queueAbandonRefusal,mediaNeedsAutomaticRelease,mediaRecallable} from '../ui/media-task-policy.js';
-import {doubaoTaskAccountDetails} from './doubao-account-policy.mjs';
+import {doubaoNoReadyAccountMessage,doubaoTaskAccountDetails} from './doubao-account-policy.mjs';
 const hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex');
 const date=()=>new Date().toISOString();
 const matches=(r,f)=>Object.entries(f).every(([k,v])=>v===undefined||r[k]===v||k==='accountId'&&r.executionAccountId===v);
@@ -25,7 +25,10 @@ export function createDoubaoMedia({service,models,doubao,requirePlugin,budget,au
  // One projection for background persistence and immediate read-only snapshots.
  // Reading the queue must never wait for a download or operate a browser.
  const taskState=(r,task)=>{
-  if(exhausted(task))return {status:'failed',failedAt:task.pausedAt||task.updatedAt||r.updatedAt||date(),error:task.message||'豆包可用账号额度已耗尽，本次生成已停止',code:task.code,message:task.message,pausedAt:null,queueBlocked:false,blockedByTaskId:'',retryPreparation:false,suspended:false,confirmation:null};
+  if(exhausted(task)){
+   const message=task.code==='DOUBAO_NO_READY_ACCOUNT'?doubaoNoReadyAccountMessage:task.message||'所有可调度账号的本项额度均已明确耗尽。';
+   return {status:'failed',failedAt:task.pausedAt||task.updatedAt||r.updatedAt||date(),error:message,code:task.code,message,pausedAt:null,queueBlocked:false,blockedByTaskId:'',retryPreparation:false,suspended:false,confirmation:null};
+  }
   const confirming=task.status==='confirmation_required'&&task.confirmationExecuting===true;
   const status=task.queueBlocked?'queued':confirming?'polling':{queued:'queued',preparing:'submitting',submit_intent:'submitting',waiting:'polling',blocked:'retry_required',quota_waiting:'retry_required',unknown_submission:'retry_required',confirmation_required:'retry_required',failed:'failed',stopped:'cancelled'}[task.status]||'polling';
   const pausedAt=status==='retry_required'?((r.status===status&&r.code===(task.code||'')&&r.blockedByTaskId===(task.blockedByTaskId||'')?r.pausedAt:'')||task.pausedAt||task.updatedAt||date()):null;
@@ -35,6 +38,9 @@ export function createDoubaoMedia({service,models,doubao,requirePlugin,budget,au
  };
  const rawJob=(r,task)=>{
   if(task&&task.status!=='complete'&&!r.stoppedAt&&!r.appliedAt&&(!r.suspended||task.status==='failed'||exhausted(task))&&!hasResult(r))r={...r,...taskState(r,task),...(task.status==='failed'?{suspended:false}: {})};
+  if((r.stoppedAt||r.autoFailedAt)&&!r.appliedAt&&(r.code||task?.code)==='DOUBAO_NO_READY_ACCOUNT'){
+   r={...r,error:doubaoNoReadyAccountMessage,message:doubaoNoReadyAccountMessage,...r.autoFailedAt?{autoFailureReason:doubaoNoReadyAccountMessage}:{}};
+  }
   r={...r,...doubaoTaskAccountDetails(task||{...r,accountId:r.executionAccountId||r.accountId})};
   const accountError=text=>text&&!text.startsWith('账号「'+r.accountLabel+'」')?'账号「'+r.accountLabel+'」：'+text:text;
   if(r.error||r.autoFailureReason||r.applyError)r={...r,error:accountError(r.error),autoFailureReason:accountError(r.autoFailureReason),applyError:accountError(r.applyError)};
@@ -200,7 +206,10 @@ export function createDoubaoMedia({service,models,doubao,requirePlugin,budget,au
   if(!r.stoppedAt&&task?.status!=='stopped'&&!automatic)return r;
   // A stop from the account records must end its card delivery too. This is
   // outside advance(), which stop waits for, so it cannot wait on itself.
-  if(automatic&&!r.autoFailedAt)await patch(r.jobId,{autoFailedAt:task?.autoFailedAt||date(),autoFailureReason:task?.autoFailureReason||r.error||task?.message||r.message||'未取得明确生成结果'});
+  if(automatic&&!r.autoFailedAt){
+   const waiting=exhausted(task)?taskState(r,task):null;
+   await patch(r.jobId,{...waiting,autoFailedAt:task?.autoFailedAt||date(),autoFailureReason:waiting?.error||task?.autoFailureReason||r.error||task?.message||r.message||'未取得明确生成结果'});
+  }
   await action('stop',{id:r.id,documentId:r.documentId,pluginId:r.pluginId,jobId:r.jobId,automaticFailure:automatic}).catch(()=>{});
   return owned(r.jobId);
  }
@@ -209,7 +218,7 @@ export function createDoubaoMedia({service,models,doubao,requirePlugin,budget,au
   const records=Object.values(await db.read()).filter(r=>r.pluginId===pluginId&&matches(r,{id:body.id,documentId:body.documentId,conversationId:body.conversationId}));
   const jobs=await Promise.all(records.map(async r=>{const task=r.taskId?await doubao.tasks.find(r.taskId,snapshot).catch(error=>({status:'blocked',code:error.code||'DOUBAO_TASK_READ_FAILED',updatedAt:r.updatedAt,message:'原任务状态读取失败：'+error.message+'；等待已暂停，未重新发送。',remoteMayBeRunning:true})):null;r=await settleStopped(r,task);r={...r,...doubaoTaskAccountDetails({...r,accountId:task?.accountId||r.executionAccountId||r.accountId},accounts)};const value=job(r,task);
    if(!r.stoppedAt&&!r.appliedAt&&value.status==='failed'&&r.taskId){if(canRetryDoubaoPreparation(task))Object.assign(value.availableActions,{resumeOriginal:true,retryPreparation:true});}
-   return {...value,...queueFields(r)};
+   return {...value,...queueFields(r),autoFailureReason:value.autoFailureReason};
   }));return {jobs:[...jobs,...await rejectionLog.list(body)].sort((a,b)=>b.createdAt.localeCompare(a.createdAt))};}
  async function stopAll(profileIds,filter={}){
   let selected=[];await db.update(s=>{selected=Object.values(s).filter(r=>!r.appliedAt&&!r.queueDismissedAt&&(!profileIds||profileIds.includes(r.profileId)||profileIds.includes(r.runnerProfileId))&&matches(r,filter));for(const r of selected)r.stoppedAt||=date();return s;});

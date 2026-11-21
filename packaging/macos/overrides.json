@@ -277,15 +277,15 @@
   },
   {
     "path": "apps/desktop/doubao-driver.mjs",
-    "sha256": "ae8c7746a96eb85f3154495444c8cde3c2aa5a3bf2f9906bc8b671c1c3351fd8"
+    "sha256": "2ff9521bb89833a2b6650a49503ecdac60ca6e7687ce8feffcf9caa54cd4e895"
   },
   {
     "path": "packages/thirdparty/doubao-tasks.mjs",
-    "sha256": "fd3e3e0ca4bae1f079394ca47386b8b55631bf72d16e094b168d65ecd00f733b"
+    "sha256": "5b3b2d8d416026ef90845136bd0c32d2e050040db60a971547cba9aff807841c"
   },
   {
     "path": "packages/thirdparty/doubao-media.mjs",
-    "sha256": "ca99d0dd13463b4b1fa37dec321ff69ec8045577a4526f0f4a1a1aafabe6cdca"
+    "sha256": "b39f126c2e6d4b19aa70c25d87e0f399cf191c40cf017af0a0ac4f98c3f1fbba"
   },
   {
     "path": "packages/ui/media-card-job.js",
@@ -314,6 +314,14 @@
   {
     "path": "packages/mobile/nutstore-journal.mjs",
     "sha256": "8c1bb6e1a9b6f96aac1f46ba92ee8f9404bec7a34e32c8441d66096ac920d295"
+  },
+  {
+    "path": "packages/thirdparty/doubao-account-policy.mjs",
+    "sha256": "9a33bb55670fccd8e52912facd541cf8e3987727bdec8bcf20eac55b2c3ba8e0"
+  },
+  {
+    "path": "packages/thirdparty/doubao-page.mjs",
+    "sha256": "d537d27507a9b4a4748f44fba08b9ecd06b6effd1075d17a2a819df77833fef5"
   },
   {
     "path": "packages/ui/card-interactions.css",

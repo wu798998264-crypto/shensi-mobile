@@ -32,7 +32,11 @@ export async function watchDoubaoSubmission(debug,task){
    let url,body;try{url=new URL(p.request.url);body=JSON.parse(p.request.postData||'');}catch{return;}
    if(url.origin!=='https://www.doubao.com'||url.pathname!=='/chat/completion'||p.request.method!=='POST')return;
    const text=body.messages?.[0]?.content_block?.[0]?.content?.text_block?.text,prefix={text:'',image:'生成图片：',video:'生成视频：'}[task.kind];
-   if(prefix===undefined||!task.prompt||body.messages?.length!==1||text!==task.prompt&&text!==prefix+task.prompt)return;
+   if(prefix===undefined||!task.prompt||body.messages?.length!==1)return;
+   // The video editor can append its selected duration and resolution to the
+   // outgoing prompt. Match the complete request, including those settings.
+   const decorated=task.kind==='video'&&task.preparedMode==='video'&&text===prefix+task.prompt+(Number(task.durationSeconds)===15?'，15s，720p':'，10s，720p');
+   if(text!==task.prompt&&text!==prefix+task.prompt&&!decorated)return;
    if(requests.size>=8||requests.has(p.requestId))return;
    requests.set(p.requestId,{state:'pending',startedAt:new Date().toISOString()});
   }
@@ -240,16 +244,18 @@ export function createDoubaoDriver({getWindow,open,reopenEmptyWorkPage,mediaIdle
    for(const event of [{type:'mousePressed',button:'left',clickCount:1},{type:'mouseReleased',button:'left',clickCount:1}]){active();await debug.sendCommand('Input.dispatchMouseEvent',{...event,...sendPoint});}});
   return {clicked:true};
  }
- async function observe(task,{manualReplies,readOnly=false,inquireStatus=false}={}){
+ async function observe(task,{manualReplies,readOnly=false,inquireStatus=false,recoverVideoPlayback=false}={}){
   const formal=url=>/^https:\/\/(www\.)?doubao\.com\/chat\/\d+\/?$/.test(url||'');
   const current=win(task.accountId).webContents.getURL(),args={prompt:task.prompt,kind:task.kind,referenceNames:(task.files||[]).map(f=>f.name),preparedMode:task.preparedMode,durationSeconds:task.durationSeconds,confirmation:task.confirmation,confirmationReplies:confirmationReplies(task),recoverHistory:true,userId:task.userId,renderedPromptUrl:task.submittedAt?(formal(task.url)?task.url:formal(task.observedPageUrl)?task.observedPageUrl:null):null};
   const op=manualReplies===undefined&&!readOnly?'observe':'observe-readonly';if(manualReplies!==undefined)Object.assign(args,{manualReplies,userId:task.userId});
   args.inquireStatus=inquireStatus||pendingStatusInquiry(task);
   // Only an active, submitted media task may initialize its own lazy player.
   // Diagnostics/legacy recovery never click Play. Hidden playback stays silent.
-  if(op==='observe'&&task.kind==='video'&&task.submittedAt&&!task.stoppedAt&&task.status!=='stopped'){
+  const ownedRecovery=op==='observe-readonly'&&recoverVideoPlayback&&manualReplies===undefined&&task.userId&&!task.explicitStopAt&&formal(task.url)&&current===task.url;
+  if(task.kind==='video'&&task.submittedAt&&(ownedRecovery||op==='observe'&&!task.stoppedAt&&task.status!=='stopped')){
    const w=win(task.accountId);if(!w.isVisible?.()){w.webContents.setAudioMuted?.(true);args.activateMedia=true;args.nativeMediaInput=true;}
   }
+  if(ownedRecovery)args.recoverVideoPlayback=true;
   if(task.url&&/\/chat\/\d+/.test(task.url)&&current!==task.url)throw fail('当前窗口已离开原任务，请打开原任务继续观察','DOUBAO_ORIGINAL_TASK_REQUIRED');
   if(formal(task.observedPageUrl)&&current!==task.observedPageUrl)throw fail('当前窗口已离开首次观察的会话，未读取其他任务','DOUBAO_ORIGINAL_TASK_REQUIRED');
   // The first send can pass through /chat -> /chat/ -> /chat/<id>.
@@ -283,7 +289,7 @@ export function createDoubaoDriver({getWindow,open,reopenEmptyWorkPage,mediaIdle
     // Native pointer sequence targets only a verified unique visible Play in
     // this owned answer. New players no longer react to DOM .click alone.
     // No desktop cursor, foreground window or generic button fallback.
-    if(args.activateMedia&&seen.ack&&!seen.gate&&seen.mediaActivations?.length){
+    if(args.activateMedia&&seen.ack&&!seen.gate&&(!ownedRecovery||seen.userId===task.userId&&seen.url===task.url&&!seen.confirmation&&!seen.stopping)&&seen.mediaActivations?.length){
      const w=win(task.accountId);if(w.isVisible()||w.webContents.getURL()!==seen.url)throw fail('原后台播放器已变化，未操作');
      await withBrowserDebugger(w,async debug=>{await focusBrowserNativeInput(w,debug);for(const point of seen.mediaActivations){if(!Number.isSafeInteger(point.x)||!Number.isSafeInteger(point.y))throw fail('原播放器位置无效');if(w.isVisible()||w.webContents.getURL()!==seen.url)throw fail('原后台播放器已变化，未操作');await debug.sendCommand('Input.dispatchMouseEvent',{type:'mouseMoved',...point});await debug.sendCommand('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});await debug.sendCommand('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});}});
     }

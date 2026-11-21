@@ -267,7 +267,7 @@ export function createDoubaoTasks({db,failureStore,driver,assertAccount,pollMs=1
    await assertActive();await driver.open({accountId:t.accountId,taskId:t.id,url,visible:false});
    let signature='',since=0,last,recovered=false;const end=Date.now()+Math.max(15000,stableMs*3);
    try{while(Date.now()<end){
-    await assertActive();const seen=await driver.observe({...t,url,observedPageUrl:url},{readOnly:true});await assertActive();last=seen;
+    await assertActive();const seen=await driver.observe({...t,url,observedPageUrl:url},{readOnly:true,recoverVideoPlayback:t.kind==='video'});await assertActive();last=seen;
     if(seen.gate)throw failure('豆包原账号需要处理登录或验证：'+seen.gate+'；请打开原网页检查','DOUBAO_ORIGINAL_PAGE_GATED');
     if(seen.ack&&(seen.userId!==t.userId||seen.url!==url))throw failure('原会话或消息不匹配，未接收其他任务的成品','DOUBAO_RESULT_OWNERSHIP_MISMATCH');
     if(seen.ack&&seen.userId===t.userId&&seen.url===url&&seen.failure?.definitive)throw failure(seen.failure.message,seen.failure.code);

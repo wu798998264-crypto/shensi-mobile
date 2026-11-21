@@ -1,6 +1,6 @@
 {
   "format": "shensi-public-extension-catalog-v1",
-  "publishedAt": "2026-11-20T07:47:32.688Z",
+  "publishedAt": "2026-11-20T22:09:54.137Z",
   "items": [
     {
       "pluginId": "thirdparty.browser",
@@ -71,14 +71,14 @@
       "pluginId": "thirdparty.doubao",
       "name": "豆包多开",
       "description": "豆包多开 macOS 独立扩展",
-      "version": "0.1.44",
+      "version": "0.1.50",
       "hostVersion": "0.0.46",
       "platform": "darwin",
       "packageFormat": "shensi-native-extension-v1",
       "repository": "wu798998264-crypto/shensi-plugin-doubao",
-      "downloadUrl": "https://github.com/wu798998264-crypto/shensi-plugins/releases/download/plugin-thirdparty.doubao-v0.1.44/thirdparty.doubao-0.1.44.plugin.json",
-      "sizeBytes": 365698,
-      "sha256": "7367e1b36dcee9c9336b9c9f5eec4703366607ede245398064a9476e61f37e3f"
+      "downloadUrl": "https://github.com/wu798998264-crypto/shensi-plugins/releases/download/plugin-thirdparty.doubao-v0.1.50/thirdparty.doubao-0.1.50.plugin.json",
+      "sizeBytes": 367245,
+      "sha256": "a2a4c32c1a8b6cc1798dadefd29e34c115cb1f5f9a13a401bbd62181affc03f3"
     },
     {
       "pluginId": "thirdparty.character-chat",
@@ -123,14 +123,14 @@
       "pluginId": "official.nutstore",
       "name": "坚果云同步",
       "description": "坚果云同步 macOS 独立扩展",
-      "version": "0.1.44",
+      "version": "0.1.50",
       "hostVersion": "0.0.46",
       "platform": "darwin",
       "packageFormat": "shensi-native-extension-v1",
       "repository": "wu798998264-crypto/shensi-plugin-nutstore",
-      "downloadUrl": "https://github.com/wu798998264-crypto/shensi-plugins/releases/download/plugin-official.nutstore-v0.1.44/official.nutstore-0.1.44.plugin.json",
+      "downloadUrl": "https://github.com/wu798998264-crypto/shensi-plugins/releases/download/plugin-official.nutstore-v0.1.50/official.nutstore-0.1.50.plugin.json",
       "sizeBytes": 216221,
-      "sha256": "391a1ca129223c9b7256306f61946f355a8f5caeac4c55d5b2151b032a515a5c"
+      "sha256": "6f461982a633cb3bcc9a78e9c3a344cce09dc67f96e6149365645e5aebdd59f2"
     },
     {
       "pluginId": "thirdparty.calendar",
@@ -155,6 +155,6 @@
   "signature": {
     "keyId": "release-2026-11",
     "algorithm": "Ed25519",
-    "value": "LcIo8bh2sMIgEl1Dp3nKvMKUZxEkE08EaGnmspwL1Fsgc59Nwse52ySBM4OWjbsZPhoZuI59PvMILxzHlw0OBQ"
+    "value": "tWsH3ks9PrV31t_dSkn0fpMdyxZQ2IPcwKTs5p-TE1aBe4TeNshMRg3QH5-_ABSF0rQ_QCqerTd8Fb5nVzZwBw"
   }
 }
