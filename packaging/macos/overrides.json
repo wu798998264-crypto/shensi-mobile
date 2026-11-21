@@ -1,5 +1,9 @@
 [
   {
+    "path": "packages/official/legacy/cli/codex-image-app-server.mjs",
+    "sha256": "0813f90a5087ff640b10f33320ba6f6e583105fe48a1a360ea8596edaf961bac"
+  },
+  {
     "path": "packages/core/src/account-service-endpoints.mjs",
     "sha256": "38b2d365486ffbd13ee1504b4d103625a10f960c34c3a94e8c78a32fee24e445"
   },
