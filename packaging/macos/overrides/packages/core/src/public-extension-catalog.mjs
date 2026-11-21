@@ -6,7 +6,7 @@ import {validatePluginPackage} from './plugin-package.mjs';
 import {ProxyAgent,EnvHttpProxyAgent,fetch as networkFetch} from 'undici';
 export const PUBLIC_EXTENSION_REPOSITORY='wu798998264-crypto/shensi-plugins';
 // Older hosts reject unfamiliar plugin identities; preserve their directory.
-export const PUBLIC_EXTENSION_CATALOG_PATH=process.platform==='darwin'?'catalog/extensions-macos.json':'catalog/extensions-v2.json';
+export const PUBLIC_EXTENSION_CATALOG_PATH=process.platform==='darwin'?'catalog/extensions-macos-v2.json':'catalog/extensions-v3.json';
 export const PUBLIC_EXTENSION_CATALOG_URL='https://raw.githubusercontent.com/'+PUBLIC_EXTENSION_REPOSITORY+'/main/'+PUBLIC_EXTENSION_CATALOG_PATH;
 // Desktop updates follow OS/PAC routing. Undici keeps redirects explicit and
 // does not share Electron account cookies or browser authentication.

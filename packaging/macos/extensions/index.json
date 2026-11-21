@@ -57,10 +57,10 @@
   },
   {
     "id": "thirdparty.depth-explorer",
-    "version": "0.1.44",
-    "path": "thirdparty.depth-explorer-0.1.44.plugin.json",
+    "version": "0.1.52",
+    "path": "thirdparty.depth-explorer-0.1.52.plugin.json",
     "size": 24932,
-    "sha256": "9f5d3b3af684d406f982c2ddc288ff091cc462726f3539f7495fe33191a0818e"
+    "sha256": "0fadca517c0c3b0eb92be43c951bf8a1d6eadfe940f53f61dfa5b7ab2452767c"
   },
   {
     "id": "official.nutstore",

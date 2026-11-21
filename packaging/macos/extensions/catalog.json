@@ -1,6 +1,6 @@
 {
   "format": "shensi-public-extension-catalog-v1",
-  "publishedAt": "2026-11-20T22:09:54.137Z",
+  "publishedAt": "2026-11-21T14:28:47.826Z",
   "items": [
     {
       "pluginId": "thirdparty.browser",
@@ -110,14 +110,14 @@
       "pluginId": "thirdparty.depth-explorer",
       "name": "深度摸索",
       "description": "深度摸索 macOS 独立扩展",
-      "version": "0.1.44",
+      "version": "0.1.52",
       "hostVersion": "0.0.46",
       "platform": "darwin",
       "packageFormat": "shensi-native-extension-v1",
       "repository": "wu798998264-crypto/shensi-plugin-depth-explorer",
-      "downloadUrl": "https://github.com/wu798998264-crypto/shensi-plugins/releases/download/plugin-thirdparty.depth-explorer-v0.1.44/thirdparty.depth-explorer-0.1.44.plugin.json",
+      "downloadUrl": "https://github.com/wu798998264-crypto/shensi-plugins/releases/download/plugin-thirdparty.depth-explorer-v0.1.52/thirdparty.depth-explorer-0.1.52.plugin.json",
       "sizeBytes": 24932,
-      "sha256": "9f5d3b3af684d406f982c2ddc288ff091cc462726f3539f7495fe33191a0818e"
+      "sha256": "0fadca517c0c3b0eb92be43c951bf8a1d6eadfe940f53f61dfa5b7ab2452767c"
     },
     {
       "pluginId": "official.nutstore",
@@ -155,6 +155,6 @@
   "signature": {
     "keyId": "release-2026-11",
     "algorithm": "Ed25519",
-    "value": "tWsH3ks9PrV31t_dSkn0fpMdyxZQ2IPcwKTs5p-TE1aBe4TeNshMRg3QH5-_ABSF0rQ_QCqerTd8Fb5nVzZwBw"
+    "value": "zFjPgh1pavtgCeucO_Vzl7lf489OdJuJcTvpRzlwAFcR_IfP8NaCFB4HogUNVi8mxumebNEB2XirSrsCSISyDQ"
   }
 }

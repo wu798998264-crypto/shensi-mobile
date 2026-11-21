@@ -39,11 +39,15 @@ const shapes={
 const aliases={upload:'share','reference-canvas':'board',restore:'history',novel:'book',generate:'spark',preview:'fit',versions:'history','save-history':'save',attachment:'image','smart-split':'scissors','create-depth':'depth','generate-text':'text','generate-image':'image','generate-video':'video','generate-audio':'audio','add-here':'plus','add-plain':'plus','reference-web':'globe','reference-document':'document','reference-skill':'spark','reference-book':'book',reference:'link','save-as-note':'document','copy-cards':'copy','cut-cards':'scissors','paste-cards':'paste','duplicate-card':'copy','save-as':'download',reveal:'folder','link-upstream':'link',focus:'fit',arrange:'move','arrange-all':'move','delete-cards':'trash','delete-edge':'trash','select-cards':'select',generation:'spark','edit-image':'edit',separate:'audio',trim:'scissors',frame:'camera',cut:'scissors',duplicate:'copy',rename:'edit',delete:'trash',remove:'trash',export:'share','new-note':'document',note:'document','new-folder':'folder','new-board':'board','parse-video':'globe'};
 export const originalIconNames=Object.freeze([...new Set([...Object.keys(codes),'back','favorite','exit-preview'])]);
 const cardGlyphs={
- focus:['E81E','M2 7.5 12 3l10 4.5L12 12 2 7.5Zm5 2.3-5 2.3L12 17l10-4.9-5-2.3M7 14.5l-5 2.3L12 21.5l10-4.7-5-2.3'],
  preview:['E740','M2 22 22 2M15 2h7v7M2 15v7h7'],
  'exit-preview':['E73F','m1 23 8.5-8.5M3 14.5h6.5V21M23 1l-8.5 8.5M14.5 3v6.5H21']
 };
 export function originalIcon(name){
+ if(name==='focus'){
+  // Draw the three layers on the toolbar's 18px grid at the same 2:1 slope.
+  const layers='M1.5 5 9 1.25 16.5 5 9 8.75Z M5.5 7 1.5 9 9 12.75 16.5 9 12.5 7 M5.5 11 1.5 13 9 16.75 16.5 13 12.5 11';
+  return `<span class="original-icon original-focus-icon" data-original-glyph="E81E" aria-hidden="true"><svg viewBox="0 0 18 18" width="100%" height="100%" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" focusable="false"><path d="${layers}" stroke-width="2.1" stroke-opacity=".22"/><path d="${layers}" stroke-width="1.3"/></svg></span>`;
+ }
  if(Object.hasOwn(cardGlyphs,name)){
   const [code,path]=cardGlyphs[name];
   return `<span class="original-icon original-${name}-icon" data-original-glyph="${code}" aria-hidden="true"><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" focusable="false"><path d="${path}"/></svg></span>`;
