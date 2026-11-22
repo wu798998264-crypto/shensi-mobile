@@ -9,8 +9,8 @@ const hash=b=>createHash('sha256').update(b).digest('hex');
 assert(isAbsolute(relative(source,app))||relative(source,app).startsWith('..'+sep),'Output must be outside the original application');
 await mkdir(app,{recursive:false});
 for(const name of ['apps','packages','resources','package.json','release-build.json'])await cp(join(source,name),join(app,name),{recursive:true,errorOnExist:true,force:false});
-const pkg=JSON.parse(await readFile(join(app,'package.json')));assert.equal(pkg.version,'0.0.41');assert.equal(pkg.name,'shensi-notes');
-pkg.version='0.0.46';
+const pkg=JSON.parse(await readFile(join(app,'package.json')));assert.equal(pkg.version,'0.0.47');assert.equal(pkg.name,'shensi-notes');
+pkg.version='0.0.47';
 // These are retired Windows integrations, never macOS executables.
 for(const name of ['resources/thirdparty','resources/yunx/runtime/runtime','resources/dreamina-canvas/dreamina-canvas.exe'])await rm(join(app,name),{recursive:true,force:true});
 async function prune(folder){for(const entry of await readdir(folder,{withFileTypes:true})){const p=join(folder,entry.name);assert(!entry.isSymbolicLink(),'Unexpected link in public source');if(entry.isDirectory())await prune(p);else if(/\.(?:exe|dll|pyd|ps1|bat|cmd|cs)$/i.test(entry.name))await rm(p);}}
