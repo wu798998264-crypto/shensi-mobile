@@ -304,6 +304,22 @@
     "sha256": "f9b8681f017f28bc4bf5f948daed66eab19fb171df432bcb1bce3120747ffd26"
   },
   {
+    "path": "apps/desktop/parser-browser.mjs",
+    "sha256": "561dd9dc04973381e8bbad9eb3c119ecc1c14d0f473bfc9ceb1d7f0f37e1c1f4"
+  },
+  {
+    "path": "apps/desktop/music-file-transfer.mjs",
+    "sha256": "690c01eb68cee796387ee8fc5aca5fdabd39d3112f634e756577beeda8154a76"
+  },
+  {
+    "path": "apps/desktop/yunx-video-parser.mjs",
+    "sha256": "c75b1c853f6bcc51c27b6ed4e842179591ecb6fb94a86868894b739d65c24706"
+  },
+  {
+    "path": "packages/official/legacy/video-portal-automation.cjs",
+    "sha256": "7ef94f270d535ee7dc8338c24a00dde590d7cd1c1f84acd993c3b427a8993069"
+  },
+  {
     "path": "resources/plugins/native-extension-trust.json",
     "sha256": "c272923b81fe1d905a9e34ba170595d1db4e7debc6f636522230fd7bdd696621"
   },
