@@ -1,7 +1,7 @@
 // GPL-3.0-only. Bounded, cookie-free worker for guoapp's synchronous host API.
 const fs=require('node:fs');
 const hosts=['fqnovel.com','novelquickapp.com','fanqienovel.com','hongguoduanju.com'];
-function allowed(value){const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password||u.port||!(u.hostname==='log.snssdk.com'&&u.pathname==='/service/2/device_register/'||hosts.some(h=>u.hostname===h||u.hostname.endsWith('.'+h))))throw Error('不支持的红果接口或分享地址');return u;}
+function allowed(value){const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password||u.port||!(u.hostname==='log.snssdk.com'&&u.pathname==='/service/2/device_register/'||u.hostname==='vas-lf-x.snssdk.com'&&u.pathname.startsWith('/video/fplay/')||hosts.some(h=>u.hostname===h||u.hostname.endsWith('.'+h))))throw Error('不支持的红果接口或分享地址');return u;}
 async function request(p){
  let url=allowed(p.url),method=p.method||'GET';if(!['GET','POST'].includes(method))throw Error('不支持的请求方式');
  const signal=AbortSignal.timeout(Math.min(Math.max(p.timeoutMs||20000,1),40000));

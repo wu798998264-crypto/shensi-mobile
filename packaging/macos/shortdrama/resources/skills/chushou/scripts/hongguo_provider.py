@@ -1,4 +1,4 @@
-"""guoapp 2.0.1+113 Hongguo adapter; no browser or private profile reuse."""
+"""guoapp Hongguo 1.0.7 adapter; no browser or private profile reuse."""
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import urllib.parse
 from download_video import DownloadError, extract_url, host_matches, safe_error
 
 ROOT = Path(__file__).resolve().parent
-UPSTREAM = "guoapp-2.0.1-113-hongguo-1.0.3"
+UPSTREAM = "guoapp-2.0.3-115-hongguo-1.0.7"
 QUALITIES = ("360p", "480p", "540p", "720p", "1080p")
 HOSTS = ("novelquickapp.com", "hongguoduanju.com", "fanqienovel.com", "fqnovel.com")
 
@@ -46,7 +46,7 @@ def parse_episodes(value, total, all_episodes=False):
 
 
 class HongguoClient:
-    download_mode = "guoapp_2_0_1"
+    download_mode = "guoapp_2_0_3"
 
     def prepare_episode(self, source, destination, key):
         return self._call("prepare", source=str(source), destination=str(destination), key=key.hex())

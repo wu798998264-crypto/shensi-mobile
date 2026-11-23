@@ -23,9 +23,10 @@ function createProvider({cacheFile,fetchImpl=fetchSync}={}){
   dramaId:id=>'hongguo:'+id,chapterId:(series,id)=>'hongguo:'+series+':'+id,
   cacheGet:key=>{const row=persisted(key)&&cacheFile?load()[key]:cache.get(key);return row&&(!row.expires||row.expires>Date.now())?row.value:null;},
   cacheSet:(key,value,ttl)=>{const row={value,expires:ttl?Date.now()+ttl:0};if(persisted(key)&&cacheFile)exclusive(()=>{const data=load();data[key]=row;const temporary=cacheFile+'.'+process.pid+'.tmp';fs.writeFileSync(temporary,JSON.stringify(data),{mode:0o600});fs.renameSync(temporary,cacheFile);});else cache.set(key,row);},
-  preserveIntegers,randomBytes:crypto.randomBytes,md5:v=>crypto.createHash('md5').update(Buffer.from(v)).digest(),sha256:v=>crypto.createHash('sha256').update(Buffer.from(v)).digest(),
+  preserveIntegers,randomBytes:crypto.randomBytes,md5:v=>crypto.createHash('md5').update(Buffer.from(v)).digest(),sha256:v=>crypto.createHash('sha256').update(Buffer.from(v)).digest(),sha512:v=>crypto.createHash('sha512').update(Buffer.from(v)).digest(),
   utf8Encode:v=>Buffer.from(v),utf8Decode:v=>Buffer.from(v).toString('utf8'),hexEncode:v=>Buffer.from(v).toString('hex'),hexDecode:v=>{if(!/^(?:[0-9a-f]{2})*$/i.test(v))throw Error('十六进制无效');return Buffer.from(v,'hex');},base64Encode:v=>Buffer.from(v).toString('base64'),base64Decode,
   aesCbcEncrypt:(key,iv,bytes)=>{const cipher=crypto.createCipheriv('aes-'+key.length*8+'-cbc',Buffer.from(key),Buffer.from(iv));cipher.setAutoPadding(false);return Buffer.concat([cipher.update(Buffer.from(bytes)),cipher.final()]);},
+  aesCbcDecrypt:(key,iv,bytes)=>{const cipher=crypto.createDecipheriv('aes-'+key.length*8+'-cbc',Buffer.from(key),Buffer.from(iv));cipher.setAutoPadding(false);return Buffer.concat([cipher.update(Buffer.from(bytes)),cipher.final()]);},
   parseUrl:v=>{const u=new URL(v);return {scheme:u.protocol.slice(0,-1),hostname:u.hostname,userInfo:u.username||u.password,path:u.pathname,query:u.search.slice(1)};},
   fetch:fetchImpl,fetchText:p=>fetchImpl({...p,headers:{'User-Agent':'Mozilla/5.0',Referer:p.referer}}),finishMedia:v=>v,
   catalogContext:()=>({}),isKnown:()=>false,reportProgress:()=>{}

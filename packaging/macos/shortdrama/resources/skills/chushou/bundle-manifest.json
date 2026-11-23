@@ -1,10 +1,10 @@
 {
   "schema": 2,
   "skill": "chushou",
-  "capturedAt": "2026-11-18",
+  "capturedAt": "2026-11-23",
   "source": "public execution-only skill; no personal creative rules or runtime data",
-  "mainSha256": "7f5ee393d87452c10bfb44f478cb62b68f36acd648138f826ae69b96a5f36dc3",
-  "revision": "ae9c0b69fec571987403c1e1297f0a5da873a5e7ad3122a71ea7e7b92c94d99a",
+  "mainSha256": "17570d87817998bba058d74b3a9c4f01dd1884504145994840dd01445be47055",
+  "revision": "d1dee7bdb4f1c2ff910965d10ea85575fe30f7a5c6b8f868f4f4e5c0497b9900",
   "files": [
     {
       "path": "LICENSE",
@@ -18,8 +18,8 @@
     },
     {
       "path": "SKILL.md",
-      "bytes": 7938,
-      "sha256": "7f5ee393d87452c10bfb44f478cb62b68f36acd648138f826ae69b96a5f36dc3"
+      "bytes": 7944,
+      "sha256": "17570d87817998bba058d74b3a9c4f01dd1884504145994840dd01445be47055"
     },
     {
       "path": "references/audio-transcription.md",
@@ -38,8 +38,8 @@
     },
     {
       "path": "references/hongguo-download.md",
-      "bytes": 2468,
-      "sha256": "3500a9a77967e547c0cf041617309fbbf3a4556871696f9f1c9858a8f8eb43ba"
+      "bytes": 2524,
+      "sha256": "fd03cba7eba19b0beeab49c51d70255a6e02f1a3c3f94c5441d2b65d876b4603"
     },
     {
       "path": "references/host-tools.md",
@@ -143,8 +143,8 @@
     },
     {
       "path": "scripts/hongguo_provider.py",
-      "bytes": 5158,
-      "sha256": "e3ff74875b717438c6fa74985e150b8f620432661a6c8d92a88eb58c0d07df7d"
+      "bytes": 5154,
+      "sha256": "f63c9edb1a356c710f2145c5a1d83e324280aebd11dc3494259a96a2d2f7b40a"
     },
     {
       "path": "scripts/hongguo_vendor/LICENSE",
@@ -153,8 +153,8 @@
     },
     {
       "path": "scripts/hongguo_vendor/UPSTREAM.json",
-      "bytes": 1312,
-      "sha256": "acc3f0249ccb42e4e8f55937174a9ea4849cced1cf552deb5689a20962bba568"
+      "bytes": 1658,
+      "sha256": "dcb533dd033f6852beab9aab7808d87e043ff43b85b9e87b6eb6417d3db9c3e7"
     },
     {
       "path": "scripts/hongguo_vendor/cli.cjs",
@@ -163,18 +163,18 @@
     },
     {
       "path": "scripts/hongguo_vendor/guoapp-host.cjs",
-      "bytes": 5664,
-      "sha256": "369a31d55d70f71363e6525ccafe495f774b11f65d23aa4785f1eb74e4173e72"
+      "bytes": 5970,
+      "sha256": "dae203bdb5ecc86b45b8638d2c91d262f4ba74b902cc5e2e74f5a2a0091b6e7f"
     },
     {
       "path": "scripts/hongguo_vendor/guoapp-http.cjs",
-      "bytes": 2349,
-      "sha256": "69a2dd7eec7de601c6f79a15b27f67d5624ec2a8650f68c44177fdbeeb4ae90c"
+      "bytes": 2425,
+      "sha256": "92a1d937482f3180bcd73cfe58bc3bf60dd7fb4cab05c3915edc280c243b7812"
     },
     {
       "path": "scripts/hongguo_vendor/guoapp.js",
-      "bytes": 144399,
-      "sha256": "3b76aa8e5e4d419a70b81a828719257a3f6442aee92ef0ca35a854c5b590e7c9"
+      "bytes": 151362,
+      "sha256": "928a1c1863fa23283404aafcf36327d93b0565ce2601b35107f9493a30b9f9a1"
     },
     {
       "path": "scripts/hongguo_vendor/package.json",

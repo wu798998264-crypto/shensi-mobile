@@ -1,15 +1,15 @@
 [
   {
     "path": "resources/skills/chushou/SKILL.md",
-    "sha256": "7f5ee393d87452c10bfb44f478cb62b68f36acd648138f826ae69b96a5f36dc3"
+    "sha256": "17570d87817998bba058d74b3a9c4f01dd1884504145994840dd01445be47055"
   },
   {
     "path": "resources/skills/chushou/bundle-manifest.json",
-    "sha256": "319a2b73c6fcf0403daf20982fd889d76a8e52c0229aa48773665bd8c6758d53"
+    "sha256": "9f39ca479dc9db90feaf75f6b62b576f8ee3551773bca33de35d55f5ae12199c"
   },
   {
     "path": "resources/skills/chushou/references/hongguo-download.md",
-    "sha256": "3500a9a77967e547c0cf041617309fbbf3a4556871696f9f1c9858a8f8eb43ba"
+    "sha256": "fd03cba7eba19b0beeab49c51d70255a6e02f1a3c3f94c5441d2b65d876b4603"
   },
   {
     "path": "resources/skills/chushou/references/binding.md",
@@ -25,11 +25,11 @@
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_provider.py",
-    "sha256": "e3ff74875b717438c6fa74985e150b8f620432661a6c8d92a88eb58c0d07df7d"
+    "sha256": "f63c9edb1a356c710f2145c5a1d83e324280aebd11dc3494259a96a2d2f7b40a"
   },
   {
     "path": "packages/shared/chushou-snapshot.js",
-    "sha256": "f4ec686fd1fb09a14e3c0c53cc3ed9b299b5c8d2ec0a1aa4220ac65baf7c364a"
+    "sha256": "87138b07cbff8e96981a454e930ed87f31f29e027a91e0dc9b58654719f0a786"
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_vendor/cli.cjs",
@@ -37,15 +37,15 @@
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_vendor/guoapp.js",
-    "sha256": "3b76aa8e5e4d419a70b81a828719257a3f6442aee92ef0ca35a854c5b590e7c9"
+    "sha256": "928a1c1863fa23283404aafcf36327d93b0565ce2601b35107f9493a30b9f9a1"
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_vendor/guoapp-host.cjs",
-    "sha256": "369a31d55d70f71363e6525ccafe495f774b11f65d23aa4785f1eb74e4173e72"
+    "sha256": "dae203bdb5ecc86b45b8638d2c91d262f4ba74b902cc5e2e74f5a2a0091b6e7f"
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_vendor/guoapp-http.cjs",
-    "sha256": "69a2dd7eec7de601c6f79a15b27f67d5624ec2a8650f68c44177fdbeeb4ae90c"
+    "sha256": "92a1d937482f3180bcd73cfe58bc3bf60dd7fb4cab05c3915edc280c243b7812"
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_vendor/playback.cjs",
@@ -53,7 +53,7 @@
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_vendor/UPSTREAM.json",
-    "sha256": "acc3f0249ccb42e4e8f55937174a9ea4849cced1cf552deb5689a20962bba568"
+    "sha256": "dcb533dd033f6852beab9aab7808d87e043ff43b85b9e87b6eb6417d3db9c3e7"
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_vendor/package.json",

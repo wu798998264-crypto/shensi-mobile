@@ -1,6 +1,6 @@
 {
   "format": "shensi-public-extension-catalog-v1",
-  "publishedAt": "2026-11-23T01:40:48.668Z",
+  "publishedAt": "2026-11-23T02:27:22.491Z",
   "items": [
     {
       "pluginId": "thirdparty.browser",
@@ -155,6 +155,6 @@
   "signature": {
     "keyId": "release-2026-11",
     "algorithm": "Ed25519",
-    "value": "WF7kUq3lDviqREOjCcwl3RcNdRd3rH3yqWliF9ibv5x5Cq9nBsRsqS2WDjLnQfDuJoqa9L13weiuJ_8s9_aQCA"
+    "value": "P7_9atamUuggKX6Xi0dDbkP8qN8KzfYBpAW6Rno569CgDARjjLWjo1WjVuBVRBDHtk5PQ1R8V1uxwSSRYU3BDw"
   }
 }

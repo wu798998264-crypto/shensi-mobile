@@ -26,7 +26,7 @@ description: 触手内置执行技能：后台下载短剧和短视频、媒体�
 
 神思中的短视频和网盘分享都通过解析后台解析。缺提取码时由宿主私密输入栏接收，不写入聊天或模型；分享已带码则自动使用。见 [视频与网盘下载](references/video-download.md)。同一神思白板在同一浏览器配置下共用一个即梦画布，图片和视频节点进入该画布，不为每次生成另建画布。
 
-短剧先 `drama_inspect` 核对整剧身份和完整集表，再明确选集或全集运行 `drama_download`。使用 guoapp 2.0.1 的红果模块，短链跳转优先解析整剧 ID；取流空响应会明确失败，不冒称成功、不反复盲试。音乐用 `download_music`，输入歌曲名或歌手，选择结果后下载、校验并导入音频卡片；短视频用 `download_video`，返回真实媒体后 `inspect_video/inspect_motion` 按需抽帧；不能把网页、封面或空文件当视频。详见 [下载规则](references/downloads.md)。
+短剧先 `drama_inspect` 核对整剧身份和完整集表，再明确选集或全集运行 `drama_download`。使用 guoapp 2.0.3 的红果模块 1.0.7，短链跳转优先解析整剧 ID；取流空响应会明确失败，不冒称成功、不反复盲试。音乐用 `download_music`，输入歌曲名或歌手，选择结果后下载、校验并导入音频卡片；短视频用 `download_video`，返回真实媒体后 `inspect_video/inspect_motion` 按需抽帧；不能把网页、封面或空文件当视频。详见 [下载规则](references/downloads.md)。
 
 即梦网页画布使用新版官方 `dreamina-canvas`，通过 `webcanvas.canvas` 操作。授权绑定当前浏览器配置，先读取实时模型规格；草稿编辑与积分生成分开。参考使用 Node ID 并回读连线及正文位置，下载真实 Resource ID。详见 [即梦画布 CLI](references/jimeng-canvas-cli.md)。旧 `dreamina` 仅继续已有本地任务，不能用任务查询冒充任意网页画布读取。
 
