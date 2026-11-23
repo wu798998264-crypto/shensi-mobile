@@ -468,7 +468,8 @@ export const startCodexProviderBridge = async ({ settings, tools, permissionCont
         const local = ["input", "preflight"].includes(phase), aborted = controller.signal.aborted;
         lastFailure = { code: aborted ? "ABORTED" : error.code || (local ? "TEXT_BRIDGE_INPUT_REJECTED" : "TEXT_PROVIDER_INVALID_RESPONSE"), statusCode: Number(error.statusCode) || (local ? 400 : 502),
           message: safeDetail(aborted ? "任务已停止，未自动重发请求" : `${local ? "本地推理校验未通过" : phase === "transport" ? "文字服务连接失败" : "文字服务响应读取失败"}：${error.message}；未自动重发本次请求`, settings.apiKey),
-          providerHttpStatus: upstreamStatus, networkCode: String(error.networkCode || error.cause?.code || "").slice(0, 100), requestDiagnostics };
+          providerHttpStatus: upstreamStatus, networkCode: String(error.networkCode || error.cause?.code || "").slice(0, 100), requestDiagnostics,
+          ...(error.toolOutputMismatch?{toolOutputMismatch:error.toolOutputMismatch}:{}) };
       }
       if (!res.headersSent) res.writeHead(lastFailure.statusCode, { "content-type": "application/json", ...(lastFailure.retryAfter ? { "retry-after": lastFailure.retryAfter } : {}) });
       res.end(JSON.stringify({ error: { code: lastFailure.code, message: lastFailure.message } }));

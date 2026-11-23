@@ -1,6 +1,11 @@
 export const ACCOUNT_SERVICE_URL = 'https://api.hexing.studio';
 export const LEGACY_ACCOUNT_SERVICE_URL = 'https://api.hexing.studio/skill';
 
+export function accountSessionRejected(status, body) {
+  return status === 401 && (body?.code === 'ACCOUNT_SESSION_INVALID'
+    || body?.ok === false && body?.message === '请先登录后再操作');
+}
+
 export function normalizeAccountServiceUrl(raw) {
   const address = new URL(raw);
   if (address.username || address.password || address.search || address.hash) throw new Error('账号服务地址不允许凭据、查询参数或片段');

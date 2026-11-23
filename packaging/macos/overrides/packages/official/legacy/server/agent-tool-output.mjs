@@ -48,14 +48,18 @@ export function createAgentToolOutputVerifier(){
       return {...result,contentItems:[{type:'inputText',text:JSON.stringify({shensiToolReceipt:token})}]};
     },
     verify(call,output){
-      let marker;
+      let marker,reason='content_mismatch';
       try{marker=payload(output);}catch{}
       if(marker&&typeof marker==='object'&&Object.keys(marker).length===1&&typeof marker.shensiToolReceipt==='string'){
         const entry=textResults.get(marker.shensiToolReceipt);
         if(entry&&entry.call===key(call)&&(!entry.callId||entry.callId===call.callId))return entry.text;
+        reason=!entry?'receipt_missing':entry.call!==key(call)?'arguments_mismatch':'call_mismatch';
       }
       let actual;try{actual=digest(output);}catch{}
-      if(!receipts.get(key(call))?.has(actual))throw Object.assign(new Error('运行器返回的工具内容与宿主全文不一致，任务已停止；未将截断或改写内容发送给模型。'),{code:'AGENT_TOOL_OUTPUT_CHANGED',statusCode:422,safeToFallback:false});
+      if(!receipts.get(key(call))?.has(actual)){
+        const detail={receipt_missing:'工具回执在当前任务中不存在',arguments_mismatch:'工具回执与本次调用参数不匹配',call_mismatch:'工具回执属于另一笔调用',content_mismatch:'工具返回内容与宿主全文不一致'}[reason];
+        throw Object.assign(new Error(detail+'，任务已停止；未将未校验内容发送给模型。'),{code:'AGENT_TOOL_OUTPUT_CHANGED',statusCode:422,safeToFallback:false,toolOutputMismatch:{reason,namespace:String(call.namespace||''),tool:String(call.tool||'')}});
+      }
       return output;
     },
   };

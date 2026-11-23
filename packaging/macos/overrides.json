@@ -1,7 +1,7 @@
 [
   {
     "path": "packages/core/src/account-service-endpoints.mjs",
-    "sha256": "38b2d365486ffbd13ee1504b4d103625a10f960c34c3a94e8c78a32fee24e445"
+    "sha256": "42cc029f1a078e026687fe61f7a1225b761f657e7c536152055500ad5c287df1"
   },
   {
     "path": "packages/ui/ui-glyph.js",
@@ -9,7 +9,7 @@
   },
   {
     "path": "packages/ui/app.js",
-    "sha256": "4bd8d0bf229daa62df77b67581cb5388b12cdd51814806f81f0d532422e86c84"
+    "sha256": "b4fe1b63ca85812404ec15e30e15447f8a7c804589402bf20363b8690c9f31eb"
   },
   {
     "path": "packages/ui/book-picker.js",
@@ -69,7 +69,7 @@
   },
   {
     "path": "packages/ui/core-plugin-copy.js",
-    "sha256": "8366d4439bdb912789d2a3824c60f05bf09ac83be1adeb85a443fcd8aa722c15"
+    "sha256": "284100636b6b5585500e83e560e04598f8d1d503b2ade7088a99dbefe217a717"
   },
   {
     "path": "packages/official/catalog.mjs",
@@ -97,7 +97,7 @@
   },
   {
     "path": "packages/ui/official-ui.js",
-    "sha256": "d0705f83630acafa1e90e40dc8f72f71685f57f0ac5b69ba5603c72720815456"
+    "sha256": "4ba317b80c012b62137ecc8aea43d6ff7d5b61dd4fe91e0388563871709b7d33"
   },
   {
     "path": "packages/ui/tutorial.js",
@@ -193,11 +193,11 @@
   },
   {
     "path": "packages/official/legacy/server/agent-tool-output.mjs",
-    "sha256": "66e1564c8e25441548ccaac639315977ca3bc24bb0aa4f5275e8315ccf8cdad2"
+    "sha256": "111fc89809976d9e4f4422e6b0984f235ccdfd82e8b0f3cbd84abf6d9f3393d4"
   },
   {
     "path": "packages/official/legacy/server/codex-workspace-tools.mjs",
-    "sha256": "23d2741ce3efdc58dab8f9827375b3331dfdbe91529c0caaaf90204ae03aa2b5"
+    "sha256": "fa45109afa1a99ae1bbac8c6b8a0daab5951d1a4654b5f18d60ac42f64279cfc"
   },
   {
     "path": "packages/official/legacy/server/shensi-codex-agent-runtime.mjs",
@@ -205,7 +205,7 @@
   },
   {
     "path": "packages/official/legacy/server/codex-provider-bridge.mjs",
-    "sha256": "6912dad5afe127ab1172185dab5cd6aaf9e5cbf32a5eec92b1db99dd8170551b"
+    "sha256": "599825775a10933dc3be141ff2280338f7df749759544d0deeb64f9693c57650"
   },
   {
     "path": "packages/ui/model-external-browser.js",
@@ -242,6 +242,34 @@
   {
     "path": "packages/ui/account-security.js",
     "sha256": "e4c6d947864b4c906f60ba481de6e07a1c97b78c7627ad97454de64dca1a15ef"
+  },
+  {
+    "path": "packages/official/legacy/server/workbuddy-desktop-bridge.mjs",
+    "sha256": "01cb40eeefbb45a926a8278639cd640fa7389855c7a97d5bf77a969ec2efb451"
+  },
+  {
+    "path": "apps/desktop/workspace-permissions.mjs",
+    "sha256": "1abe67532b674e03180c10f596dedca738b5be035e18919b8cb502fcbff09a15"
+  },
+  {
+    "path": "packages/ui/copy-text.js",
+    "sha256": "f0560ba3c042871adc723c068e5050427af720f6f292be3901f01b8f7a67f7a5"
+  },
+  {
+    "path": "packages/ui/directory-paths.js",
+    "sha256": "797e5242af2f5a51ba13aa2b99cc8342f4e32a61edd8f0faca381df404cc36c8"
+  },
+  {
+    "path": "packages/ui/storage-location-picker.js",
+    "sha256": "2ed38f177c870d460647e9e350dd8bf8ebe5c3b5f72c65994c3dee989c5589ff"
+  },
+  {
+    "path": "packages/core/legacy/recycle-state.js",
+    "sha256": "8f5e3e40e6f625b329967b770a1cf29b55ab4bb013467f3f93c9c4d30f21d0db"
+  },
+  {
+    "path": "packages/official/chat-turns.mjs",
+    "sha256": "65868b584dfdd3067efcd5e281f1027564df075fbedae1956053ae0984e290aa"
   },
   {
     "path": "packages/ui/about-page.js",
@@ -373,7 +401,7 @@
   },
   {
     "path": "packages/official/membership.mjs",
-    "sha256": "de899a24196ea9c725ec12571edc0cdaf4dbb2f014d9d33bb75a4ae8689506bd"
+    "sha256": "a7d9c479736f8e2ca134fd1dbb0a0c4ec205adb2510e8ab94929c02b2cb499a1"
   },
   {
     "path": "packages/official/legacy/dreamina-image-options.js",
@@ -385,7 +413,7 @@
   },
   {
     "path": "packages/mobile/account-client.mjs",
-    "sha256": "bf949e50aa3db16b0ca648a89710be723354502ddc4288d26d13075c7ce4c467"
+    "sha256": "445b7dff0423b607b0f593a13c2b3aa717192bda7c63b6e9088b6e8a5b601d9f"
   },
   {
     "path": "packages/mobile/cloud-sync-client.mjs",

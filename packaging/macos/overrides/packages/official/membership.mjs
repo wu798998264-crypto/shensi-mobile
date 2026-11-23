@@ -5,7 +5,7 @@ import {jsonStore,failure} from './store.mjs';
 import {sealMemberData,openMemberData} from './member-seal.mjs';
 import {createCloudFileClient} from '../mobile/cloud-sync-client.mjs';
 import {cloudSyncStatus as readCloudStatus} from '../core/src/cloud-sync-status.mjs';
-import {ACCOUNT_SERVICE_URL,accountEndpoint} from '../core/src/account-service-endpoints.mjs';
+import {ACCOUNT_SERVICE_URL,accountEndpoint,accountSessionRejected} from '../core/src/account-service-endpoints.mjs';
 
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const accountErrors={EMAIL_DOMAIN_TYPO:'请核对收件地址，QQ 邮箱的后缀是 qq.com。',EMAIL_UNAVAILABLE:'邮箱服务暂不可用，请稍后重试或使用密码登录',EMAIL_SEND_FAILED:'验证码邮件未能发送，请稍后重试',EMAIL_RATE_LIMIT:'发送过于频繁，请稍后重试',EMAIL_DAILY_LIMIT:'今日验证码发送次数已达上限',EMAIL_BUSY:'验证码正在发送，请稍候',EMAIL_CODE_INVALID:'验证码错误或已过期，请重新获取',EMAIL_BIND_REQUIRED:'该邮箱尚未验证绑定，请先用原账号密码登录',EMAIL_INVALID:'请输入有效邮箱'};
@@ -37,6 +37,10 @@ export function createMembershipService({dataRoot,models,accountBaseUrl=process.
   let response;try{response=await fetch(serviceBaseUrl+path,{method:body===undefined?'GET':'POST',redirect:'error',headers:{Accept:'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(body===undefined?{}:{'Content-Type':'application/json'})},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(timeoutMs),...(signal?[signal]:[])])});}catch(error){if(signal?.aborted)throw failure('任务已停止','ABORTED');const code=error.cause?.code||error.code;throw failure(path==='/v1/auth/email-code'?'验证码发送结果尚未确认，请先检查收件箱和垃圾邮件，稍后再试。':code==='ECONNRESET'?'与原神思账号服务的安全连接被中断，请检查网络或代理后重试':error.name==='TimeoutError'?'连接原神思账号服务超时，请检查网络或代理后重试':'无法连接神思账号服务，请检查网络后重试','MEMBER_SERVICE_UNAVAILABLE');}
   const chunks=[];let size=0;for await(const chunk of response.body||[]){size+=chunk.byteLength;if(size>1024*1024)throw failure('账号服务响应超过限制');chunks.push(chunk);}const bytes=Buffer.concat(chunks).toString('utf8');let value;try{value=JSON.parse(bytes);}catch{if(response.ok)throw failure('账号服务未提供有效的会员接口','MEMBER_SERVICE_UNAVAILABLE');value={};}
   if(!value||typeof value!=='object'||Array.isArray(value)){if(response.ok)throw failure('账号服务响应格式无效','MEMBER_SERVICE_UNAVAILABLE');value={};}
+  if(path==='/v1/auth/me'&&response.status===401){
+   const invalid=accountSessionRejected(response.status,value);
+   throw Object.assign(failure(invalid?'登录已失效，请重新登录':'账号核验暂时不可用，已保留本机登录，请稍后刷新',invalid?'ACCOUNT_SESSION_INVALID':'MEMBER_SERVICE_UNAVAILABLE'),{statusCode:401});
+  }
   if(!response.ok&&(path.startsWith('/v1/auth/')||path.startsWith('/v1/account/')))throw Object.assign(failure(accountErrors[value.code]||({400:'账户信息不完整或格式不正确，请检查后重试',401:'登录已失效或凭证不正确',403:'账号操作未获授权',409:'账号或资料状态已变化，请刷新后重试',429:'请求过于频繁，请稍后重试'}[response.status]||'账户服务暂不可用'),accountErrors[value.code]?value.code:'ACCOUNT_SERVICE_REJECTED'),{statusCode:response.status,retryAfterSeconds:Math.min(86400,Math.max(0,Number(value.retryAfterSeconds)||0))});
   if(!response.ok){const message=response.status===401?'账号登录已失效，请重新登录':response.status===403?'算力权益、密钥归属或有效期核验未通过':response.status===404||response.status===503?'官方模型服务尚未开放或暂不可用':response.status===409?'该签发请求已处理或待核对，请刷新后处理':response.status===429?'请求或会员密钥数量已达上限':'会员操作未完成，请刷新状态核对';throw Object.assign(failure(message,'MEMBER_SERVICE_REJECTED'),{statusCode:response.status});}
   return value;
@@ -61,8 +65,8 @@ export function createMembershipService({dataRoot,models,accountBaseUrl=process.
  }
  async function accountStatus(){const full=await status(),auth=await login(),officialConfiguration=await modelAccess(),cloud=full.authenticated?(cloudSession===auth?.token&&verifiedSession===auth?.token?cloudStatus:{state:'unverified',checkedAt:'',message:'云空间尚未联网核验'}):{state:'login_required',checkedAt:'',message:'请先登录神思账号'};return {issuer,serviceBaseUrl,authenticated:full.authenticated,user:full.user,checkedAt:full.checkedAt,cached:full.cached,lastError:full.lastError,officialConfiguration,cloudSyncStatus:{...cloud},services:{cloudSync:cloud.state==='available',computeCredits:officialConfiguration.enabled===true}};}
  async function authenticatedUser(auth){
-  try{const me=await request('/v1/auth/me',{token:auth.token});if(me.user?.id!==auth.user.id)throw Object.assign(failure('账号身份发生变化，请重新登录','ACCOUNT_MISMATCH'),{statusCode:401});return me;}
-  catch(error){if(error.statusCode===401){const current=await login();if(current?.token===auth.token&&current?.issuer===auth.issuer){await models.putSecret('member-login','');await models.putSecret('member-sync-unlock','');verifiedSession='';verifiedComputeSession='';cloudSession='';}}throw error;}
+  try{const me=await request('/v1/auth/me',{token:auth.token});if(typeof me?.user?.id!=='string'||!me.user.id.trim())throw failure('账号核验响应不完整，已保留本机登录','ACCOUNT_INVALID_RESPONSE');if(me.user.id!==auth.user.id)throw Object.assign(failure('账号身份发生变化，请重新登录','ACCOUNT_MISMATCH'),{statusCode:401});return me;}
+  catch(error){if(['ACCOUNT_SESSION_INVALID','ACCOUNT_MISMATCH'].includes(error.code)){const current=await login();if(current?.token===auth.token&&current?.issuer===auth.issuer){await models.putSecret('member-login','');await models.putSecret('member-sync-unlock','');verifiedSession='';verifiedComputeSession='';cloudSession='';}}throw error;}
  }
  async function refreshAccount(){const auth=await requireLogin();try{const me=await authenticatedUser(auth);const saved=await state();await saveState({...saved,issuer,memberId:auth.user.id,publicUser:publicAccount(me.user),checkedAt:new Date().toISOString()});verifiedSession=auth.token;lastError='';
    // Account login must work even while commercial services are unavailable.
@@ -117,7 +121,9 @@ export function createMembershipService({dataRoot,models,accountBaseUrl=process.
    if(!result.user?.id||typeof result.token!=='string'||!result.token||result.token.length>16384)throw failure('账号响应无效');
    // A mismatched or unverified new login must not replace the previous one.
    const me=await request('/v1/auth/me',{token:result.token});if(me.user?.id!==result.user.id)throw failure('登录返回的身份不一致，原登录保留','ACCOUNT_MISMATCH');
-   await models.putSecret('member-login',JSON.stringify({issuer,token:result.token,user:publicAccount(me.user)}),{remember:true});await models.putSecret('member-sync-unlock','');verifiedSession='';verifiedComputeSession='';await refreshAccount();return body.accountOnly===true?accountStatus():status();
+   await models.putSecret('member-login',JSON.stringify({issuer,token:result.token,user:publicAccount(me.user)}),{remember:true});await models.putSecret('member-sync-unlock','');verifiedSession=result.token;verifiedComputeSession='';lastError='';
+   const saved=await state();await saveState({...saved,issuer,memberId:me.user.id,publicUser:publicAccount(me.user),checkedAt:new Date().toISOString()});
+   return body.accountOnly===true?accountStatus():status();
   }
   if(name==='logout'){const auth=await login();await models.putSecret('member-login','');await models.putSecret('member-sync-unlock','');verifiedSession='';verifiedComputeSession='';lastError='';if(auth?.issuer===issuer)try{await request('/v1/auth/logout',{token:auth.token,body:{}});}catch{lastError='已退出本机账号；云端会话注销未确认';}return status();}
   if(name==='refresh')return refresh();

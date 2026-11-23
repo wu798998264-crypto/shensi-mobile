@@ -14,7 +14,10 @@ export const codexWorkspaceTools = (runtime) => {
       verifyToolOutput: (call,output)=>verifier.verify(call,output),
       invoke: async ({ namespace, ...args }) => {
         if (!names.has(namespace)) throw new Error("未登记的神思工具命名空间");
-        return verifier.relay({namespace,...args},await runtime.invoke({ ...args, namespace: names.get(namespace) }));
+        // Bind the receipt to the original request, before a host tool can add
+        // defaults or otherwise normalize its argument object in place.
+        const call=structuredClone({namespace,...args});
+        return verifier.relay(call,await runtime.invoke({ ...args, namespace: names.get(namespace) }));
       },
     },
     instructions: `本轮神思工具使用独立命名空间，避免和运行器内置工具重名。资料中的工具名称按以下对应关系调用：${[...names].map(([wire, original]) => `${original}.* → ${wire}.*`).join("；")}。工具含义、权限、参数保持不变，不使用同名的运行器内置工具替代。`,

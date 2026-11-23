@@ -3,8 +3,6 @@ import {writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 
 // Use the actual host theme function and browser UI, with isolated profiles.
-// Every theme run starts from a persisted preference so the installed app path
-// exercises the same reload boundary as a user's settings change.
 export async function verifyBrowserThemes({owner,run,wait,evidence,nativeTheme,api}){
  const customThemes=[
   {id:'custom-browser-violet',name:'紫夜',colors:{topbar:'#211c30',sidebar:'#211c30',editor:'#181421',chat:'#181421',text:'#f0eaf8',accent:'#bb9eef'}},

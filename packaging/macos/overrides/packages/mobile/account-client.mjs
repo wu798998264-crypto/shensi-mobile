@@ -2,7 +2,7 @@
 // No browser/localStorage fallback, Node dependency, generation or purchase endpoint.
 import {createCloudFileClient} from './cloud-sync-client.mjs';
 import {cloudSyncStatus as readCloudStatus} from '../core/src/cloud-sync-status.mjs';
-import {ACCOUNT_SERVICE_URL,LEGACY_ACCOUNT_SERVICE_URL,accountEndpoint} from '../core/src/account-service-endpoints.mjs';
+import {ACCOUNT_SERVICE_URL,LEGACY_ACCOUNT_SERVICE_URL,accountEndpoint,accountSessionRejected} from '../core/src/account-service-endpoints.mjs';
 export {ACCOUNT_SERVICE_URL,LEGACY_ACCOUNT_SERVICE_URL};
 export const ACCOUNT_ISSUER=ACCOUNT_SERVICE_URL;
 const failure=(message,code,status)=>Object.assign(new Error(message),{code,...status?{status}: {}});
@@ -48,13 +48,17 @@ export function createMobileAccountClient({secureVault,fetchImpl=fetch,issuer=AC
   try{while(reader){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>1024*1024){await reader.cancel();throw failure('账户响应超过安全大小','INVALID_RESPONSE');}text+=decoder.decode(part.value,{stream:true});}text+=decoder.decode();}catch(error){if(error.code)throw error;throw failure('账户响应中断，请重新核验','ACCOUNT_UNAVAILABLE');}
   let value;try{value=JSON.parse(text);}catch{if(response.ok)throw failure('账户服务响应无效','INVALID_RESPONSE');value={};}
   if(!value||typeof value!=='object'||Array.isArray(value)){if(response.ok)throw failure('账户响应格式无效','INVALID_RESPONSE');value={};}
+  if(path==='/v1/auth/me'&&response.status===401){
+   if(accountSessionRejected(response.status,value))throw failure('登录已失效，请重新登录','ACCOUNT_SESSION_INVALID',401);
+   throw failure('账号核验暂时不可用，已保留本机登录，请稍后刷新','ACCOUNT_UNAVAILABLE',401);
+  }
   if(!response.ok)throw Object.assign(failure(messages[value.code]||({400:'账户信息不完整或格式不正确，请检查后重试',401:'登录已失效或凭证不正确',403:'账号操作未获授权',409:'账号或资料状态已变化，请刷新后重试',429:'请求过于频繁，请稍后重试'}[response.status]||'账户服务暂不可用'),messages[value.code]?value.code:'ACCOUNT_REJECTED',response.status),{retryAfterSeconds:Math.min(86400,Math.max(0,Number(value.retryAfterSeconds)||0))});
   return value;
  }
  async function verify(){
   verified=false;await load();if(!session)throw failure('请先登录神思账号','LOGIN_REQUIRED');
-  try{const me=await request('/v1/auth/me',{token:session.token});if(me.user?.id!==session.user.id)throw failure('账号身份发生变化，请重新登录','ACCOUNT_MISMATCH',401);session={...session,user:publicUser(me.user)};await persistSession(session);verified=true;lastError='';return state();}
-  catch(error){lastError=error.message;if(error.status===401){session=null;await secureVault.remove(key);}throw error;}
+  try{const me=await request('/v1/auth/me',{token:session.token});if(typeof me?.user?.id!=='string'||!me.user.id.trim())throw failure('账号核验响应不完整，已保留本机登录','INVALID_RESPONSE');if(me.user.id!==session.user.id)throw failure('账号身份发生变化，请重新登录','ACCOUNT_MISMATCH',401);session={...session,user:publicUser(me.user)};await persistSession(session);verified=true;lastError='';return state();}
+  catch(error){lastError=error.message;if(['ACCOUNT_SESSION_INVALID','ACCOUNT_MISMATCH'].includes(error.code)){await secureVault.remove(key);session=null;}throw error;}
  }
  async function signIn(path,body){
   const result=await request(path,{body:{...body,rememberMe:true}});

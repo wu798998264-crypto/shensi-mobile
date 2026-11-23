@@ -1,5 +1,7 @@
 // Interface copy only. Never use this dictionary to rewrite stored documents.
 export const corePluginCopy={
+ '未能写入剪贴板，请选中回复文字后按 Ctrl+C（Mac 为 ⌘C）。':'Could not copy to the clipboard. Select the reply text and press Ctrl+C (⌘C on Mac).',
+ '所选文件夹、文档和白板将一并移入回收站，可恢复目录、正文和历史。':'The selected folders, documents and whiteboards will be moved to Trash. Their structure, content and history can be restored.',
  "安装包续传位置或大小与发布清单不一致": "The download range does not match the release manifest.",
  "安装包大小与发布清单不一致": "The installer size does not match the release manifest.",
  "日历与待办": "Calendar and tasks",
