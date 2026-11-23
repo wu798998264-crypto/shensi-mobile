@@ -33,6 +33,7 @@ import {createMembershipService} from './membership.mjs';
 import {createDesktopCloudNotebooks} from './cloud-notebooks.mjs';
 import {activateWork,deactivateWork,workItem,linkIndex,globalLinkIndex,connectDocuments,disconnectDocuments} from './workspace.mjs';
 import {createChatService} from './chat.mjs';
+import {createChatVoice} from './chat-voice.mjs';
 import {assertNotebookIdle} from './notebook-activity.mjs';
 import {createSelectionEdits} from './selection-edits.mjs';
 import {createMediaService} from './media.mjs';
@@ -89,6 +90,7 @@ export function createOfficialHost({service,desktop={},syncOptions={},mediaOptio
  const videoParser=createBoardVideoParser({service,requirePlugin,runtime:desktop.videoParser});
  const workTools=createWorkTools({service,agent,knowledge,books,models,requirePlugin,recycle});
  const chat=createChatService({service,models,requirePlugin,agent,consoles,media,books,control,doubao}),depth=createDepthService({service,requirePlugin,...depthOptions});
+ const voice=createChatVoice({dataRoot:service.dataRoot,requirePlugin});
  const selectionEdits=createSelectionEdits({service,agent,chat,models,requirePlugin,doubao});
  models.setProfileStopper(async ids=>{await reader.stopProfiles(ids);await characters.stopAll(ids);await selectionEdits.abortProfiles(ids);await workTools.abortProfiles(ids);await chat.abortProfiles(ids);return media.stopProfiles(ids);});
  let syncedCredential=false;
@@ -117,7 +119,7 @@ export function createOfficialHost({service,desktop={},syncOptions={},mediaOptio
   if(pluginId==='thirdparty.browser'&&(enabled===true||install))browser.resume();
   if(pluginId==='thirdparty.doubao'&&(enabled===true||install)){models.unblockProvider(pluginId);doubao.resume();await doubao.configureAccounts();}
   if(pluginId==='thirdparty.text-reader'&&(enabled===true||install)){models.unblockProvider(pluginId);await reader.enable();}
-  if(pluginId==='official.conversation-control'&&(enabled===false||uninstall)){await selectionEdits.stopAll();await maps.stopAll();await videoParser.stopAll();for(const source of ['official.document-chat','official.whiteboard-generation'])await chat.abortPlugin(source);}
+  if(pluginId==='official.conversation-control'&&(enabled===false||uninstall)){voice.handle('stop');await selectionEdits.stopAll();await maps.stopAll();await videoParser.stopAll();for(const source of ['official.document-chat','official.whiteboard-generation'])await chat.abortPlugin(source);}
   if(pluginId==='official.conversation-control'&&(enabled===true||install))videoParser.resume();
   let mediaStop;if((enabled===false||uninstall)&&['official.document-chat','official.whiteboard-generation','official.conversation-control'].includes(pluginId))mediaStop=await chat.abortPlugin(pluginId);
   if((enabled===false||uninstall)&&pluginId==='thirdparty.depth-explorer')await depth.stopAll();
@@ -154,6 +156,7 @@ export function createOfficialHost({service,desktop={},syncOptions={},mediaOptio
   if(path==='/graph/disconnect'){await requirePlugin('official.graph');return disconnectDocuments(service,body);}
   if(path==='/graph/connect'){await requirePlugin('official.graph');return connectDocuments(service,body);}
   if(path==='/graph'){await requirePlugin('official.graph');return body.scope==='global'?globalLinkIndex(service):linkIndex((await service.load(body.id)).state);}
+  if(path.startsWith('/voice/'))return voice.handle(path.slice(7),body);
   if(path.startsWith('/chat/'))return chat.handle(path.slice(6),body);
   if(path.startsWith('/depth/'))return depth.handle(path.slice(7),body);
   if(path==='/sync/preview'&&body.conflictId){await requirePlugin('official.nutstore');await hydrateSync();return sync.previewConflict(body);}
@@ -170,5 +173,5 @@ export function createOfficialHost({service,desktop={},syncOptions={},mediaOptio
  }
  const startRuntime=async()=>{const available=await list();if(available.some(p=>p.id==='official.nutstore'&&p.installed!==false&&p.enabled)){await sync.startup();try{await hydrateSync();}catch{sync.clearSessionCredentials();console.warn('坚果云本机登录凭据暂时不可读取；未启动自动同步，请在同步设置重新核验。');}}if(available.some(p=>p.id==='thirdparty.doubao'&&p.installed&&p.enabled))await doubao.configureAccounts();if(available.some(p=>p.id==='thirdparty.text-reader'&&p.installed&&p.enabled))await reader.enable();};
  async function installManagedPackage(body){const pkg=body.package;if(!pkg||Object.keys(pkg).sort().join(',')!==Object.keys(LOCAL_H3_PACKAGE).sort().join(',')||Object.entries(LOCAL_H3_PACKAGE).some(([k,v])=>pkg[k]!==v))throw failure('托管插件包未通过随软件固定清单校验');return update({pluginId:LOCAL_H3_PLUGIN_ID,install:true});}
- return {browserCommand:(action,body,owner)=>browser.handle(action,body,owner),prepareBrowserQuit:()=>browser.close(),list,update,handle,models,stopExternalProvider,startRuntime,installManagedPackage,assertNotebookIdle:id=>assertNotebookIdle({dataRoot:service.dataRoot,id,chat}),close:async()=>{await browser.close({force:true});syncHostClosed=true;unsubscribeSync();await publisher.close();await nutstoreNotebooks.close();await cloudNotebooks.close();await sync.close();await vault.close();await videoParser.close();await maps.close();await characters.stopAll();await selectionEdits.stopAll();await workTools.stopAll();await localH3.close();membership.close();chat.abortAll();await desktop.chushouTranscriber?.close();await media.close();await reader.close();await doubao.close();await depth.close();},requirePlugin};
+ return {browserCommand:(action,body,owner)=>browser.handle(action,body,owner),prepareBrowserQuit:()=>browser.close(),list,update,handle,models,stopExternalProvider,startRuntime,installManagedPackage,assertNotebookIdle:id=>assertNotebookIdle({dataRoot:service.dataRoot,id,chat}),close:async()=>{voice.close();await browser.close({force:true});syncHostClosed=true;unsubscribeSync();await publisher.close();await nutstoreNotebooks.close();await cloudNotebooks.close();await sync.close();await vault.close();await videoParser.close();await maps.close();await characters.stopAll();await selectionEdits.stopAll();await workTools.stopAll();await localH3.close();membership.close();chat.abortAll();await desktop.chushouTranscriber?.close();await media.close();await reader.close();await doubao.close();await depth.close();},requirePlugin};
 }

@@ -5,7 +5,7 @@
   },
   {
     "path": "packages/ui/ui-glyph.js",
-    "sha256": "5ea20312d5136891c906166e09c4acbbd38ccf036069a97f5cd2de8c3647d246"
+    "sha256": "c2868c4c5eaa4c84409d65d0912fdf5cb0122d5af4ddafca0dcf6dedbb8984ac"
   },
   {
     "path": "packages/ui/app.js",
@@ -33,7 +33,7 @@
   },
   {
     "path": "packages/ui/chat-layout.js",
-    "sha256": "1b77fbd8cf5c28f737c863dbfa7edebb3fad968033af2ebc1ac4fe0a367df11f"
+    "sha256": "daf985d3eb75660cfcb5d8d9fd9f9643ad0591d1eff82425ec908038b4b565f2"
   },
   {
     "path": "packages/ui/selection-edit.js",
@@ -65,11 +65,11 @@
   },
   {
     "path": "packages/ui/generation-settings.js",
-    "sha256": "431fa288cde2e89c191726c326c5705699643658cbe15ab8dc017923925c1903"
+    "sha256": "787470bf1203664c367feccfcfa6e8ad6ff4c15b51ff73f342e9672b887d7abb"
   },
   {
     "path": "packages/ui/core-plugin-copy.js",
-    "sha256": "284100636b6b5585500e83e560e04598f8d1d503b2ade7088a99dbefe217a717"
+    "sha256": "808a057761853cd85ee79385e215a2ea41e708550a76d8bf07149f5d3b31ebbd"
   },
   {
     "path": "packages/official/catalog.mjs",
@@ -77,7 +77,7 @@
   },
   {
     "path": "packages/official/host.mjs",
-    "sha256": "53bf4904fe3995fce5309d3cc9d439263b3b382f4c3f8dbd6173b66fb0e82655"
+    "sha256": "b8bb1f304a09a002b015759849ef0b6a49626ee88c80490ba5861e4f02c00778"
   },
   {
     "path": "packages/official/selection-edits.mjs",
@@ -97,7 +97,7 @@
   },
   {
     "path": "packages/ui/official-ui.js",
-    "sha256": "4ba317b80c012b62137ecc8aea43d6ff7d5b61dd4fe91e0388563871709b7d33"
+    "sha256": "41b547e08dbf06d19130fa870ae434404cc821b68642276dfc900cb4dc4305d1"
   },
   {
     "path": "packages/ui/tutorial.js",
@@ -109,11 +109,11 @@
   },
   {
     "path": "packages/official/chat.mjs",
-    "sha256": "b40bb7cdc024e45ff3c8b665da1cfd12f6801583416e9ce6f551eb611ea7b7cd"
+    "sha256": "89ad7c41ad06a3b3c1fa88dfa0a30d1f126eb269ba87ec5006964657c8ed6112"
   },
   {
     "path": "packages/official/agent.mjs",
-    "sha256": "605425821c50e2d11d1b9714cf44654d4d81d9b3496714f3957b34d7be443f86"
+    "sha256": "d42dd65e2023ee17594b0227ca4787966dfb62242897b61ef860b3444271e468"
   },
   {
     "path": "packages/core/src/service.mjs",
@@ -201,7 +201,7 @@
   },
   {
     "path": "packages/official/legacy/server/shensi-codex-agent-runtime.mjs",
-    "sha256": "28fcc452c30664d12ea620619b1867e0f1d80b613cfefe805fddaedee85606ab"
+    "sha256": "cd7ab96c60aa15d7920247a21bf2bf05684de4e15b6950a1b1968235d716709c"
   },
   {
     "path": "packages/official/legacy/server/codex-provider-bridge.mjs",
@@ -249,7 +249,7 @@
   },
   {
     "path": "apps/desktop/workspace-permissions.mjs",
-    "sha256": "1abe67532b674e03180c10f596dedca738b5be035e18919b8cb502fcbff09a15"
+    "sha256": "46f20741ff01f805e06a3061970cba3adac0dc2b90679025a0bff3c350031f58"
   },
   {
     "path": "packages/ui/copy-text.js",
@@ -293,7 +293,7 @@
   },
   {
     "path": "packages/ui/membership-ui.js",
-    "sha256": "b629968fb0ec8850955953288be750d4d88872fea5c137bfb9335aa9da30d68e"
+    "sha256": "8460c76c0ae8f1bb7d067b148f180a62fc31225d5e828a343e976f97f0c63fad"
   },
   {
     "path": "packages/core/src/release-download.cjs",
@@ -366,6 +366,50 @@
   {
     "path": "packages/thirdparty/doubao-page.mjs",
     "sha256": "d537d27507a9b4a4748f44fba08b9ecd06b6effd1075d17a2a819df77833fef5"
+  },
+  {
+    "path": "packages/official/chat-voice.mjs",
+    "sha256": "b79302301487d30fa0bff251310b76afe8e4855ca42d732f9fdada320326a154"
+  },
+  {
+    "path": "packages/official/chat-voice-runtime.mjs",
+    "sha256": "c2da0e34962bdc5dff1e093a7c66b0a3a1b8215b7fac3af726ef988fcd943053"
+  },
+  {
+    "path": "packages/official/chat-voice-payloads.json",
+    "sha256": "1b725c122018a3480ed2637a17d1d39f9ee0322e6b26c5808a35de3e0d3be6a3"
+  },
+  {
+    "path": "packages/official/chat-voice-tts.py",
+    "sha256": "9534a9c5f8f2310e9f7c0df0d404ac7e2ec462875dfbb09348c81cf23ca4e704"
+  },
+  {
+    "path": "packages/ui/chat-voice.js",
+    "sha256": "150444511ea094327b23de3314fd8aa3c85cc6eeabf03a669a46e2757c914a6b"
+  },
+  {
+    "path": "packages/ui/chat-layout.css",
+    "sha256": "5e055c7bab6fd9b742401aeb85160d2f2ed2c9acf776d7b14fb81e6b9190c686"
+  },
+  {
+    "path": "packages/official/task-skill-routing.mjs",
+    "sha256": "73b2526c72340634bec350aa6ef9965ba15c92c7e38f0ffb5ac34e1d1eecbcd5"
+  },
+  {
+    "path": "packages/official/chat-completion.mjs",
+    "sha256": "163f004566141cbb88bf198bb4a5a35a20ec6d19dd041c485edccc89beb1f0c2"
+  },
+  {
+    "path": "packages/official/knowledge.mjs",
+    "sha256": "e4ef895dc5428aef732cdbb8c6cfc60be91892ebd556077965e890f529532d9e"
+  },
+  {
+    "path": "packages/official/skill-panel-knowledge.mjs",
+    "sha256": "8daadfc0435ff6b53baf3fc0cc2cbf660f6820f24b4e7dd39afab251d5fc965c"
+  },
+  {
+    "path": "packages/official/legacy/server/codex-session-runner.mjs",
+    "sha256": "c6cfcb2c2dd4c1637b1b1de9a460a5f38217811e536a2c637207375c42712abf"
   },
   {
     "path": "packages/official/legacy/cli/codex-image-app-server.mjs",

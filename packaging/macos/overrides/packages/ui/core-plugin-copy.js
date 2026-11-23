@@ -1,5 +1,16 @@
 // Interface copy only. Never use this dictionary to rewrite stored documents.
 export const corePluginCopy={
+ '本机离线语音':'Offline voice on this device',
+ '离线语音输入':'Offline voice input','离线朗读':'Offline read aloud','停止朗读':'Stop reading',
+ '首次按本机配置设置默认状态，之后保留你的选择。模型首次下载，语音和朗读内容仅在本机处理。':'Defaults are based on this device. Your choices are then kept. Models download once; audio and speech text are processed locally.',
+ '本机语音设置已保存':'Voice settings saved for this device',
+ '请在对话控制设置中启用离线语音输入':'Enable offline voice input in Conversation Control settings',
+ '请在对话控制设置中启用离线朗读':'Enable offline read aloud in Conversation Control settings',
+ '停止录音或取消识别':'Stop recording or cancel transcription',
+ '准备离线识别，首次需要下载模型…':'Preparing offline recognition. Models download on first use…',
+ '准备离线朗读，首次需要下载模型…':'Preparing offline speech. Models download on first use…',
+ '正在录音，再点话筒结束（最长60秒）':'Recording. Click the microphone to finish (up to 60 seconds)',
+ '正在离线识别…':'Transcribing locally…',
  '未能写入剪贴板，请选中回复文字后按 Ctrl+C（Mac 为 ⌘C）。':'Could not copy to the clipboard. Select the reply text and press Ctrl+C (⌘C on Mac).',
  '所选文件夹、文档和白板将一并移入回收站，可恢复目录、正文和历史。':'The selected folders, documents and whiteboards will be moved to Trash. Their structure, content and history can be restored.',
  "安装包续传位置或大小与发布清单不一致": "The download range does not match the release manifest.",

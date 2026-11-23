@@ -7,11 +7,12 @@ import {openCloudNotebooks} from './cloud-notebooks.js';
 const rememberStore={get:async()=>{try{return JSON.parse(localStorage.getItem('shensi-account-name')||'null');}catch{return null;}},set:async value=>{if(value)localStorage.setItem('shensi-account-name',JSON.stringify(value));else localStorage.removeItem('shensi-account-name');}};
 
 export function createMembershipPanel(context){
- let root,data,auth,busy=false,billing={paymentEnabled:false,offers:[]};
+ let root,data,auth,busy=false,mountRevision=0,billing={paymentEnabled:false,offers:[]};
  const call=(name,body={})=>context.api('/api/official/membership/'+({status:'account-status',refresh:'account-refresh'}[name]||name),['login','register','email-login'].includes(name)?{...body,accountOnly:true}:body);
- const reload=async()=>{data=await call('refresh');billing=await call('billing-config').catch(()=>billing);render();};
+ async function loadBilling(revision){const next=await call('billing-config').catch(()=>null);if(next&&revision===mountRevision&&root?.isConnected){billing=next;if(data?.authenticated&&!busy)render();}}
+ const reload=async()=>{const revision=++mountRevision;data=await call('refresh');render();void loadBilling(revision);};
  const security=createAccountSecurity({call,user:()=>data.user,toast:context.toast,updated:reload});
- async function mount(target){root=target;root.dataset.coreLocalize='';root.textContent='正在读取账号状态…';try{[data,billing]=await Promise.all([call('status'),call('billing-config').catch(()=>({paymentEnabled:false,offers:[]}))]);render();}catch(error){root.textContent=error.message;}}
+ async function mount(target){const revision=++mountRevision;root=target;root.dataset.coreLocalize='';root.textContent='正在读取账号状态…';try{const next=await call('status');if(revision!==mountRevision||!target.isConnected)return;data=next;render();void loadBilling(revision);}catch(error){if(revision===mountRevision&&target.isConnected)root.textContent=error.message;}}
  function render(){
   auth?.dispose();auth=null;const user=data.user;
   root.classList.add('account-settings-page');

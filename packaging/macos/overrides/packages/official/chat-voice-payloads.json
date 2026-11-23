@@ -1,0 +1,57 @@
+{
+  "win": {
+    "archive": "runtime-win.tar.bz2",
+    "folder": "sherpa-onnx-v2.0.1-win-x64-shared-MT-Release",
+    "sha256": "dc703575a68594435f53dec93df775ff4913af851a196c0537163f21d8d2364e",
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-v2.0.1-win-x64-shared-MT-Release.tar.bz2",
+    "files": {
+      "bin/sherpa-onnx-offline.exe": "25a8af3104edf78bbe083972bc117140bf990e63bcbd4b758ebd58e3e277638d",
+      "bin/onnxruntime.dll": "7f66f939a881baf4f46a2216496798edf4a1429878b646d12674aa62f27d8a25",
+      "bin/onnxruntime_providers_shared.dll": "551d0e1fe4c227d8542314ba718d52f4379e0c7bfe729a37c59833a884e27b4d",
+      "lib/sherpa-onnx-c-api.dll": "0965a6e4c0254da2beff489cf7a8aaffaf7dc94f90b43b3e66448b8cab4177ea",
+      "lib/onnxruntime.dll": "7f66f939a881baf4f46a2216496798edf4a1429878b646d12674aa62f27d8a25",
+      "lib/onnxruntime_providers_shared.dll": "551d0e1fe4c227d8542314ba718d52f4379e0c7bfe729a37c59833a884e27b4d"
+    }
+  },
+  "mac": {
+    "archive": "runtime-mac.tar.bz2",
+    "folder": "sherpa-onnx-v2.0.1-osx-universal2-shared",
+    "sha256": "bf6718f708e15390f1da133dd888661a68df270791b178aaf765d4e3f0baa9fe",
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-v2.0.1-osx-universal2-shared.tar.bz2",
+    "files": {
+      "bin/sherpa-onnx-offline": "5da827c6d2e37576bc1d95f4a4f36c12beda349cc26d1400b69c8fc7b94e0893",
+      "lib/libsherpa-onnx-c-api.dylib": "fceedaf741fa650b8885029f3393c968f0fba84c1f7ea8ec6b0b36cfa250afcc",
+      "lib/libsherpa-onnx-cxx-api.dylib": "57bbfdebb02af5611932058c71d7accc1396c7368956649dad85727d3f2dd71d",
+      "lib/libonnxruntime.dylib": "0181c2458590a90540a64ec218a78c9a4879f55747349253e54fa97d0d8de7eb"
+    }
+  },
+  "tts": {
+    "archive": "kokoro.tar.bz2",
+    "folder": "kokoro-int8-multi-lang-v1_0",
+    "sha256": "72c347230107ef8a31098ec4d468a605244beef5f1ed00db97efa13518800653",
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-multi-lang-v1_0.tar.bz2",
+    "files": {
+      "model.int8.onnx": "75635ea3b85a32d00094dcdd61a258aba87c160f7c264c304a7b3ae9d734195e",
+      "voices.bin": "1c5a5b983d3d50d8586d437a51f3faa2da7919ce76a013c081e65671a3447c29",
+      "tokens.txt": "6ebb6bb288f20f3ae8d004d3c2ca27697da27c037d75e81a60e2a6a663f95425",
+      "lexicon-zh.txt": "902bc2d20ac7c449c5ecbbbb23c89d12119c03ed5b8ed27f114f0260c9e35229",
+      "lexicon-us-en.txt": "7daaab53a181be9885b853a8582bf1838186317e5dadacbcef9c426d6fa0da14",
+      "date-zh.fst": "eb8aa079ae3cb81d8f4404992f39d61a0cb990947512b5b8d1e54d1f6980e718",
+      "number-zh.fst": "743f402181fcfebf76cc2f0546b71fa26476e626fbe4e460fb7b4c3a7a8bd5bd",
+      "phone-zh.fst": "1ac2b6fa56b1442320c4de7db08353bab8963a2b57f365eebcdd3a2d3562f8d7",
+      "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "README.md": "87359cd32dfdff6dfeb16633b5a116aee3b9ac69dec3302378270a2cab9885b1"
+    }
+  },
+  "asr": {
+    "archive": "model.tar.bz2",
+    "folder": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17",
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2",
+    "sha256": "7d1efa2138a65b0b488df37f8b89e3d91a60676e416f515b952358d83dfd347e",
+    "files": {
+      "model.int8.onnx": "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51",
+      "tokens.txt": "f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc",
+      "README.md": "763991a00edaea534ab36bf1b7cf89e61e911666dcfabbba71f91f9f7c593a63"
+    }
+  }
+}

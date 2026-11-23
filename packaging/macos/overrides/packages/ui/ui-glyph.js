@@ -1,5 +1,6 @@
 // App-owned vectors: controls must never depend on a Windows-only icon font.
 const paths={
+ E720:'M9 6a3 3 0 0 1 6 0v6a3 3 0 0 1-6 0V6zM6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6',
  E700:'M4 6h16M4 12h16M4 18h16',E70D:'m5 9 7 7 7-7',E710:'M12 4v16M4 12h16',E711:'m5 5 14 14M19 5 5 19',
  E70F:'m16 4 4 4M4 20l5-1L20 8a2.8 2.8 0 0 0-4-4L5 15z',E71A:'M5 5h14v14H5z',E71E:'M12 5v14M5 12h14',E71F:'M5 12h14',
  E723:'m9 13 7-7a3 3 0 0 1 4 4L10 20a5 5 0 0 1-7-7L13 3',E724:'m3 3 18 9-18 9 4-9-4-9zM7 12h14',E74A:'M12 20V4m-7 7 7-7 7 7',

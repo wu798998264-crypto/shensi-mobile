@@ -523,7 +523,7 @@ export class ShensiCodexAgentRuntime {
         ...(!enhanced ? { environments: [] } : {}),
         dynamicTools: options.shensiRuntime?.agentDriven === true ? options.workspaceToolRuntime?.dynamicTools || [] : [],
         ...(!enhanced ? { selectedCapabilityRoots: [] } : {}),
-        ...(options.shensiRuntime?.agentDriven ? { config: { tool_output_token_limit: AGENT_TOOL_OUTPUT_TOKEN_LIMIT, ...(enhanced
+        ...(options.shensiRuntime?.agentDriven ? { config: { tool_output_token_limit: AGENT_TOOL_OUTPUT_TOKEN_LIMIT, "skills.include_instructions": false, ...(enhanced
           ? { "features.shell_tool": true, "features.unified_exec": true, "features.apply_patch_freeform": true, "features.remote_models": true, "web_search": requestedWebSearchEnabled ? "live" : "disabled" }
           : { "features.shell_tool": false, "features.unified_exec": false, "features.apply_patch_freeform": false, "features.remote_models": false, "web_search": "disabled" }) } } : {}),
         developerInstructions,
