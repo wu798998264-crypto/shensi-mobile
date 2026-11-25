@@ -1,4 +1,4 @@
-// GPL-3.0-only. guoapp Hongguo module 1.0.7, fixed upstream commit in UPSTREAM.json.
+// GPL-3.0-only. guoapp 1.0.7 plus fruitknife 3.1.2 playback routes; see UPSTREAM.json.
 // Bounded Node host: no device rotation after rejection, no account import.
 const siteBaseUrl = "https://hongguoduanju.com";
 const appBaseUrl = "https://api5-normal-sinfonlineb.fqnovel.com";
@@ -51,9 +51,16 @@ const doubleColumnShowType = "506";
 const searchSeriesTab = "29";
 const audioSearchTab = "2";
 const tagPanelCategory = "5000";
+const legacyVersionCode = "74332", legacyVersionName = "7.4.3.32";
+const legacyVideoUserAgent = "com.phoenix.read/73932 (Linux; U; Android 12; zh_CN_#Hans; PGT-AN10; Build/V417IR;tt-ok/3.12.13.20)";
+const modelBases = ["https://api5-normal-sinfonlinea.fqnovel.com", "https://api5-normal-sinfonlinec.fqnovel.com"];
+const preloadBaseUrl = "https://reading.snssdk.com";
+const preloadQueryExtras = { manifest_version_code: appVersionCode, ssmix: "a", device_brand: "Redmi", device_type: "25053RT47C", os_version: "16", os_api: "36", ac: "wifi", language: "zh", host_abi: "arm64-v8a" };
 
 const paths = {
   videoDetail: "/novel/player/video_detail/v1/",
+  videoModelAlt: "/novel/player/video_model/v1/",
+  preloadPath: "/novel/player/multi_video_model/preload/v1",
   videoModel: "/novel/player/multi_video_model/player/v1",
   videoTab: "/reading/bookapi/video_tab/multi_video_model/v1/",
   landpage: "/reading/distribution/category/landpage/v/",
@@ -1461,11 +1468,12 @@ function timeoutError() {
   return failure("红果请求超时", { timeout: true });
 }
 
-function playbackQuery(deviceId, installId) {
+function playbackQuery(deviceId, installId, versionCode, versionName) {
+  const vc = versionCode || appVersionCode, vn = versionName || appVersionName;
   return {
-    aid: "8662", app_name: "novelread", version_code: appVersionCode, version_name: appVersionName,
+    aid: "8662", app_name: "novelread", version_code: vc, version_name: vn,
     channel: "vivo_8662_64", device_platform: "android", device_type: "PGT-AN10", os_version: "12",
-    update_version_code: appVersionCode, iid: installId, cdid: uuidLike(), device_id: deviceId,
+    update_version_code: vc, iid: installId, cdid: uuidLike(), device_id: deviceId,
   };
 }
 
@@ -1474,7 +1482,7 @@ function appRequest(method, path, extra, payload, options) {
   const comment = options.comment === true;
   const helper = options.helper === true;
   const deadline = options.deadline;
-  const playback = path === paths.videoModel;
+  const playback = path === paths.videoModel || path === paths.videoModelAlt || path === paths.preloadPath;
   const signedV5 = playback || path === paths.videoTab;
   const signed = !comment && path !== paths.bookmallTab;
   let lane = "";
@@ -1494,8 +1502,9 @@ function appRequest(method, path, extra, payload, options) {
     }
     lane = "hongguo-helper";
   }
-  const query = Object.assign(playback ? playbackQuery(deviceId, installId) : appQuery(deviceId, installId), extra || {});
+  const query = Object.assign(playback ? playbackQuery(deviceId, installId, options.versionCode, options.versionName) : appQuery(deviceId, installId), extra || {});
   const body = payload === null || payload === undefined ? null : typeof payload === "string" ? payload : JSON.stringify(payload);
+  const bodyBytes = body !== null && options.gzip === true ? host.gzip(host.utf8Encode(body)) : null;
   const attempts = Math.min(Math.max(host.retries(), 1), 3);
   let lastError = null;
   let rotations = 0;
@@ -1509,7 +1518,7 @@ function appRequest(method, path, extra, payload, options) {
     if (remainingMs(deadline) <= 0) {
       throw lastError || timeoutError();
     }
-    const address = (playback ? playbackBaseUrl : appBaseUrl) + path;
+    const address = (options.base || (playback ? playbackBaseUrl : appBaseUrl)) + path;
     const nonce = comment ? host.randomBytes(11) : null;
     let ticket;
     try {
@@ -1526,10 +1535,10 @@ function appRequest(method, path, extra, payload, options) {
     const rawQuery = encodeQuery(query);
     let requestUrl = address + "?" + rawQuery;
     const headers = signedV5
-      ? { "User-Agent": playbackUserAgent, Accept: "application/json" }
+      ? { "User-Agent": options.userAgent || playbackUserAgent, Accept: "application/json" }
       : { "User-Agent": appUserAgent, Accept: "application/json", "X-XS-From-Web": "0", "Sdk-Version": "2" };
     if (signedV5) {
-      const prepared = signPlaybackV5(address, query, body === null ? null : host.utf8Encode(body), now);
+      const prepared = signPlaybackV5(address, query, bodyBytes !== null ? bodyBytes : body === null ? null : host.utf8Encode(body), now);
       requestUrl = prepared.url;
       Object.assign(headers, prepared.headers);
     } else if (comment) {
@@ -1542,10 +1551,11 @@ function appRequest(method, path, extra, payload, options) {
     if (body !== null) {
       headers["Content-Type"] = "application/json; charset=utf-8";
     }
+    if (bodyBytes !== null) headers["Content-Encoding"] = "gzip";
     let response;
     try {
       response = host.fetch({
-        method, url: requestUrl, headers, body: body === null ? "" : body, ticket,
+        method, url: requestUrl, headers, body: bodyBytes === null ? (body === null ? "" : body) : bodyBytes, ticket,
         limit: responseLimit, timeoutMs: Math.min(appRequestTimeoutMs, remainingMs(deadline)),
         followRedirects: true, anyStatus: true, background: options.background === true,
       });
@@ -1584,6 +1594,7 @@ function appRequest(method, path, extra, payload, options) {
       if (registerError !== null) {
         lastError = new Error("红果 App 接口未返回有效数据（设备注册失败：" + message(registerError) + "）");
       }
+      lastError.emptyResponse = true;
       continue;
     }
     let result;
@@ -2273,6 +2284,12 @@ function resolveVideoMedia(task) {
     if (error.backoff) throw error;
   }
   try {
+    return webPublicFallbackMedia(videoId);
+  } catch (error) {
+    if (error.backoff) throw error;
+    nativeError = new Error(message(nativeError) + "；网站备用取流：" + message(error));
+  }
+  try {
     return webMedia(seriesId, videoId);
   } catch (pageError) {
     throw new Error("红果 App 取流失败：" + message(nativeError) + "；网页取流失败：" + message(pageError));
@@ -2285,25 +2302,60 @@ function appMedia(videoId) {
 }
 
 function fetchAppMedia(videoId, helper) {
-  let tabError;
-  try {
-    return fetchTabMedia(videoId, helper);
-  } catch (error) {
-    if (error.noCompatibleMedia) {
-      throw error;
+  const state = cacheRead("appRoutes") || {};
+  if (Number(state.until) > Date.now()) throw failure("红果 App 连续空响应，暂用网站线路，30 分钟内自动恢复探测", { emptyResponse: true });
+  const routes = ["video_tab", "player_a", "player_b", "model_a", "model_c", "preload"];
+  if (routes.includes(state.preferred)) routes.splice(0, 0, routes.splice(routes.indexOf(state.preferred), 1)[0]);
+  let lastError;
+  for (const route of routes) {
+    try {
+      let media;
+      if (route === "video_tab") media = fetchTabMedia(videoId, helper);
+      else if (route === "player_a") media = fetchPlayerMedia(videoId, helper);
+      else media = fetchAlternateMedia(route, videoId, helper);
+      cacheWrite("appRoutes", { failures: 0, until: 0, preferred: route }, 0);
+      return Object.assign(media, { sourceRoute: "app_" + route });
+    } catch (error) {
+      if (!error.emptyResponse || error.backoff) throw error;
+      lastError = error;
     }
-    if (error.backoff) throw error;
-    tabError = error;
   }
-  try {
-    return fetchPlayerMedia(videoId, helper);
-  } catch (error) {
-    if (error.noCompatibleMedia) {
-      throw error;
-    }
-    if (error.backoff) throw error;
-    throw new Error(message(tabError) + "；播放器接口：" + message(error));
-  }
+  host.exclusive(() => {
+    const latest = cacheRead("appRoutes") || {};
+    const failures = Math.min(2, (Number(latest.failures) || 0) + 1);
+    cacheWrite("appRoutes", { failures, until: failures >= 2 ? Date.now() + 30 * minuteMs : 0, preferred: "" }, 0);
+  });
+  throw lastError;
+}
+
+function fetchAlternateMedia(route, videoId, helper) {
+  const alt = route === "model_a" || route === "model_c", preload = route === "preload";
+  const payload = alt ? {
+    biz_param: { detail_page_version: 0, device_level: 3, disable_digg_stat: false, from_video_id: "", need_all_video_definition: true, need_mp4_align: false, source: 9, use_os_player: false, use_server_dns: false, video_platform: 3 },
+    content_type: 1004, video_id: String(videoId),
+  } : {
+    biz_param: { detail_page_version: 0, device_level: preload ? 2 : 1, disable_digg_stat: false, disable_video_relate_book: false, need_all_video_definition: true, need_mp4_align: false, use_os_player: false, use_server_dns: false, video_platform: 1024 },
+    mixed_video_id_map: { "1004": [videoId] }, dr_scene: preload ? "preload" : "player",
+  };
+  const options = { helper, base: alt ? modelBases[route === "model_a" ? 0 : 1] : preload ? preloadBaseUrl : appBaseUrl };
+  if (alt || preload) Object.assign(options, { gzip: true, versionCode: legacyVersionCode, versionName: legacyVersionName, userAgent: legacyVideoUserAgent });
+  const result = appRequest("POST", alt ? paths.videoModelAlt : preload ? paths.preloadPath : paths.videoModel, preload ? preloadQueryExtras : null, payload, options);
+  const entries = nested(result, "data"), data = nested(isRecord(entries["1004"]) ? entries["1004"] : entries, videoId);
+  if (isEmptyRecord(data)) throw new Error("红果 App 未返回所请求的分集播放信息");
+  return mediaFromModel(appVideoModel(data));
+}
+
+function webPublicFallbackMedia(videoId) {
+  const response = host.fetch({ method: "POST", url: siteBaseUrl + "/api/video/protected/fallback-play-info?aid=8662",
+    headers: { "Content-Type": "application/json", "User-Agent": webUserAgent, Referer: siteBaseUrl + "/", Accept: "application/json" },
+    body: JSON.stringify({ item_id: String(videoId) }), limit: responseLimit, timeoutMs: appRequestTimeoutMs });
+  if ([401, 403].includes(response.status)) throw failure("该集需要有效的网站登录授权，当前授权不足或已失效", { backoff: true });
+  if (response.status === 429) throw failure("红果网站请求受到限流，请稍后重试", { backoff: true });
+  if (response.status !== 200) throw new Error("红果网站备用取流 HTTP " + response.status);
+  const result = parseJson(response.body), mainUrl = mapString(result, "main_url");
+  if (!/^https:\/\/\S+$/.test(mainUrl)) throw new Error("该集未提供有效播放地址");
+  const duration = parseNumber(mapString(result, "video_duration"));
+  return { url: mainUrl, referer: siteBaseUrl + "/", sourceRoute: "fruitknife_web", durationMs: duration > 0 ? Math.trunc(duration * secondMs) : 0 };
 }
 
 function fetchTabMedia(videoId, helper) {
@@ -2311,7 +2363,7 @@ function fetchTabMedia(videoId, helper) {
     video_id: videoId, video_id_type: "0", device_level: "1", need_all_video_definition: "1", need_mp4_align: "0",
     use_os_player: "0", video_platform: "1024", source: "0", from_video_id: "",
   };
-  const result = appRequest("GET", paths.videoTab, query, null, { helper });
+  const result = appRequest("GET", paths.videoTab, query, null, { helper, versionCode: legacyVersionCode, versionName: legacyVersionName, userAgent: legacyVideoUserAgent });
   const root = nested(result, "data");
   const data = nested(nested(root, "video_model_data"), videoId);
   if (isEmptyRecord(data)) {
@@ -2328,7 +2380,7 @@ function fetchPlayerMedia(videoId, helper) {
     },
     mixed_video_id_map: { "1004": [videoId] }, dr_scene: "player",
   };
-  const result = appRequest("POST", paths.videoModel, null, payload, { helper });
+  const result = appRequest("POST", paths.videoModel, null, payload, { helper, gzip: true, versionCode: legacyVersionCode, versionName: legacyVersionName, userAgent: legacyVideoUserAgent });
   const entries = nested(result, "data");
   const data = nested(isRecord(entries["1004"]) ? entries["1004"] : entries, videoId);
   if (isEmptyRecord(data)) {

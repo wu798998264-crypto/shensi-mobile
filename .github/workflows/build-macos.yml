@@ -1,5 +1,5 @@
-name: Build Shensi 0.0.51 for macOS
-run-name: Shensi 0.0.51 macOS packages
+name: Build Shensi 0.0.52 for macOS
+run-name: Shensi 0.0.52 macOS packages
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: shensi-macos-0.0.51
+  group: shensi-macos-0.0.52
   cancel-in-progress: false
 jobs:
   build:
@@ -24,6 +24,8 @@ jobs:
           - arch: x64
             runner: macos-15-intel
     env:
+      SHENSI_TEST_HONGGUO_FIXTURE: 'villain'
+      SHENSI_TEST_HONGGUO_SHARE_URL: 'https://novelquickapp.com/s/yDbLcIG8yxg/'
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       GH_TOKEN: ${{ github.token }}
@@ -78,9 +80,9 @@ jobs:
           set -euo pipefail
           app="$(find "$WORK/dist-$ARCH" -maxdepth 2 -name '*.app' -print -quit)"
           test -n "$app"
-          hdiutil verify "$WORK/dist-$ARCH/Shensi-0.0.51-$ARCH.dmg"
+          hdiutil verify "$WORK/dist-$ARCH/Shensi-0.0.52-$ARCH.dmg"
           node packaging/macos/after-sign.cjs "$app" "$ARCH"
-          (cd "$WORK/dist-$ARCH" && shasum -a 256 "Shensi-0.0.51-$ARCH.dmg" > SHA256SUMS)
+          (cd "$WORK/dist-$ARCH" && shasum -a 256 "Shensi-0.0.52-$ARCH.dmg" > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.arch }}

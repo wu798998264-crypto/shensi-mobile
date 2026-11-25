@@ -35,7 +35,7 @@ import {createDirectoryHistory} from './directory-history.js';
 import {bindPluginOrder} from './plugin-order.js';
 import * as tabs from '/legacy/document-tabs.js';
 import {sanitizeDocumentHtml} from '/legacy/document-sanitize.js';
-import {findTextMatches} from '/legacy/document-find-replace.js';
+import {createDocumentFinder} from './document-finder.js';
 import {emptyCanvas,fittedBoardViewport,addTextCard,resizedCard,nodeVersions,unseenImageOutputCount,acknowledgeImageOutput,captureNodeVersion,adoptNodeVersion,copySelection,pasteSelection,edgePath} from './canvas-model.js';
 import {escapeHtml as h,htmlToMarkdown,hydrateMedia,ensureMediaTextSlots,cleanEditorHtml,replaceEditorImage,replaceEditorText,documentCharacterCount,selectedDocumentText,editorDocumentText} from './editor.js';
 import {normalizePreferences,THEMES,SHORTCUTS,shortcutFromEvent,applyPresentation} from './preferences.js';
@@ -143,6 +143,7 @@ for(const event of ['pointerup','pointercancel'])document.addEventListener(event
 let libraryLoadQueue=Promise.resolve(),libraryTransition=false,libraryEpoch=0,libraryLoadRequest=0,documentSwitchRequest=0;
 let state,stamp,libraryId,libraries=[],revision=0,dirty=false,saving=false,saveTimer,draftTimer,savePromise,conflict=false,composition=false,graphTabOpen=false,graphTabActive=false,suppressGraphTabClick=false;
 let query='',mode='rich',panel='',nodeTab='preview',selected=new Set(),selectedEdge='',selectedEdges=new Set(),connection='',previewVersion='',findOpen=false,workSection='manuscript',documentClipboard=null;
+const documentFinder=createDocumentFinder();
 let formatPaint=null;
 let lastEditorScope='';const documentModes=new Map();try{for(const entry of JSON.parse(localStorage.getItem('shensi-document-modes')||'[]'))if(Array.isArray(entry)&&['rich','read','markdown','atlas'].includes(entry[1]))documentModes.set(entry[0],entry[1]);}catch{}
 const editorScope=()=>libraryId+':'+state?.activeDocument;
@@ -452,7 +453,7 @@ function bindShell(){
   $('.work-nav')?.addEventListener('contextmenu',event=>{const section=event.target.closest('[data-work-section]');if(!section)return;event.preventDefault();const role=section.dataset.workSection,scope=role==='index'?'index':'section:'+role;void contextMenu([{value:'history',label:'历史版本'},{value:'reveal',label:'打开所在文件夹'}],event).then(answer=>answer.value==='history'?directoryHistory.open(scope,section.textContent):answer.value==='reveal'?revealLocation({workRole:role}):null).catch(error=>toast(error.message));});
   bindDirectorySelection();
   $('.filetree').onkeydown=e=>{const row=e.target.closest('[data-doc]');if(row&&e.key==='Enter')openDocument(row.dataset.doc);};
-  if($('#find-query'))$('#find-query').oninput=()=>{const d=current(),text=d.canvas?d.canvas.nodes.map(n=>n.text||'').join('\n'):d.markdown||'';$('#find-count').textContent=findTextMatches(text,$('#find-query').value).length+' 处';};
+  documentFinder.bind({scope:editorScope(),input:$('#find-query'),replacement:$('#find-replacement'),output:$('#find-count'),editor:$('.editor'),source:$('.markdown-source'),boardText:()=>current()?.canvas?.nodes.map(n=>n.text||'').join('\n')||''});
 }
 function bindResize(el,key,min,max,invert){el.onpointerdown=e=>{const start=e.clientX,initial=ui[key]||(invert?370:248);el.setPointerCapture(e.pointerId);el.onpointermove=ev=>{ui[key]=Math.max(min,Math.min(max,initial+(ev.clientX-start)*(invert?-1:1)));$('.shell').style.setProperty(invert?'--right':'--left',ui[key]+'px');};el.onpointerup=()=>{el.onpointermove=null;prefs();};};}
 function bindTreeDrag(){bindDirectorySelection();for(const row of $$('.tree-row[data-doc]'))row.ondragstart=e=>{e.dataTransfer.setData('application/shensi-doc',row.dataset.doc);};for(const target of $$('.filetree,[data-folder],[data-doc]')){target.ondragover=e=>{if(e.dataTransfer.types.includes('application/shensi-doc')){e.preventDefault();e.stopPropagation();}};target.ondrop=e=>{const id=e.dataTransfer.getData('application/shensi-doc');if(!state.documents[id])return;e.preventDefault();e.stopPropagation();if(target.dataset.doc){const ordered=(state.moduleItems.library??[]).filter(([key])=>key!==id);const index=ordered.findIndex(([key])=>key===target.dataset.doc);ordered.splice(Math.max(0,index),0,[id,state.documents[id].title]);state.moduleItems.library=ordered;state.documents[id].coreFolderId=state.documents[target.dataset.doc].coreFolderId||'';}else state.documents[id].coreFolderId=target.dataset.folder||'';markDirty();render();};}}
@@ -902,7 +903,7 @@ async function runAction(action){try{
   if(action==='close-trash'){panel='';render();return;}
   if(action==='trash'){if(!(await save()))return;panel='trash';document.body.classList.remove('full-panel');render();return;}
   if(action==='find'){findOpen=!findOpen;render();$('#find-query')?.focus();return;}if(action==='close-find'){findOpen=false;render();return;}
-  if(action==='find-next'){const q=$('#find-query').value;if(current().canvas){const matches=current().canvas.nodes.filter(n=>q&&n.text?.includes(q));const index=matches.findIndex(n=>selected.has(n.id));const node=matches[(index+1)%matches.length];if(node)openNode(node.id,'preview');else toast('没有匹配内容');}else if(mode==='markdown'){const el=$('.markdown-source'),start=el.value.indexOf(q,el.selectionEnd);const index=start<0?el.value.indexOf(q):start;if(index>=0){el.focus();el.setSelectionRange(index,index+q.length);}}else window.find(q,false,false,true);return;}
+  if(action==='find-next'){const q=$('#find-query').value;if(current().canvas){const matches=current().canvas.nodes.filter(n=>q&&n.text?.toLowerCase().includes(q.toLowerCase()));const index=matches.findIndex(n=>selected.has(n.id));const node=matches[(index+1)%matches.length];if(node)openNode(node.id,'preview');else toast('没有匹配内容');}else if(!documentFinder.next())toast('没有匹配内容');return;}
   if(action==='replace-all'){const q=$('#find-query').value,r=$('#find-replacement').value;if(!q)return;const answer=await modal('替换全部匹配','<p>将在当前文档中替换。若需保留替换前的历史，请先点击“保存历史版本”。</p>');if(answer.value!=='ok')return;if(current().canvas){pushBoardUndo();for(const node of current().canvas.nodes)if(node.text)node.text=node.text.split(q).join(r);boardChanged();renderPanel();}else if(mode==='markdown'){$('.markdown-source').value=$('.markdown-source').value.split(q).join(r);$('.markdown-source').oninput();}else{const editor=$('.editor'),before=editor.innerHTML,count=replaceEditorText(editor,q,r);if(count)richReplaceBatches.push({before,after:editor.innerHTML,count});editor.oninput();}return;}
   if(action==='import'){$('#import-input').click();return;}if(action==='export')return exportDocument();
   if(action==='attachment'){if(!current().canvas&&mode!=='rich'){toast('请在编辑模式插入附件');return;}chooseAttachment();return;}

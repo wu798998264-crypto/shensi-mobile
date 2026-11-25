@@ -1,6 +1,8 @@
 @import url('/map-workshop.css');
 @import url('/notebook-picker.css');
 @import url('/board-video-parser.css');
+::highlight(shensi-find){background-color:#ffe08a;color:#252019}
+::highlight(shensi-find-current){background-color:#f5a623;color:#18130b;text-decoration:underline}
 .help-button{position:relative;overflow:visible}
 .help-button.has-app-update::after{content:'';position:absolute;top:1px;right:1px;width:7px;height:7px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 2px var(--side);pointer-events:none}
 #about-screen [data-about-action="open-update-folder"][hidden]{display:none}

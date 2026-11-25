@@ -13,6 +13,17 @@
   "originalSourceHashes": {
     "main.js": "457f75b556cb0fb6f103b91fd9831f173ecbfdb266fa0bfe16f292d88a0a7b24"
   },
+  "playbackUpdate": {
+    "name": "fruitknife",
+    "version": "3.1.2",
+    "moduleVersion": "1.0.11",
+    "release": "https://github.com/wu798998264-crypto/fruitknife/releases/tag/v3.1.2",
+    "archive": "fruitknife-3.1.2-win.zip",
+    "archiveSha256": "4b8164b7d89a92db456833287af4ab25a5c8633bd0861838f4140d254a26115a",
+    "moduleSha256": "55e4bda845270c9f07d45a4bda27aa4ed9b8538744c87a0f882df3af173f9d94",
+    "scope": "Six bounded App routes, gzip playback requests and website fallback-play-info; no user state or cookies imported",
+    "adaptation": "Persist route preference and two-empty-round 30-minute circuit across CLI calls; preserve rejection/identity protections; measure actual video dimensions after full decode"
+  },
   "changes": [
     "Node standard-library host instead of Flutter/Go; strict Base64 and lossless integer parsing match original host",
     "Expose video-only search; listening-book search stays outside short-drama scope",

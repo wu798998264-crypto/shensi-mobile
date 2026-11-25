@@ -9,7 +9,7 @@
   },
   {
     "path": "packages/ui/app.js",
-    "sha256": "b4fe1b63ca85812404ec15e30e15447f8a7c804589402bf20363b8690c9f31eb"
+    "sha256": "69a01b4a033226d1320492b10c71ab59c6195ee5686285b296cd8f38dbc33b74"
   },
   {
     "path": "packages/ui/book-picker.js",
@@ -37,7 +37,7 @@
   },
   {
     "path": "packages/ui/selection-edit.js",
-    "sha256": "f6fff6ebe522787b34d62d4783605bfe81b19c3118c76c0cc0e28128cfd26343"
+    "sha256": "22f040029588f21bdbe49b29692887645339b029a1cbc471b44c5b9c5a658039"
   },
   {
     "path": "packages/ui/writing-timer.js",
@@ -49,7 +49,7 @@
   },
   {
     "path": "packages/ui/styles.css",
-    "sha256": "4b32d8d148f2ec9ca55008b520c53a535e3c5dab3eca3d93a316adfc9b7d4adb"
+    "sha256": "e50544b1cf80d011cc12aedc5e347f20794fe8d4264871599ae7fbe8113d6b76"
   },
   {
     "path": "packages/core/src/native-extensions.mjs",
@@ -386,6 +386,10 @@
   {
     "path": "packages/ui/chat-layout.css",
     "sha256": "af56512baa6db46d96a599e03853f08eea48efbedeea7c42bcab97258efe7fcf"
+  },
+  {
+    "path": "packages/ui/document-finder.js",
+    "sha256": "88d92f077b32f67cbdb13d8b51291dc6f1dfd9b44d6fc024cf4abd2ad0ac2153"
   },
   {
     "path": "packages/official/task-skill-routing.mjs",

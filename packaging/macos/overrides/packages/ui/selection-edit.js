@@ -2,7 +2,14 @@ import {escapeHtml as h,cleanEditorHtml,htmlToMarkdown,documentCharacterCount} f
 import {contextMenu} from './context-menu.js';
 import {uiGlyph} from './ui-glyph.js';
 
-const modeFor=instruction=>/(?:前|之前|前面).{0,10}(?:补写|插入|补充|增加)|(?:补写|插入|补充|增加).{0,12}(?:前|之前|前面)/u.test(instruction)?'insert_before':/补写|插入|插写|增补|补充|增加|添加|加入|续写/u.test(instruction)?'insert_after':'replace';
+export function selectionEditMode(instruction){
+ // Negative constraints describe what to preserve, not an insertion request.
+ const request=String(instruction).replace(/(?:不要|不得|不能|禁止|不再|不必|不允许|不应|无需|避免|别|不)[^，。；;\n]*/gu,'');
+ if(/(?:在|于)(?:选区|选中(?:的)?(?:文字|文本|段落)|这段(?:文字|文本)?|原文)(?:的)?(?:前|之前|前面).{0,10}(?:补写|插入|补充|增加)/u.test(request))return 'insert_before';
+ if(/(?:在|于)(?:选区|选中(?:的)?(?:文字|文本|段落)|这段(?:文字|文本)?|原文)(?:的)?(?:后|之后|后面).{0,10}(?:补写|插入|补充|增加)/u.test(request))return 'insert_after';
+ if(/改写|重写|替换|改成|修改|润色|精简|扩写/u.test(request))return 'replace';
+ return /(?:前|之前|前面).{0,10}(?:补写|插入|补充|增加)|(?:补写|插入|补充|增加).{0,12}(?:前|之前|前面)/u.test(request)?'insert_before':/补写|插入|插写|增补|补充|增加|添加|加入|续写/u.test(request)?'insert_after':'replace';
+}
 const modeLabel=mode=>({replace:'局部修改',insert_before:'在选区前补写',insert_after:'在选区后补写',insert_at_caret:'从此处补写'})[mode];
 const sameDoc=(a,b)=>a&&b&&JSON.stringify([a.markdown??'',a.html??''])===JSON.stringify([b.markdown??'',b.html??'']);
 const glyph=uiGlyph;
@@ -57,7 +64,7 @@ export function createSelectionEditor(context){
   const instruction=toolbar.querySelector('input').value.trim();if(!instruction||!saved||busy)return;const selection=saved;busy=true;toolbar.querySelector('button[type=submit]').disabled=true;
   try{if(!await context.flush())throw Error('正文尚未保存，请先处理保存冲突');await context.settleModelSelection?.();if(selection.id!==context.libraryId()||selection.documentId!==context.current()?.id)throw Error('文档已切换，请重新选择');
    const key=JSON.stringify([selection.id,selection.documentId,selection.start,selection.end,selection.documentText,instruction]);if(pendingSubmission?.key!==key)pendingSubmission={key,requestId:'selection-'+crypto.randomUUID()};
-   const generation=++request,result=await api('start',{...selection,range:undefined,rect:undefined,instruction,mode:selection.caret?'insert_at_caret':modeFor(instruction),expectedStateStamp:context.stamp(),requestId:pendingSubmission.requestId});if(generation===request)jobs=result.jobs;else await refresh();pendingSubmission=null;retargetInstruction='';hide();paint();schedule();
+   const generation=++request,result=await api('start',{...selection,range:undefined,rect:undefined,instruction,mode:selection.caret?'insert_at_caret':selectionEditMode(instruction),expectedStateStamp:context.stamp(),requestId:pendingSubmission.requestId});if(generation===request)jobs=result.jobs;else await refresh();pendingSubmission=null;retargetInstruction='';hide();paint();schedule();
   }finally{busy=false;if(toolbar?.isConnected)toolbar.querySelector('button[type=submit]').disabled=false;}
  }
  function paint(){
