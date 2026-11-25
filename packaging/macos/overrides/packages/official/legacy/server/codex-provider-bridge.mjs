@@ -340,7 +340,7 @@ export const startCodexProviderBridge = async ({ settings, tools, permissionCont
           if(item.type!=='function_call_output')return item;
           const call=calls.get(item.call_id),target=call&&catalog.get(call.namespace?`${call.namespace}_${call.name}`:call.name);
           if(!target)return item;
-          const output=tools.verifyToolOutput({namespace:target.namespace,tool:target.name,arguments:parsedObject(call.arguments),callId:item.call_id},item.output);
+          const output=tools.verifyToolOutput({namespace:target.namespace,tool:target.name,arguments:parsedObject(call.arguments),rawArguments:call.arguments,callId:item.call_id},item.output);
           resultBytes+=Buffer.byteLength(typeof output==='string'?output:JSON.stringify(output));
           if(resultBytes>64_000_000)throw Error('完整工具上下文超过单次推理输入上限，请缩小资料范围');
           return {...item,output};
@@ -432,6 +432,11 @@ export const startCodexProviderBridge = async ({ settings, tools, permissionCont
         if (!target) return item;
         return { ...item, name: target.name, namespace: target.namespace };
       });
+      for(const item of output){
+        if(item.type!=='function_call')continue;
+        const target=catalog.get(item.namespace?`${item.namespace}_${item.name}`:item.name);
+        if(target)tools?.registerToolCall?.({namespace:target.namespace,tool:target.name,rawArguments:item.arguments,callId:item.call_id,outputLimitReached:payload.incomplete_details?.reason==='max_output_tokens'||payload.choices?.[0]?.finish_reason==='length'||payload.stop_reason==='max_tokens'});
+      }
       if (!output.length) throw new Error("上游没有返回文本或工具调用");
       const translatedUsage = anthropic
         ? { input_tokens: payload.usage?.input_tokens || 0, output_tokens: payload.usage?.output_tokens || 0, total_tokens: (payload.usage?.input_tokens || 0) + (payload.usage?.output_tokens || 0) }

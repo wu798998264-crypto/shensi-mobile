@@ -34,8 +34,25 @@ const payload=value=>{
 // Verify at the final provider boundary too. A future Codex default or token
 // estimator must not turn a successful host read into an abbreviated result.
 export function createAgentToolOutputVerifier(){
-  const receipts=new Map(),textResults=new Map(),key=({namespace,tool,arguments:args={}})=>canonical([namespace,tool,args]);
+  const receipts=new Map(),textResults=new Map(),rejectedCalls=new Map(),key=({namespace,tool,arguments:args={}})=>canonical([namespace,tool,args]);
+  const wireKey=call=>canonical([call.namespace,call.tool,call.rawArguments]);
   return {
+    // Only the provider response boundary may register this rejection. Never
+    // infer it from runner error text: a forged error must not bypass receipts.
+    registerCall(call){
+      const existing=rejectedCalls.get(call.callId);
+      if(existing&&existing.key!==wireKey(call))throw Object.assign(new Error('工具调用编号重复且参数不同，未执行该调用'),{code:'AGENT_TOOL_CALL_ID_REUSED',safeToFallback:false});
+      let args,reason='malformed_json';
+      try{args=JSON.parse(call.rawArguments);reason='expected_object';}catch{}
+      if(args&&typeof args==='object'&&!Array.isArray(args))return;
+      if(!call.callId)return;
+      const documentWrite=call.namespace==='shensi_host_documents'&&['create','write'].includes(call.tool);
+      rejectedCalls.set(call.callId,{key:wireKey(call),namespace:call.namespace,tool:call.tool,result:{success:false,contentItems:[{type:'inputText',text:JSON.stringify({code:'AGENT_TOOL_ARGUMENTS_INVALID',reason:call.outputLimitReached?'output_limit':reason,execution:'not_started',error:'工具参数必须是完整的 JSON 对象，本次调用未执行、未写入文档。'+(call.outputLimitReached?'提供商已明确报告输出达到上限，不要重发相同长度的调用。':'')+(documentWrite?'请把单次正文缩小为约1000字的完整段落：新文档先create首段，然后read并write(scope=append)逐段续写；已有文档先read，用partial和原样复制的唯一expectedText逐段修改。每次写后回读并使用新基线，不遗漏剩余内容；全部保存回读后才算完成。':'请保持原任务，修正参数格式后继续；不要将此结果当作任务已完成。')})}]}});
+    },
+    rejectedResult(call){
+      const entry=rejectedCalls.get(call.callId);
+      return entry&&entry.namespace===call.namespace&&entry.tool===call.tool?entry.result:null;
+    },
     capture(call,result){completeAgentToolOutput(result);const id=key(call),values=receipts.get(id)||new Set();values.add(digest(result));receipts.set(id,values);return result;},
     // Keep the authoritative text in this task. The model gets it in full at
     // the provider boundary, even if Codex reformats its local history.
@@ -48,6 +65,10 @@ export function createAgentToolOutputVerifier(){
       return {...result,contentItems:[{type:'inputText',text:JSON.stringify({shensiToolReceipt:token})}]};
     },
     verify(call,output){
+      const rejected=rejectedCalls.get(call.callId);
+      // Rebuild our own pre-execution diagnostic; discard the runner's text.
+      // Bind it to the exact raw arguments, tool, call ID and current task.
+      if(rejected&&rejected.key===wireKey(call))return rejected.result.contentItems[0].text;
       let marker,reason='content_mismatch';
       try{marker=payload(output);}catch{}
       if(marker&&typeof marker==='object'&&Object.keys(marker).length===1&&typeof marker.shensiToolReceipt==='string'){

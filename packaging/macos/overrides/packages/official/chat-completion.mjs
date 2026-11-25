@@ -2,7 +2,11 @@
 // and the existing checkpoint when the agent explicitly reports a blocker.
 export function chatCompletion(response,requestText=''){
  const report=response?.completion;
- if(report?.status==='blocked')return {status:'interrupted',errorCode:'CHAT_TASK_INCOMPLETE',error:String(report.summary||'任务尚未完成，已保留进度，请补充所需条件后继续。').replace(/\b(?:sk|ds|api)[-_][A-Za-z0-9_-]{12,}\b/gi,'[已隐藏]').replace(/Bearer\s+\S+/gi,'Bearer [已隐藏]').slice(0,2000)};
+ if(report?.status==='blocked'){
+  const reason=typeof report.blockedBy==='string'?report.blockedBy.trim():'';
+  const summary=String(report.summary||'任务尚未完成，已保留进度，请补充所需条件后继续。');
+  return {status:'interrupted',errorCode:'CHAT_TASK_INCOMPLETE',error:(reason?'未完成原因：'+reason+'\n已完成部分：'+summary:summary).replace(/\b(?:sk|ds|api)[-_][A-Za-z0-9_-]{12,}\b/gi,'[已隐藏]').replace(/Bearer\s+\S+/gi,'Bearer [已隐藏]').slice(0,2000)};
+ }
  // Compatibility for runners that have not emitted the structured report:
  // only an explicit non-completion admission on an action request qualifies.
  const text=String(response?.text??response?.content??response??'');

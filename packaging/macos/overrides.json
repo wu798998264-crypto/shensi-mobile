@@ -33,7 +33,7 @@
   },
   {
     "path": "packages/ui/chat-layout.js",
-    "sha256": "daf985d3eb75660cfcb5d8d9fd9f9643ad0591d1eff82425ec908038b4b565f2"
+    "sha256": "af72d67b38ec12a1b77e9e0a55e3d5736308e24eb32e36b128e09c8e4b010056"
   },
   {
     "path": "packages/ui/selection-edit.js",
@@ -97,7 +97,7 @@
   },
   {
     "path": "packages/ui/official-ui.js",
-    "sha256": "41b547e08dbf06d19130fa870ae434404cc821b68642276dfc900cb4dc4305d1"
+    "sha256": "c7fb01606fda5e2ed35601e0a2a152fa1d404722f13514bb9ebbcc7f90602fca"
   },
   {
     "path": "packages/ui/tutorial.js",
@@ -113,7 +113,7 @@
   },
   {
     "path": "packages/official/agent.mjs",
-    "sha256": "d42dd65e2023ee17594b0227ca4787966dfb62242897b61ef860b3444271e468"
+    "sha256": "d5a9c00bc73660902aeaa64c90f880d8db28d40a3883240909d72e00419ea3e1"
   },
   {
     "path": "packages/core/src/service.mjs",
@@ -193,11 +193,11 @@
   },
   {
     "path": "packages/official/legacy/server/agent-tool-output.mjs",
-    "sha256": "111fc89809976d9e4f4422e6b0984f235ccdfd82e8b0f3cbd84abf6d9f3393d4"
+    "sha256": "1ee263e0f7a17bc550ab3b0cb96f86a8ba383fa49d4dd8a1c109f21b228bd2df"
   },
   {
     "path": "packages/official/legacy/server/codex-workspace-tools.mjs",
-    "sha256": "fa45109afa1a99ae1bbac8c6b8a0daab5951d1a4654b5f18d60ac42f64279cfc"
+    "sha256": "ad06ca2eac3904d72d51190d1e4f8b8c6a3b4c0a5cac31952ba681df2efe2210"
   },
   {
     "path": "packages/official/legacy/server/shensi-codex-agent-runtime.mjs",
@@ -205,7 +205,7 @@
   },
   {
     "path": "packages/official/legacy/server/codex-provider-bridge.mjs",
-    "sha256": "599825775a10933dc3be141ff2280338f7df749759544d0deeb64f9693c57650"
+    "sha256": "362b0ec532cc600ed5b2c65352e84926d3e66a69962b761e61e6959287901762"
   },
   {
     "path": "packages/ui/model-external-browser.js",
@@ -369,27 +369,23 @@
   },
   {
     "path": "packages/official/chat-voice.mjs",
-    "sha256": "b79302301487d30fa0bff251310b76afe8e4855ca42d732f9fdada320326a154"
+    "sha256": "986f59de9cc94cedec55fe3f254009010467f793937c1eb28924b9db83bae5f2"
   },
   {
     "path": "packages/official/chat-voice-runtime.mjs",
-    "sha256": "c2da0e34962bdc5dff1e093a7c66b0a3a1b8215b7fac3af726ef988fcd943053"
+    "sha256": "e470fca20c45b6a24e5ba60c019fd640e2ed38ab3ad8874fe17882466b11cadf"
   },
   {
     "path": "packages/official/chat-voice-payloads.json",
-    "sha256": "1b725c122018a3480ed2637a17d1d39f9ee0322e6b26c5808a35de3e0d3be6a3"
-  },
-  {
-    "path": "packages/official/chat-voice-tts.py",
-    "sha256": "9534a9c5f8f2310e9f7c0df0d404ac7e2ec462875dfbb09348c81cf23ca4e704"
+    "sha256": "215fffa96f106406e27262122f69c0403356a7ca271ead9d31a8e5c8a3dc445e"
   },
   {
     "path": "packages/ui/chat-voice.js",
-    "sha256": "150444511ea094327b23de3314fd8aa3c85cc6eeabf03a669a46e2757c914a6b"
+    "sha256": "4b553e974b7719606fa93d5ded78f69303f682b57b7c3d8c9d3a741fcf47da73"
   },
   {
     "path": "packages/ui/chat-layout.css",
-    "sha256": "5e055c7bab6fd9b742401aeb85160d2f2ed2c9acf776d7b14fb81e6b9190c686"
+    "sha256": "af56512baa6db46d96a599e03853f08eea48efbedeea7c42bcab97258efe7fcf"
   },
   {
     "path": "packages/official/task-skill-routing.mjs",
@@ -397,7 +393,7 @@
   },
   {
     "path": "packages/official/chat-completion.mjs",
-    "sha256": "163f004566141cbb88bf198bb4a5a35a20ec6d19dd041c485edccc89beb1f0c2"
+    "sha256": "47bfe80baf720c88127cf6ad74291175e67f2bf48e446edd634ba376fb7f637b"
   },
   {
     "path": "packages/official/knowledge.mjs",

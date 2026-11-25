@@ -33,8 +33,8 @@ exports.verifyUi=async({js,api,screenshot,evidence,platform})=>{
  await api('plugins/update',{pluginId:'official.conversation-control',settings:{defaultRunPath:runPath}});
  await click('[data-plugin-settings="official.conversation-control"]');await wait(()=>js('!document.querySelector("#settings-screen").hidden&&document.querySelectorAll("[data-generation-default]").length===4'),'unified settings');
  assert(await js(`(()=>{const e=document.querySelector('#settings-screen');return !e.querySelector('[data-plugin-pref],#plugin-storage-settings,[data-settings-plugin-toggle],[data-setting-action="save"],[data-setting-action^="plugin-save-inline:"]')&&!e.querySelector('.settings-content').textContent.includes('凭证')&&e.querySelectorAll('[data-save-generation-defaults]').length===1;})()`),'control settings keeps model defaults and device voice switches without credential duplication');
- await wait(()=>js('document.querySelectorAll("[data-voice-setting]").length===2'),'device voice switches');
- assert(await js('[...document.querySelectorAll("[data-voice-setting]")].every(e=>e.type==="checkbox"&&e.getBoundingClientRect().width>0)'), 'both device voice switches remain visible');
+ await wait(()=>js('document.querySelectorAll("[data-voice-setting]").length===1&&!!document.querySelector("[data-voice-setting=asr]")'),'device speech input switch');
+ assert(await js('!document.querySelector("[data-voice-setting=tts]")&&[...document.querySelectorAll("[data-voice-setting]")].every(e=>e.type==="checkbox"&&e.getBoundingClientRect().width>0)'), 'only the device speech input switch remains visible');
  await js(`document.querySelector('[data-generation-default="text"]').value=${JSON.stringify(modelId)}`);await click('[data-save-generation-defaults]');
  await wait(()=>js(`document.querySelector('#official-plugin-settings [role="status"]').textContent==='默认模型已保存'`),'model defaults saved');
  assert.deepEqual(await api('official/models'),modelsBefore,'default selection does not alter model configuration or authorization');

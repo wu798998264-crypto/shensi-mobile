@@ -76,7 +76,13 @@ export function createOfficialUI(context){
  function mountWriting(body){if(!reviewAvailable()){for(const editor of writingEditors.values())editor.detach({hideExpanded:true});return;}const scopeKey=JSON.stringify([chatScope,chatId]);for(const [key,editor]of writingEditors)if(!key.startsWith(scopeKey+'|')){void editor.dispose().catch(error=>context.toast(error.message));writingEditors.delete(key);}for(const element of body.querySelectorAll('[data-writing-id]')){const item=consoleState?.consoles?.find(c=>c.id===element.dataset.writingId);if(!item)continue;const snapshot={...chatBody(),...(item._target?{target:item._target,documentId:item._target.documentId||''}:{})},key=scopeKey+'|'+item.id;let editor=writingEditors.get(key);if(!editor){editor=createWritingEditor({item,scopeKey:key,modal:context.modal,toast:context.toast,...(snapshot.target?{apply:payload=>applyWriting(snapshot,payload)}:{}),call:(action,payload)=>api('/chat/console/'+action,{...snapshot,...payload})});writingEditors.set(key,editor);}else editor.refresh(item);editor.attach(element);}}
  let renderedChatKey='',scrollChatToEnd=false,modelSelectionRevision=0,modelSelectionListener;
  const submissionKey=()=>chatScope?JSON.stringify([chatScope.pluginId,chatScope.id,chatId]):'';
-  function updateSubmission(){const pending=submissions.get(submissionKey())?.pending,body=drawer?.querySelector('.shensi-chat'),button=body?.querySelector('.chat-compose button[type=submit]');if(!button)return;button.disabled=!!pending||!!currentChat()?.archived;button.setAttribute('aria-busy',String(!!pending));button.title=pending?'正在提交…':'发送';body.querySelector('[data-chat-submission-status]')?.remove();}
+  function updateSubmission(){
+   const pending=submissions.get(submissionKey())?.pending,body=drawer?.querySelector('.shensi-chat'),button=body?.querySelector('[data-chat-primary]');if(!button)return;
+   const c=currentChat(),running=c?.status==='running',hasText=(body.querySelector('[data-chat-draft]')?.value||'').length>0,stop=running&&!hasText&&!c?.archived;
+   button.disabled=!!pending||!!c?.archived;button.setAttribute('aria-busy',String(!!pending));button.type=stop?'button':'submit';button.toggleAttribute('data-chat-stop',stop);
+   const mode=stop?'stop':'send';if(button.dataset.chatPrimary!==mode){button.dataset.chatPrimary=mode;button.innerHTML=chatIcon(stop?'\uE71A':'\uE724');}
+   button.title=pending?'正在提交…':stop?'停止当前任务':running&&!c?.pendingApproval?.options?.length?'发送并加入队列':'发送';button.setAttribute('aria-label',button.title);body.querySelector('[data-chat-submission-status]')?.remove();
+  }
  async function submitChat(event){
    event.preventDefault();const key=submissionKey(),input=drawer?.querySelector('[data-chat-draft]'),text=input?.value||'',initialProfileId=drawer?.querySelector('[data-chat-profile]')?.value;
   if(!key||submissions.get(key)?.pending||!text.trim())return;if(!initialProfileId){context.toast('请先选择对话模型配置');return;}
@@ -96,7 +102,7 @@ export function createOfficialUI(context){
   finally{const entry=submissions.get(key);if(entry)entry.pending=false;if(submissionKey()===key)updateSubmission();}
  }
  const api=(path,body)=>context.api('/api/official'+path,body);
- const voice=createChatVoiceUI({api:context.api,toast:context.toast,key:submissionKey,input:()=>drawer?.querySelector('[data-chat-draft]'),append:async(text,key)=>{if(key!==submissionKey())return;const input=drawer?.querySelector('[data-chat-draft]');if(!input||input.disabled)return;input.value+=(input.value&&!/\s$/.test(input.value)?'\n':'')+text;const c=currentChat();if(c)c.draft=input.value;await saveDraft();input.focus();}});
+ const voice=createChatVoiceUI({api:context.api,toast:context.toast,key:submissionKey,input:()=>drawer?.querySelector('[data-chat-draft]'),append:async(text,key)=>{if(key!==submissionKey())return;const input=drawer?.querySelector('[data-chat-draft]');if(!input||input.disabled)return;input.value+=(input.value&&!/\s$/.test(input.value)?'\n':'')+text;const c=currentChat();if(c)c.draft=input.value;updateSubmission();await saveDraft();input.focus();}});
  // Background reads advance the save baseline only when applyResult adopts them.
  async function refreshWorkspace(id){if(id===context.libraryId()&&context.refreshWorkspace){await context.refreshWorkspace();return;}if(id!==context.libraryId())return;const live=await context.api('/api/state?id='+encodeURIComponent(id),undefined,false);if(id!==context.libraryId()||live.stateStamp===context.stamp())return;if(context.isDirty()){context.toast('新内容已保存；当前人工草稿仍保留，请重新读取并合并后再保存');return;}context.applyResult(live);}
  const enabled=id=>plugins.some(p=>p.id===(id.includes('.')?id:'official.'+id)&&p.enabled&&p.installed!==false);
@@ -303,7 +309,7 @@ export function createOfficialUI(context){
    body.querySelector('.chat-compose').onsubmit=submitChat;updateSubmission();voice.bind(body);
    const feed=body.querySelector('.chat-messages');restoreChatScroll(feed,scrollSnapshot,{follow,reuse:true});
    body.querySelector('[data-chat-draft]').addEventListener('keydown',event=>{if(event.isComposing||event.keyCode===229)return;const command=board?'sendWhiteboardChat':'sendDocumentChat',binding=(context.preferences?.()||DEFAULT_PREFERENCES).shortcuts?.[command];if(binding&&shortcutFromEvent(event).toLowerCase()===binding.toLowerCase()){event.preventDefault();event.stopPropagation();if(!event.repeat)body.querySelector('.chat-compose').requestSubmit();}});
-   body.querySelector('[data-chat-draft]').oninput=()=>{clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,300);};
+   body.querySelector('[data-chat-draft]').oninput=()=>{updateSubmission();clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,300);};
    body.querySelector('.chat-compose').addEventListener('submit',()=>{clearTimeout(draftTimer);draftTimer=null;},true);
     for(const form of body.querySelectorAll('[data-chat-edit-form]'))form.onsubmit=async event=>{event.preventDefault();const messageId=form.dataset.chatEditForm,text=form.elements.text.value;if(!text.trim())return;try{await saveDraft();chatState=await api('/chat/branch',{...chatBody(),messageId,text});chatId=chatState.activeId;renderChat();drawer.querySelector('.chat-compose').requestSubmit();}catch(error){context.toast(error.message);}};
     const configureModel=event=>{
