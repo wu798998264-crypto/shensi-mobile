@@ -281,7 +281,7 @@
   },
   {
     "path": "packages/ui/localization.js",
-    "sha256": "5953dff8b009620d2585e14acb5452cc546cb3836f35c5e8aa97b294e10e1a05"
+    "sha256": "97e9641e04d37b13fd959ddfbfff5a90cfc1ae86b39b2292cc6798bc6773c9d0"
   },
   {
     "path": "packages/ui/plugin-storage-settings.js",
@@ -470,5 +470,37 @@
   {
     "path": "packages/mobile/network.mjs",
     "sha256": "3991df2396d390e4a6b40282aa881a6028034b58a0de1e16413b6f1060efbcb6"
+  },
+  {
+    "path": "apps/desktop/main.mjs",
+    "sha256": "1c9bfdb26844cdf624f3a433650336254f8f41db0dad91af0aa3b30030dc3b87"
+  },
+  {
+    "path": "apps/desktop/server.mjs",
+    "sha256": "166ec389a33fa46c5efb0b7f7ff7873adeae1f4899ce7d1986024c6d9aca0a4f"
+  },
+  {
+    "path": "apps/desktop/export-files.mjs",
+    "sha256": "74b5c4848b179232a969b43e41d9058a7e0f524a870ce96a3c5f7503f83e124d"
+  },
+  {
+    "path": "packages/core/src/document-export.mjs",
+    "sha256": "a3210eb7462a36e3dc52c6d35b6bd0ce9bca479a2e52543796bfaa2fe6e700a8"
+  },
+  {
+    "path": "packages/ui/board-tools.js",
+    "sha256": "c112594e3964a58957ec6d1532e9357c21e5596a3d8f7f0d5eb7c87f460dc8ad"
+  },
+  {
+    "path": "packages/ui/document-export.js",
+    "sha256": "72d3fb08342aaee4e1473fc570c684b17088a5eeb2a7d44d3065f0a579b59865"
+  },
+  {
+    "path": "packages/official/legacy/server/quanben-book-source.mjs",
+    "sha256": "c846a9b394e803e0ec974578c72d181bd000a2127c193ed7cf6428049852a342"
+  },
+  {
+    "path": "resources/skills/chushou/scripts/novel-source/quanben-book-source.mjs",
+    "sha256": "8c1a02398425390ea2a8a865f5032d9498964e46f1ca3b5c935c262bf4e28103"
   }
 ]
