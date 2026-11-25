@@ -13,7 +13,7 @@ let dataRoot;
 if(process.argv[5]){
  const previous=JSON.parse(await readFile(resolve(process.argv[5]),'utf8'));
  dataRoot=resolve(previous.dataRoot);
- assert(previous.passed===false&&previous.stage==='download'&&previous.platform===process.platform&&previous.arch===process.arch);
+ assert(previous.passed===false&&['inspect','download'].includes(previous.stage)&&previous.platform===process.platform&&previous.arch===process.arch);
  const priorRoot=resolve(previous.packageRoot);
  if(priorRoot!==root){
   // Packaged manifests omit development scripts and dependencies.
@@ -27,7 +27,8 @@ if(process.argv[5]){
   }
  }
  assert(/^guoapp-real-[A-Za-z0-9]+$/.test(basename(dataRoot))&&dirname(dataRoot)===resolve(tmpdir()),'仅可复用本机上次隔离验收的匿名设备');
- assert((await stat(join(dataRoot,'machine/chushou/runtime/hongguo/device.json'))).isFile());
+ const device=await stat(join(dataRoot,'machine/chushou/runtime/hongguo/device.json')).catch(error=>{if(error.code==='ENOENT'&&previous.stage==='inspect')return null;throw error;});
+ assert(device?.isFile()||previous.stage==='inspect','下载阶段必须保留同一匿名设备；目录阶段尚未注册设备可继续原目录');
 }else dataRoot=await mkdtemp(join(tmpdir(),'guoapp-real-'));
 const service=await createCoreService({dataRoot});configureBundledMedia({root,resourcesPath:resourceRoot,isPackaged:true});
 const book=await service.create('红果下载验收'),state=await service.load(book.id),doc=await service.createDocument(book.id,{kind:'whiteboard',expectedStateStamp:state.stateStamp}),scope={id:book.id,documentId:doc.documentId,pluginId:'official.conversation-control',conversationId:'guoapp-real'};
