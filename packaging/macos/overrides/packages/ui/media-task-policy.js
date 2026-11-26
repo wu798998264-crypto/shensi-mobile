@@ -42,6 +42,7 @@ export function mediaQueueGroup(job){
  if(mediaWaitingParameters(job))return 'queued';
  if(mediaResultNeedsAttention(job))return 'attention';
  if(job.status==='cancel_requested')return 'running';
+ if(job.status==='queued'&&job.queueState==='active'&&job.queueStage==='准备提交')return 'running';
  if(job.status==='queued'&&(!job.providerTaskId||job.source==='doubao-browser'||job.source==='text-reader')&&!job.dreaminaDispatching)return 'queued';
  return 'running';
 }

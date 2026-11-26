@@ -6,6 +6,7 @@ import {createChushouTranscriber} from './chushou-transcriber.mjs';
 import * as electron from 'electron';
 import { app, BrowserWindow, dialog, shell, safeStorage, ipcMain, session, Tray, Menu, nativeImage, clipboard } from 'electron';
 import {createImageFileActions} from './image-files.mjs';
+import {createCardClipboard,readCardClipboard} from './card-clipboard.mjs';
 import {createExportFileSaver} from './export-files.mjs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -59,6 +60,8 @@ else {
       confirmPublisherRemoval:async account=>{const options={type:'warning',buttons:['取消','移除本插件账号'],defaultId:0,cancelId:0,message:'移除 '+account.platformName+' · '+(account.penName||account.authorLabel||account.note||'未完成登录空间')+'？',detail:'请先保存此账号网页中未保存的编辑。仅移除小说发布插件的本地账号及登录会话，不注销网站账号、不删除网站作品、不影响其他账号。'};const result=win&&!win.isDestroyed()?await dialog.showMessageBox(win,options):await dialog.showMessageBox(options);return result.response===1;},
       openFolder:async path=>{const error=await shell.openPath(path);if(error)throw new Error(error);},
       ...createImageFileActions({dialog,nativeImage,clipboard,getWindow:()=>BrowserWindow.getFocusedWindow()||win,directory:app.getPath('pictures')}),
+      copyCardFiles:createCardClipboard({nativeImage}),
+      readCardClipboard:()=>readCardClipboard(clipboard),
       saveExportFile:createExportFileSaver({dialog,getWindow:()=>BrowserWindow.getFocusedWindow()||win,directory:app.getPath('documents')}),
       openExternal:async url=>shell.openExternal(url),
       chooseBrowserExecutable:async()=>{const options={title:'选择外部浏览器程序',properties:['openFile'],filters:[{name:'浏览器程序',extensions:process.platform==='darwin'?['app']:['exe']}]},chosen=win&&!win.isDestroyed()?await dialog.showOpenDialog(win,options):await dialog.showOpenDialog(options);return chosen.canceled?'':chosen.filePaths[0];},

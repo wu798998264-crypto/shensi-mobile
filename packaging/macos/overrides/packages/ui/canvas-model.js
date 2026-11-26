@@ -1,4 +1,5 @@
 import {snapshotCardModelDefaults,snapshotCopiedCardDefaults} from './card-model-defaults.js';
+import {generationStoredDraft,mediaRatioPreset} from './generation-intent.js';
 import {snapshotCanvasNodeVersion,generationAssetQualifiesForHistory} from '../core/legacy/whiteboard.js';
 export const emptyCanvas=()=>({nodes:[],edges:[],assets:[],viewport:{x:60,y:60,zoom:1},settings:{snapToGrid:true,gridSize:20}});
 export function fittedBoardViewport(nodes,width,height){
@@ -57,8 +58,30 @@ export function resizedCard(node,start,dx,dy,grid=1){
   }
   return {width:Math.max(180,round(start.width+dx)),height:Math.max(120,round(start.height+dy))};
 }
-export function copySelection(canvas,ids){const set=new Set(ids);return structuredClone({nodes:canvas.nodes.filter(n=>set.has(n.id)),edges:canvas.edges.filter(e=>set.has(e.fromNode)&&set.has(e.toNode))});}
-export function pasteSelection(canvas,payload,offset=40){const map=new Map(payload.nodes.map(n=>[n.id,'node-'+crypto.randomUUID()]));for(const n of payload.nodes)canvas.nodes.push(snapshotCopiedCardDefaults({...structuredClone(n),id:map.get(n.id),x:n.x+offset,y:n.y+offset}));for(const e of payload.edges??[])canvas.edges.push({...structuredClone(e),id:'edge-'+crypto.randomUUID(),fromNode:map.get(e.fromNode),toNode:map.get(e.toNode)});return [...map.values()];}
+function copiedGenerationDraft(draft){
+ const value=structuredClone(draft);
+ for(const key of ['references','referenceEdgeIds','referenceExcludedIds','promptMentions','mentions','promptReferenceSequence','multiframeTransitions'])value[key]=[];
+ value.includeTargetReference=false;
+ for(const key of ['libTvSourceNodeId','libTvDocumentNodeId','libTvContextNodeId','libTvContextLink','updatedAt'])delete value[key];
+ if(value.channels)for(const key of Object.keys(value.channels))value.channels[key]=copiedGenerationDraft(value.channels[key]);
+ return value;
+}
+export function copySelection(canvas,ids,doc={canvas}){
+ const set=new Set(ids),nodes=canvas.nodes.filter(n=>set.has(n.id)),generationDrafts={};
+ for(const node of nodes){const stored=generationStoredDraft(doc,node),channel=stored.channel||node.generationIntent?.channel||node.generation?.channel;if(!channel&&!Object.keys(stored).length)continue;generationDrafts[node.id]=copiedGenerationDraft({...(channel?{channel}:{}),prompt:node.generation?.prompt??node.text??'',...(mediaRatioPreset(node)?{aspectRatio:mediaRatioPreset(node)}:{}),...stored});}
+ return structuredClone({nodes,edges:canvas.edges.filter(e=>set.has(e.fromNode)&&set.has(e.toNode)&&!generationDrafts[e.toNode]),generationDrafts});
+}
+export function pasteSelection(canvas,payload,offset=40){
+ const map=new Map(payload.nodes.map(n=>[n.id,'node-'+crypto.randomUUID()]));
+ for(const source of payload.nodes){const node=snapshotCopiedCardDefaults({...structuredClone(source),id:map.get(source.id),x:source.x+offset,y:source.y+offset});
+  delete node.coreMediaJobId;delete node.coreDepthJobId;delete node.coreSelectedVersionId;delete node.coreCopiedFrom;
+  if(node.generation){node.generation={...node.generation};delete node.generation.jobId;delete node.generation.referenceOrder;}
+  const draft=payload.generationDrafts?.[source.id];if(draft){(canvas.coreGenerationDrafts??={})[node.id]=copiedGenerationDraft(draft);if(draft.channel)node.generationIntent={channel:draft.channel};}
+  canvas.nodes.push(node);
+ }
+ for(const e of payload.edges??[])if(map.has(e.fromNode)&&map.has(e.toNode)&&!payload.generationDrafts?.[e.toNode])canvas.edges.push({...structuredClone(e),id:'edge-'+crypto.randomUUID(),fromNode:map.get(e.fromNode),toNode:map.get(e.toNode)});
+ return [...map.values()];
+}
 export function edgePath(a,b,fromSide='right',toSide='left'){
  return connectionPath(nodeSidePoint(a,fromSide),nodeSidePoint(b,toSide));
 }

@@ -1,6 +1,6 @@
 import {chooseMediaRange} from './media-trim.js';
 import {frameLatest} from './board-interaction.js';
-import {captureNodeVersion} from './canvas-model.js';
+import {captureNodeVersion,fittedBoardViewport} from './canvas-model.js';
 import {originalIcon} from './original-icons.js';
 import {escapeHtml as h} from './editor.js';
 import {contextMenu} from './context-menu.js';
@@ -15,6 +15,7 @@ import {chooseCardReplacement} from './card-replacement.js';
 import {openBoardVideoParser} from './board-video-parser.js';
 import {duplicateCards} from './card-duplicate.js';
 import {chooseDocumentExport} from './document-export.js';
+import {generationCardRatio,inheritedMediaRatio} from './generation-intent.js';
 
 export const CARD_COLORS={default:'',gray:'#a9adb3',red:'#df6d68',orange:'#e8915a',yellow:'#e8c85b',green:'#6fbd8a',teal:'#4fb5a7',cyan:'#5bb7d3',blue:'#6f9fd5',indigo:'#7886d8',purple:'#a477d2',pink:'#d982ad'};
 const colorNames=['默认','灰色','红色','橙色','黄色','绿色','青绿色','青色','蓝色','靛色','紫色','粉色'];
@@ -93,15 +94,22 @@ export function createBoardTools(c){
   if(value==='delete-edge'){const ids=new Set(c.selectedEdges?.().has(edgeId)?c.selectedEdges():[edgeId]);mutate(()=>{canvas().edges=canvas().edges.filter(e=>!ids.has(e.id));c.selectEdges?.([]);});return;}
   if(value==='select-cards'){c.select(canvas().nodes.map(n=>n.id));c.selectionChanged?.();return;}
   if(value==='duplicate-card'){
-   if(duplicating)return;const scope=c.libraryId()+':'+c.current().id,ids=[...c.selected()];if(!ids.length)return;
+   if(duplicating){c.toast?.('正在创建副本，请稍候');return;}const scope=c.libraryId()+':'+c.current().id,ids=[...c.selected()];if(!ids.length)return;
    duplicating=true;try{
-    if(!await c.flush())return;
+    c.toast?.('正在创建副本，请稍候');
+    if(c.finishEditing&&!await c.finishEditing())throw Error('未创建副本：卡片编辑尚未保存，请点击顶部保存状态处理后重试。');
+    if(!await c.flush())throw Error('未创建副本：当前内容尚未保存，请点击顶部保存状态处理后重试。');
     if(scope!==c.libraryId()+':'+c.current()?.id)throw Error('白板已切换，未创建副本');
     const liveIds=new Set(canvas().nodes.map(n=>n.id));if(ids.some(id=>!liveIds.has(id)))throw Error('原卡片已变化，请重新选择后创建副本');
-    mutate(()=>c.select(duplicateCards(c.current(),ids)));await c.flush();
+    const liveBoard=document.querySelector('.board');
+    mutate(()=>{const created=new Set(duplicateCards(c.current(),ids));c.select([...created]);const copies=canvas().nodes.filter(n=>created.has(n.id)),view=canvas().viewport;
+     if(liveBoard?.clientWidth&&liveBoard?.clientHeight&&copies.some(n=>n.x*view.zoom+view.x<24||n.y*view.zoom+view.y<24||(n.x+n.width)*view.zoom+view.x>liveBoard.clientWidth-24||(n.y+n.height)*view.zoom+view.y>liveBoard.clientHeight-24))Object.assign(view,fittedBoardViewport(copies,liveBoard.clientWidth,liveBoard.clientHeight));
+    });
+    try{c.toast?.(await c.flush()?'副本已创建并保存':'副本已创建，暂未保存；请点击顶部保存状态继续保存，无需再次创建。');}
+    catch(error){c.toast?.('副本已创建，暂未保存；请点击顶部保存状态继续保存，无需再次创建。');}
    }finally{duplicating=false;}return;
   }
-  if(value==='cut-cards'){await c.run('copy-cards');await c.run('delete-cards');return;}
+  if(value==='cut-cards'){const scope=c.libraryId()+':'+c.current().id,ids=[...c.selected()].sort().join('\0');const copied=await c.run('copy-cards');if(copied?.copied&&scope===c.libraryId()+':'+c.current()?.id&&ids===[...c.selected()].sort().join('\0'))await c.run('delete-cards');return;}
   if(value==='reveal'){
    const id=c.libraryId(),documentId=c.current().id,nodeId=node?.id;if(!await c.flush())return;
    if(id!==c.libraryId()||documentId!==c.current()?.id)throw Error('白板已切换，未打开文件夹');
@@ -162,20 +170,27 @@ export function createBoardTools(c){
  function position(){const selection=nodes(),node=selection.length===1?selection[0]:null,board=document.querySelector('.board');if(!toolbar)return;if(!node||node.operation?.type==='depth-explorer'){toolbar.hidden=true;return;}if(toolbar.hidden||!board)return;const v=canvas().viewport;toolbar.style.left=Math.max(8,Math.min(board.clientWidth-toolbar.offsetWidth-8,(node.x+node.width/2)*v.zoom+v.x-toolbar.offsetWidth/2))+'px';const corner=board.querySelector('.whiteboard-corner-controls'),minTop=corner?corner.offsetTop+corner.offsetHeight+8:8;toolbar.style.top=Math.max(minTop,node.y*v.zoom+v.y-toolbar.offsetHeight-30)+'px';}
  function connectPointer(event){
   event.preventDefault();event.stopPropagation();const port=event.target.closest('[data-connect]'),board=document.querySelector('.board'),source=canvas().nodes.find(n=>n.id===port.dataset.connect);if(!source)return;
-  const side=port.dataset.connectSide||'right',start=nodeSidePoint(source,side),svg=board.querySelector('.edges'),line=document.createElementNS('http://www.w3.org/2000/svg','path');
-  line.setAttribute('d',connectionPath(start,start));line.setAttribute('class','connection-preview');svg.append(line);board.setPointerCapture(event.pointerId);
+  const scope=c.libraryId()+':'+c.current().id,active=()=>scope===c.libraryId()+':'+c.current()?.id;
+  const sources=c.selected().has(source.id)?nodes():[source],sourceIds=new Set(sources.map(n=>n.id));
+  const side=port.dataset.connectSide||'right',svg=board.querySelector('.edges'),lines=sources.map(n=>{const start=nodeSidePoint(n,side),line=document.createElementNS('http://www.w3.org/2000/svg','path');line.setAttribute('d',connectionPath(start,start));line.setAttribute('class','connection-preview');svg.append(line);return {start,line};});
+  const removeLines=()=>lines.forEach(({line})=>line.remove());
+  const connect=targetId=>sources.filter(n=>canvas().nodes.some(live=>live.id===n.id)&&n.id!==targetId&&!canvas().edges.some(edge=>edge.fromNode===n.id&&edge.toNode===targetId)).map(n=>({id:'edge-'+crypto.randomUUID(),fromNode:n.id,toNode:targetId,fromSide:side}));
+  board.setPointerCapture(event.pointerId);
   let candidate=null;
-  const ports=[...board.querySelectorAll('[data-connect]')].filter(el=>el.dataset.connect!==source.id).map(element=>({element,rect:element.getBoundingClientRect()}));
+  const ports=[...board.querySelectorAll('[data-connect]')].filter(el=>!sourceIds.has(el.dataset.connect)).map(element=>({element,rect:element.getBoundingClientRect()}));
   const locate=e=>{let nearest=null,distance=38;for(const {element,rect:r} of ports){const d=Math.hypot(e.clientX-r.left-r.width/2,e.clientY-r.top-r.height/2);if(d<distance){nearest=element;distance=d;}}return nearest;};
   const highlight=port=>{for(const card of board.querySelectorAll('.connection-target'))card.classList.remove('connection-target');for(const el of board.querySelectorAll('.connection-port-target'))el.classList.remove('connection-port-target');candidate=port;if(port){port.closest('[data-node]').classList.add('connection-target');port.classList.add('connection-port-target');}};
-  const boardRect=board.getBoundingClientRect(),motion=frameLatest(e=>{const r=boardRect,v=canvas().viewport,next=locate(e);if(next!==candidate)highlight(next);const target=candidate&&canvas().nodes.find(n=>n.id===candidate.dataset.connect);line.setAttribute('d',connectionPath(start,target?nodeSidePoint(target,candidate.dataset.connectSide):{x:(e.clientX-r.left-v.x)/v.zoom,y:(e.clientY-r.top-v.y)/v.zoom}));});
+  const boardRect=board.getBoundingClientRect(),motion=frameLatest(e=>{if(!active())return cleanup();const r=boardRect,v=canvas().viewport,next=locate(e);if(next!==candidate)highlight(next);const target=candidate&&canvas().nodes.find(n=>n.id===candidate.dataset.connect),end=target?nodeSidePoint(target,candidate.dataset.connectSide):{x:(e.clientX-r.left-v.x)/v.zoom,y:(e.clientY-r.top-v.y)/v.zoom};for(const {start,line}of lines)line.setAttribute('d',connectionPath(start,end));});
   board.onpointermove=e=>motion.push({clientX:e.clientX,clientY:e.clientY});
-  const cleanup=(remove=true)=>{motion.cancel();highlight(null);board.onpointermove=null;board.onpointerup=null;board.onpointercancel=null;if(remove)line.remove();if(board.hasPointerCapture(event.pointerId))board.releasePointerCapture(event.pointerId);};
+  const cancel=()=>cleanup(),escape=e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cleanup();}};
+  const cleanup=(remove=true)=>{motion.cancel();highlight(null);document.removeEventListener('keydown',escape,true);window.removeEventListener('blur',cancel);board.removeEventListener('lostpointercapture',cancel);board.onpointermove=null;board.onpointerup=null;board.onpointercancel=null;if(remove)removeLines();if(board.hasPointerCapture(event.pointerId))board.releasePointerCapture(event.pointerId);};
+  document.addEventListener('keydown',escape,true);window.addEventListener('blur',cancel);board.addEventListener('lostpointercapture',cancel);
   board.onpointerup=async e=>{const nearby=locate(e);cleanup(false);const element=document.elementFromPoint(e.clientX,e.clientY),targetPort=nearby||element?.closest('[data-connect]'),targetId=targetPort?.dataset.connect||element?.closest('[data-node]')?.dataset.node;
-   if(targetId){line.remove();if(targetId!==source.id&&!canvas().edges.some(edge=>edge.fromNode===source.id&&edge.toNode===targetId))mutate(()=>canvas().edges.push({id:'edge-'+crypto.randomUUID(),fromNode:source.id,toNode:targetId,fromSide:side,toSide:targetPort?.dataset.connectSide||'left'}));return;}
-   const rect=board.getBoundingClientRect(),v=canvas().viewport;if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom){line.remove();return;}
-   const point={x:(e.clientX-rect.left-v.x)/v.zoom,y:(e.clientY-rect.top-v.y)/v.zoom},answer=await contextMenu([item('add-plain','普通卡片'),...(c.generationEnabled()?generateItems():[]),...(c.generationEnabled()&&c.depthEnabled?.()?[item('create-depth','深度摸索')]:[])],e);line.remove();if(answer.value==='cancel')return;
-   try{if(!canvas().nodes.some(n=>n.id===source.id))return;const isDepth=answer.value==='create-depth';if(isDepth&&!c.depthEnabled?.())throw Error('深度摸索插件已停用');const node=add(point,isDepth?{name:'深度摸索',text:'',width:420,height:240,operation:{type:'depth-explorer',settings:{quality:'balanced',provider:'auto',invertDepth:false,keepAudio:true}}}:{});mutate(()=>canvas().edges.push({id:'edge-'+crypto.randomUUID(),fromNode:source.id,toNode:node.id,fromSide:side,toSide:'left'}));await c.flush();if(answer.value.startsWith('generate-'))await c.generate(answer.value.slice(9));}catch(error){c.toast(error.message);}
+   if(!active()){removeLines();return;}
+   if(targetId){removeLines();if(sourceIds.has(targetId)||!canvas().nodes.some(n=>n.id===targetId))return;const edges=connect(targetId);if(edges.length)mutate(()=>canvas().edges.push(...edges.map(edge=>({...edge,toSide:targetPort?.dataset.connectSide||'left'}))));return;}
+   const rect=board.getBoundingClientRect(),v=canvas().viewport;if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom){removeLines();return;}
+   const point={x:(e.clientX-rect.left-v.x)/v.zoom,y:(e.clientY-rect.top-v.y)/v.zoom},answer=await contextMenu([item('add-plain','普通卡片'),...(c.generationEnabled()?generateItems():[]),...(c.generationEnabled()&&c.depthEnabled?.()?[item('create-depth','深度摸索')]:[])],e);removeLines();if(answer.value==='cancel'||!active())return;
+   try{if(!sources.some(n=>canvas().nodes.some(live=>live.id===n.id)))return;const isDepth=answer.value==='create-depth',channel=answer.value.startsWith('generate-')?answer.value.slice(9):'';if(isDepth&&!c.depthEnabled?.())throw Error('深度摸索插件已停用');mutate(()=>{const fields=isDepth?{name:'深度摸索',text:'',width:420,height:240,operation:{type:'depth-explorer',settings:{quality:'balanced',provider:'auto',invertDepth:false,keepAudio:true}}}:{},node=addTextCard(canvas(),{...point,...fields});Object.assign(node,fields);canvas().edges.push(...connect(node.id).map(edge=>({...edge,toSide:'left'})));if(channel){node.generationIntent={channel};generationCardRatio(node,channel,inheritedMediaRatio(canvas(),node,channel));}c.select([node.id]);});if(channel&&active())await c.generate(channel);await c.flush();}catch(error){c.toast(error.message);}
 
   };
   board.onpointercancel=()=>cleanup();

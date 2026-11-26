@@ -9,7 +9,7 @@
   },
   {
     "path": "packages/ui/app.js",
-    "sha256": "f40f6279285f0b3b19616d73bd6c18d6d3756936a3d1f761b1ef68c4a42a83f7"
+    "sha256": "d1218595502ad73a8f6a2a64e95d6e73f75fbd7b879ae050a1b716625dd47f17"
   },
   {
     "path": "packages/ui/book-picker.js",
@@ -29,7 +29,7 @@
   },
   {
     "path": "packages/ui/media-ui.js",
-    "sha256": "59cadb524b8aa79f9a5fa614200a92efaac55a1eeeb39b2d9ebf3166f90a3a5d"
+    "sha256": "23828afb2a1d42a5792e8b24933fc6892c45cd7924ca3bd81f56f69169c1e634"
   },
   {
     "path": "packages/ui/chat-layout.js",
@@ -69,7 +69,7 @@
   },
   {
     "path": "packages/ui/core-plugin-copy.js",
-    "sha256": "808a057761853cd85ee79385e215a2ea41e708550a76d8bf07149f5d3b31ebbd"
+    "sha256": "83f2b5feb20a9e7dc0e46b668667bceb9631586e89742ff2ce2f634a4b4951ad"
   },
   {
     "path": "packages/official/catalog.mjs",
@@ -117,7 +117,7 @@
   },
   {
     "path": "packages/core/src/service.mjs",
-    "sha256": "539878b4104557da5983b0d6aabc1465828b5b490a3732872a0632f6c4b30959"
+    "sha256": "70a83426f94b4e50a42a09ee3006c3b84f32a1e588df90646ead6e6e002ec82e"
   },
   {
     "path": "packages/ui/card-model-defaults.js",
@@ -125,11 +125,11 @@
   },
   {
     "path": "packages/ui/canvas-model.js",
-    "sha256": "a5b9337e5bdffeadb8ce18d1e8b39c752198645ffbbf6dd3a6a4c55d54cc0416"
+    "sha256": "dd87fada32b4e9ab0dc6a817af6a3c9e920c25bd5ad070929908ada01ee6a953"
   },
   {
     "path": "packages/ui/card-duplicate.js",
-    "sha256": "8778b3e0ee95e384286fac3fefe8b5e4e3c8d90bfaf7ae399364e603d8a981e7"
+    "sha256": "6d8bdc5bf80cf8404bab0695b5d255454f2c8cf15f900efa1f3248630aa6d2b6"
   },
   {
     "path": "packages/ui/generation-sources.js",
@@ -281,7 +281,7 @@
   },
   {
     "path": "packages/ui/localization.js",
-    "sha256": "97e9641e04d37b13fd959ddfbfff5a90cfc1ae86b39b2292cc6798bc6773c9d0"
+    "sha256": "b20cbc9cfe9e74e433e54dc4966f0f0e7317927a2db7b1ca512924c1272ebea8"
   },
   {
     "path": "packages/ui/plugin-storage-settings.js",
@@ -429,7 +429,7 @@
   },
   {
     "path": "packages/ui/media-task-policy.js",
-    "sha256": "94ba7266f1bd037d67fe7bc743c6ae5c782c7755a9888f28acc4831a0a640ea6"
+    "sha256": "cb7a3e68511ba8f09a5090cc470fb14b0d20e9893b83e786acf6001a801e1b62"
   },
   {
     "path": "packages/core/src/plugin-marketplace.mjs",
@@ -441,7 +441,7 @@
   },
   {
     "path": "packages/official/media.mjs",
-    "sha256": "99f2d8e70a025cad5e67c9d80a722ad90e3d03ce0d5a6e8f17d9925d6841580c"
+    "sha256": "c6e540436371b7e9a421d0487efa59e58b11faf1514576007717e874629a7b4c"
   },
   {
     "path": "packages/official/membership.mjs",
@@ -473,11 +473,11 @@
   },
   {
     "path": "apps/desktop/main.mjs",
-    "sha256": "1c9bfdb26844cdf624f3a433650336254f8f41db0dad91af0aa3b30030dc3b87"
+    "sha256": "519679dff38dc008e658db95d2ac7af979e7600cd9d0fee81698552d8b919d1d"
   },
   {
     "path": "apps/desktop/server.mjs",
-    "sha256": "166ec389a33fa46c5efb0b7f7ff7873adeae1f4899ce7d1986024c6d9aca0a4f"
+    "sha256": "ffb075777e207292fc0e5abc00c574419463159d276d87e1b56a6fbce453741c"
   },
   {
     "path": "apps/desktop/export-files.mjs",
@@ -489,7 +489,7 @@
   },
   {
     "path": "packages/ui/board-tools.js",
-    "sha256": "c112594e3964a58957ec6d1532e9357c21e5596a3d8f7f0d5eb7c87f460dc8ad"
+    "sha256": "c95428258a82d0d151ba568ac002ed620ce0dc52a1e0945e0cb4ab3ea96eecbe"
   },
   {
     "path": "packages/ui/document-export.js",
@@ -506,5 +506,53 @@
   {
     "path": "packages/ui/window-controls.js",
     "sha256": "b536a8b03664a6941b094ca49a5717b282eb6057340962030f381c9c128b8240"
+  },
+  {
+    "path": "apps/desktop/card-clipboard.mjs",
+    "sha256": "32ba4527af8f7dd21dd08dd77c0c4a5d73072c790713780420a4c231e8147306"
+  },
+  {
+    "path": "packages/official/legacy/dreamina-task-queue.js",
+    "sha256": "9bcd41298408df198d19ed164b052c9bf259d99ca5a6d03b5f088fdd02990fdf"
+  },
+  {
+    "path": "packages/official/legacy/server/media-worker-manager.mjs",
+    "sha256": "a14df80221eb3984cea200fcfd8584b593e8c45b1405ec10b6cf17dfb96f84aa"
+  },
+  {
+    "path": "packages/official/legacy/server/adapters.mjs",
+    "sha256": "59bbe2c468d4daccfb5d669e7cdbd136fc9f77e42b50d6e7babbf05812957488"
+  },
+  {
+    "path": "packages/official/legacy/server/media-submission-recovery.mjs",
+    "sha256": "48ea3fa6dabcc292fcee16ee535fe660b3718d8eb3a54705c4aa99ed5648032d"
+  },
+  {
+    "path": "packages/official/legacy/server/image-api-stream.mjs",
+    "sha256": "10845e2bca596f4ab3fef59fbe0c181cb72de8872c585d0d55e4eeaec5f4e9ca"
+  },
+  {
+    "path": "packages/ui/generation-layout.js",
+    "sha256": "366f84372ee019b302bc344d0d0df6b12f09a8c3289c78245dd9f4199e1091d7"
+  },
+  {
+    "path": "packages/ui/generation-intent.js",
+    "sha256": "1cc2fa4e3e4d0ef2a7223852c4439e768f685aca36ff3f70c956ed6acffd397d"
+  },
+  {
+    "path": "packages/ui/whiteboard-parity.css",
+    "sha256": "b6e1517e2fc6bf1489bd995bdddbb665f8fbf5050acfb418551bba3eab8f3a64"
+  },
+  {
+    "path": "packages/ui/window-state.js",
+    "sha256": "d1896257db834a35dcd71c84fafc62137753aa991bf06238d94ce5645bff2016"
+  },
+  {
+    "path": "packages/ui/node-preview-save.js",
+    "sha256": "a3fe48f90750e525d27bc85505c6c17c4afd663afe1875320707e911b8270b28"
+  },
+  {
+    "path": "packages/ui/attachment-preview.js",
+    "sha256": "25d1c9a4e2f09f03f2f0f5e8fc2818b228464f4ee03fd07af141bf6bf08f9c3d"
   }
 ]

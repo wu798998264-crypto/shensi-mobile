@@ -7,6 +7,7 @@ const {pathToFileURL}=require('node:url');
 const {verifyUi}=require('./ui-acceptance.cjs');
 const verifyCardExport=require('./verify-card-export.cjs');
 const verifyEditorControls=require('./verify-editor-controls.cjs');
+const verifyGenerationCopy=require('./verify-generation-copy.cjs');
 const run=(exe,args,options={})=>{const r=spawnSync(exe,args,{encoding:'utf8',timeout:60000,...options});assert.equal(r.status,0,exe+' '+r.stderr);return r.stdout;};
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
 function manifest(root){const files=[];function visit(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){const p=path.join(dir,e.name);if(e.isDirectory())visit(p);else if(e.isFile()&&e.name!=='runtime-manifest.json'){const b=fs.readFileSync(p);files.push({path:path.relative(root,p).split(path.sep).join('/'),size:b.length,sha256:hash(b)});}}}visit(root);return {platform:'darwin',arch:process.arch,files};}
@@ -28,7 +29,7 @@ async function launch(app,env){
  }catch(error){await close();throw error;}
 }
 async function verify(app,arch){
- assert.equal(process.platform,'darwin');assert.equal(process.arch,arch);app=path.resolve(app);const version='0.0.54',res=path.join(app,'Contents/Resources'),root=path.join(res,'app'),yunx=path.join(root,'resources/yunx'),evidence=path.resolve('build/ui-'+arch);fs.mkdirSync(evidence,{recursive:true});
+ assert.equal(process.platform,'darwin');assert.equal(process.arch,arch);app=path.resolve(app);const version='0.0.55',res=path.join(app,'Contents/Resources'),root=path.join(res,'app'),yunx=path.join(root,'resources/yunx'),evidence=path.resolve('build/ui-'+arch);fs.mkdirSync(evidence,{recursive:true});
  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'))).version,version);assert.deepEqual(JSON.parse(fs.readFileSync(path.join(yunx,'runtime-manifest.json'))),manifest(yunx));run('codesign',['--verify','--deep','--strict','--verbose=2',app]);
  const java=path.join(yunx,'runtime/runtime/bin/java'),bridge=JSON.parse(run(java,['-Djava.awt.headless=true','-cp',path.join(yunx,'classes')+':'+path.join(yunx,'runtime/app/*'),'YunxBridge'],{input:'{"action":"version"}\n'}).trim());assert(bridge.ok);assert.equal(bridge.data.version,'1.3.4');
  run(path.join(res,'node/node'),['--version']);for(const t of ['ffmpeg','ffprobe'])run(path.join(res,'ffmpeg',t),['-version']);run(path.join(res,'cli/dreamina-canvas'),['version']);run(path.join(res,'cli/libtv'),['--version']);
@@ -46,6 +47,7 @@ async function verify(app,arch){
   const ui=await verifyUi({js,api,screenshot:name=>desktop.screenshot(path.join(evidence,name)),evidence,platform:'darwin-'+arch});
   const editorControls=await verifyEditorControls({...desktop,screenshot:name=>desktop.screenshot(path.join(evidence,name))},id);fs.writeFileSync(path.join(evidence,'editor-controls.json'),JSON.stringify(editorControls,null,2));
   const cardExport=await verifyCardExport({...desktop,screenshot:name=>desktop.screenshot(path.join(evidence,name))},id);fs.writeFileSync(path.join(evidence,'card-export.json'),JSON.stringify(cardExport,null,2));
+  const generationCopy=await verifyGenerationCopy({...desktop,screenshot:name=>desktop.screenshot(path.join(evidence,name))},id);fs.writeFileSync(path.join(evidence,'generation-copy.json'),JSON.stringify(generationCopy,null,2));
   let state=await api('state?id='+id);const doc=await api('document',{id,kind:'note',title:'macOS 合成验收',expectedStateStamp:state.stateStamp});state=await api('state?id='+id);state.state.documents[doc.documentId].markdown='macOS 写入与回读';await api('state',{id,state:state.state,expectedStateStamp:state.stateStamp});assert.equal((await api('state?id='+id)).state.documents[doc.documentId].markdown,'macOS 写入与回读');
   const profile=(await api('official/browser-profiles/add',{name:'Mac 合成配置'})).profile;await api('official/browser-profiles/bookmark-add',{profileId:profile.id,url:'https://example.com/',title:'本地保存验收'});assert((await api('official/browser-profiles/read')).bookmarks.some(b=>b.title==='本地保存验收'));
   await js('document.dispatchEvent(new Event("shensi:open-browser"))');await wait(()=>js('!!document.querySelector(".browser-workspace")'));

@@ -81,7 +81,7 @@ export async function createCoreService({ dataRoot = join(projectRoot, 'user-dat
     queues.set(id, job); job.finally(() => { if(queues.get(id) === job) queues.delete(id); }).catch(()=>{}); return job;
   };
   const workspaceReads=new Map();
-  async function load(id) {
+  async function load(id,{editing=false}={}) {
     const opts=options(id),stamp=(await engine.getWorkspaceStateStamp(opts)).stateStamp;
     let entry=workspaceReads.get(id);
     if(!entry||entry.stamp!==stamp){
@@ -91,7 +91,10 @@ export async function createCoreService({ dataRoot = join(projectRoot, 'user-dat
       entry.promise.then(result=>{entry.stamp=result.stateStamp;},()=>{if(workspaceReads.get(id)===entry)workspaceReads.delete(id);});
       if(workspaceReads.size>2)workspaceReads.delete(workspaceReads.keys().next().value);
     }
-    return clone(await entry.promise);
+    const result=await entry.promise;
+    // Editing views never consume full histories. Keep the authoritative cache
+    // intact, and omit history before cloning instead of after the HTTP copy.
+    return clone(editing?{...result,state:{...result.state,histories:{},coreDirectoryHistories:{}}}:result);
   }
   async function loadUncached(id) {
     const result = await engine.loadWorkspaceState(options(id));
@@ -286,7 +289,7 @@ const directoryMetadata=fileProjection(state=>({name:state.projectName,knowledge
       queueMicrotask(()=>{for(const listener of listeners)try{listener(event);}catch{/* A plugin listener cannot fail a committed save. */}});
       return {...loaded,receipt,historyReceipt,beforeHistoryReceipt};
   }
-  const save=(id,payload)=>serial(id,()=>commit(id,payload),payload?.signal);
+  const save=(id,payload)=>serial(id,()=>commit(id,payload,undefined,true),payload?.signal);
   const recycleDirectory=(id,{tokens,expectedStateStamp}={})=>serial(id,async()=>{if(!Array.isArray(tokens)||!tokens.length||tokens.length>10000||tokens.some(t=>typeof t!=='string'||! /^(document|folder):[a-zA-Z0-9_.-]+$/.test(t)))throw fail('请选择有效的目录项');const current=await load(id);if(current.stateStamp!==expectedStateStamp)throw fail('笔记本已更新，删除未执行，请刷新后重试','WORKSPACE_STATE_CONFLICT');const next=clone(current.state);if(!recycleSelection(next,tokens))throw fail('所选内容已不存在或不可回收');return commit(id,{state:next,expectedStateStamp},undefined,true,current);});
   const resolveLocalDraft=(id,{baseState,state,clientId,draftRevision}={})=>serial(id,async()=>{
     if(!baseState?.documents||!state?.documents)throw fail('缺少本地稿或原始保存基线');
@@ -312,8 +315,8 @@ const directoryMetadata=fileProjection(state=>({name:state.projectName,knowledge
       let requestHash;
       if(copyFromDocumentId!==undefined&&(source!=='user'||imported!==undefined||typeof copyFromDocumentId!=='string'))throw fail('副本来源无效');
       if(copyFolderId!==undefined&&(copyFromDocumentId===undefined||typeof copyFolderId!=='string'||copyFolderId&&!state.coreFolders?.some(f=>f.id===copyFolderId)))throw fail('副本目标文件夹不存在');
-      if(source!=='user'){
-        requestHash=digest(JSON.stringify({kind,imported}));
+      if(source!=='user'||operationId!==undefined){
+        requestHash=digest(JSON.stringify({kind,imported,copyFromDocumentId,copyFolderId}));
         if(!/^[a-zA-Z0-9_-]{1,100}$/.test(operationId||''))throw fail('插件新建需要唯一操作身份');
         const old=state.coreTextOperations?.[operationId];
         if(old){if(old.requestHash!==requestHash)throw fail('操作身份已经用于其他内容');return {...current,documentId:old.documentId,replayed:true};}
@@ -337,8 +340,8 @@ const directoryMetadata=fileProjection(state=>({name:state.projectName,knowledge
       else {document.markdown??='';document.html??=engine.markdownToHtml(document.markdown);}
       state.documents[documentId]=document;(state.moduleItems.library??=[]).push([documentId,title]);
       Object.assign(state,openDocumentInTabs(state,documentId));
-      if(source!=='user')(state.coreTextOperations??={})[operationId]={requestHash,documentId,createdAt:new Date().toISOString()};
-      const result=await commit(id,{state,expectedStateStamp,signal},source==='user'?undefined:{documentId,source,operationType:'create',reason:'插件创建正式内容',operationId},true,current);
+      if(requestHash)(state.coreTextOperations??={})[operationId]={requestHash,documentId,createdAt:new Date().toISOString()};
+      const result=await commit(id,{state,expectedStateStamp,signal},source==='user'?(requestHash?{operationId}:undefined):{documentId,source,operationType:'create',reason:'插件创建正式内容',operationId},true,current);
       if(!result.state.documents[documentId])throw fail('新建文件未能回读');
       return {...result,documentId};
     },signal);
@@ -699,7 +702,7 @@ const directoryMetadata=fileProjection(state=>({name:state.projectName,knowledge
     if(payload===undefined)return readJson(path);
     return serial('draft:'+id+':'+clientId,async()=>{
       const old=await readJson(path);
-      if((old?.revision??-1)>(payload.revision??0))return old;
+      if((old?.revision??-1)>(payload.revision??0)||old?.cleared&&old.revision===(payload.revision??0))return old;
       await atomicJson(path,{...payload,updatedAt:new Date().toISOString()});return {saved:true};
     });
   }
@@ -733,7 +736,7 @@ const directoryMetadata=fileProjection(state=>({name:state.projectName,knowledge
   const moveDocuments=createDocumentMover({exclusive,load,commit,options,validate:validateWorkWrites,assertDrafts:async(id,ids)=>{const current=(await load(id)).state;for(const file of await readdir(draftsRoot)){if(!file.startsWith(id+'-'))continue;const draft=await readJson(join(draftsRoot,file));if(draft?.state&&ids.some(docId=>draft.state.documents?.[docId]&&JSON.stringify(snapshotDocument(draft.state.documents[docId]))!==JSON.stringify(snapshotDocument(current.documents[docId]))))throw fail('其他窗口仍有文档草稿，请先保存后再移动');}}});
   const notebookRecycle=createNotebookRecycle({engine,dataRoot,notesRoot,appRoot:join(projectRoot,'apps/desktop'),serial,load,notify:event=>{for(const listener of listeners)listener(event);}});
   const cloudNotebooks=createCoreCloudNotebookStorage({load,list:()=>barrier.then(()=>list()),commit,serial,engine,options,blank:createBlankNotebookState,sanitize:sanitizeDocumentHtml,media:createCoreCloudMedia(dataRoot)});
-  const service={dataRoot,skills,setCardDefaultResolver:fn=>{cardDefaultResolver=fn;},moveDocuments,cloudNotebooks,notebookRecycle,setAssetTrash,deleteHistory,cleanupHistory,directoryCatalog:()=>barrier.then(()=>directoryCatalog()),list:()=>barrier.then(()=>list()),recycleIndex:()=>barrier.then(()=>recycleIndex()),referenceIndex:()=>barrier.then(()=>referenceIndex()),create:name=>serial('catalog',()=>create(name)),load:id=>barrier.then(()=>load(id)),stateStamp:id=>barrier.then(()=>engine.getWorkspaceStateStamp(options(id))).then(({stateStamp})=>({stateStamp})),graphLoad:id=>barrier.then(()=>graphLoad(id)),save,resolveLocalDraft,saveMergedDocuments,createDocument,saveVersion,replaceCard,saveDirectoryVersion,restoreDirectoryVersion,applyTextEdit,appendAiCard,saveMediaRecall,applyGeneratedTextResult,applyMediaResult,applyBoardPatch,draft,restore,exclusive,markdown:engine.markdownToHtml,subscribe:listener=>{listeners.add(listener);return ()=>listeners.delete(listener);},
+  const service={dataRoot,skills,setCardDefaultResolver:fn=>{cardDefaultResolver=fn;},moveDocuments,cloudNotebooks,notebookRecycle,setAssetTrash,deleteHistory,cleanupHistory,directoryCatalog:()=>barrier.then(()=>directoryCatalog()),list:()=>barrier.then(()=>list()),recycleIndex:()=>barrier.then(()=>recycleIndex()),referenceIndex:()=>barrier.then(()=>referenceIndex()),create:name=>serial('catalog',()=>create(name)),load:(id,view)=>barrier.then(()=>load(id,view)),stateStamp:id=>barrier.then(()=>engine.getWorkspaceStateStamp(options(id))).then(({stateStamp})=>({stateStamp})),graphLoad:id=>barrier.then(()=>graphLoad(id)),save,resolveLocalDraft,saveMergedDocuments,createDocument,saveVersion,replaceCard,saveDirectoryVersion,restoreDirectoryVersion,applyTextEdit,appendAiCard,saveMediaRecall,applyGeneratedTextResult,applyMediaResult,applyBoardPatch,draft,restore,exclusive,markdown:engine.markdownToHtml,subscribe:listener=>{listeners.add(listener);return ()=>listeners.delete(listener);},
     assetLoad:id=>barrier.then(()=>assetLoad(id)),recycleDirectory,stageMapMedia,stageVideoPreview,editMedia,editBoard,appendMediaNodes,importBoardMedia,bindBoardDraft,applyDocumentMediaResult,asset:(id,payload)=>serial(id,()=>engine.saveWorkspaceAttachment({...options(id),...payload})),
     // Internal host capability for account-browser results. The existing stream
     // validator checks signatures, complete images and playable video frames.

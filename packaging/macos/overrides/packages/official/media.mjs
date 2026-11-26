@@ -145,7 +145,7 @@ export function createMediaService({service,models,requirePlugin,budget,launchWo
    if(record.recallArchivedAt){const result=await service.saveMediaRecall(record.id,{...record,jobId,channel:job.channel,result:job.result,recallState:'recalled',signal:controller.signal});await ledger.update(s=>{for(const r of Object.values(s))if(r.jobId===jobId)r.recallRequestedAt='';return s;});await jobs.updateMediaGenerationJob({jobId,patch:{recalledAt:new Date().toISOString(),recallRequestedAt:'',cardApplyError:'',cardApplyRetryPausedAt:new Date().toISOString()}});return result;}
    if(partial&&!record.nodeId)return null;
    const result=await service[record.nodeId?'applyMediaResult':'applyDocumentMediaResult'](record.id,{...record,jobId,attachments,channel:job.channel,incremental:job.incrementalImages===true,signal:controller.signal});let cardReadback;
-   if(record.nodeId){const node=mediaTargetDocument(result.state,record.documentId).canvas.nodes.find(n=>n.id===record.nodeId);cardReadback={nodeId:node.id,relativePath:node.file,generationJobId:jobId,documentId:record.documentId,resultAssetId:jobId+'-0',verified:true};}
+   if(record.nodeId){const node=mediaTargetDocument(result.state,record.documentId).canvas.nodes.find(n=>n.id===record.nodeId);if(node?.coreMediaJobId!==jobId||!attachments.some(a=>a.relativePath===node.file))throw failure('原成品已保存，但当前卡片已改用其他内容；未覆盖当前卡片','MEDIA_CARD_CONFLICT');cardReadback={nodeId:node.id,relativePath:node.file,generationJobId:node.coreMediaJobId,documentId:record.documentId,resultAssetId:jobId+'-0',verified:true};}
    if(partial){await jobs.updateMediaGenerationJob({jobId,patch:{partialAppliedCount:attachments.length,partialAppliedAt:new Date().toISOString(),partialApplyError:'',partialApplyAttempts:0}});return result;}
    await jobs.markGenerationJobApplied({jobId,resultAssetId:jobId+'-0',...(cardReadback?{cardReadback}:{})});if(record.recallRequestedAt){await ledger.update(s=>{for(const r of Object.values(s))if(r.jobId===jobId)r.recallRequestedAt='';return s;});await jobs.updateMediaGenerationJob({jobId,patch:{recallRequestedAt:''}});}return result;
   }catch(error){
@@ -198,7 +198,11 @@ export function createMediaService({service,models,requirePlugin,budget,launchWo
     if(r.nodeId&&!r.stoppedAt&&!r.recallArchivedAt&&!job.resultSuppressed&&job.desiredAction!=='cancel'&&job.incrementalImages&&job.status!=='complete'&&job.result?.attachments?.length>Number(job.partialAppliedCount||0)&&Number(job.partialApplyAttempts||0)<5)await apply(job.id);
     if(mediaNeedsAutomaticRelease(job)){await abandonLocal(job,r,{explicitStop:true,automaticFailure:!['cancelled','stopped','superseded'].includes(job.status)});continue;}
     if(r.recallArchivedAt&&!r.recallRequestedAt)continue;
-    if(mediaResultNeedsAttention(job)&&!r.recallRequestedAt){if(!job.deliveryDetachedAt)await jobs.updateMediaGenerationJob({jobId:job.id,patch:{deliveryDetachedAt:new Date().toISOString(),cardApplyRetryPausedAt:new Date().toISOString()}});continue;}
+    // Recovery labels can survive a successful download. A complete local
+    // result still gets its first guarded card write; genuine write conflicts
+    // and explicit pauses retain the existing manual-recovery protection.
+    const readyForCard=job.status==='complete'&&(job.result?.attachment||job.result?.attachments?.length)&&!job.cardApplyError&&!job.cardApplyRetryPausedAt;
+    if(mediaResultNeedsAttention(job)&&!r.recallRequestedAt&&!readyForCard){if(!job.deliveryDetachedAt)await jobs.updateMediaGenerationJob({jobId:job.id,patch:{deliveryDetachedAt:new Date().toISOString(),cardApplyRetryPausedAt:new Date().toISOString()}});continue;}
     if(r.recallRequestedAt&&['failed','retry_required'].includes(job.status)){
      await ledger.update(s=>{for(const record of Object.values(s))if(record.jobId===job.id)record.recallRequestedAt='';return s;});
      await jobs.updateMediaGenerationJob({jobId:job.id,patch:{recallRequestedAt:'',cardApplyRetryPausedAt:new Date().toISOString()}});continue;

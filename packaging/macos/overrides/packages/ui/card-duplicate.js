@@ -14,6 +14,14 @@ const remapDraft=(draft,nodes,edges)=>{
 export function duplicateCards(doc,ids){
  const canvas=doc.canvas,selected=new Set(ids),sources=canvas.nodes.filter(n=>selected.has(n.id)),nodeMap=new Map(sources.map(n=>[n.id,'node-'+crypto.randomUUID()])),edgeMap=new Map();
  const incoming=canvas.edges.filter(e=>nodeMap.has(e.toNode)).map(edge=>{const id='edge-'+crypto.randomUUID();edgeMap.set(edge.id,id);return {...structuredClone(edge),id,fromNode:nodeMap.get(edge.fromNode)||edge.fromNode,toNode:nodeMap.get(edge.toNode)};});
+ // Move the entire selection together into a free horizontal band. Repeated
+ // copies must not land on the previous copy or distort multi-card spacing.
+ let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
+ for(const n of sources){left=Math.min(left,n.x);right=Math.max(right,n.x+n.width);top=Math.min(top,n.y);bottom=Math.max(bottom,n.y+n.height);}
+ const width=right-left,gap=60;let nextLeft=right+gap;
+ const obstacles=canvas.nodes.filter(n=>n.y<bottom+gap&&n.y+n.height>top-gap).sort((a,b)=>a.x-b.x);
+ for(const n of obstacles){if(n.x+n.width+gap<=nextLeft)continue;if(n.x>=nextLeft+width+gap)break;nextLeft=n.x+n.width+gap;}
+ const offset=nextLeft-left;
  const existingNames=new Set(canvas.nodes.map(n=>n.name)),historyByNode=new Map();
  for(const asset of canvas.assets||[])if(nodeMap.has(asset.sourceNodeId)){if(!historyByNode.has(asset.sourceNodeId))historyByNode.set(asset.sourceNodeId,[]);historyByNode.get(asset.sourceNodeId).push(asset);}
  for(const source of sources){
@@ -21,7 +29,7 @@ export function duplicateCards(doc,ids){
   let count=Object.hasOwn(sequence,base)&&Number.isSafeInteger(sequence[base])&&sequence[base]>=0?sequence[base]:0,name;
   do{name=base+' 副本'+(count?chinese(count):'');count++;}while(existingNames.has(name));
   Object.defineProperty(sequence,base,{value:count,writable:true,enumerable:true,configurable:true});existingNames.add(name);
-  const id=nodeMap.get(source.id),copy={...structuredClone(source),id,name,coreDuplicateBase:base,x:source.x+source.width+60,y:source.y};
+  const id=nodeMap.get(source.id),copy={...structuredClone(source),id,name,coreDuplicateBase:base,x:source.x+offset,y:source.y};
   copy.coreCopiedFrom={nodeId:source.id,mediaJobId:source.coreMediaJobId||source.generation?.jobId||source.coreCopiedFrom?.mediaJobId||'',depthJobId:source.coreDepthJobId||''};
   delete copy.coreMediaJobId;delete copy.coreDepthJobId;
   const assetMap=new Map();

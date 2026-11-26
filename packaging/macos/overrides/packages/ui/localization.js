@@ -2,6 +2,7 @@ import {corePluginCopy} from './core-plugin-copy.js';
 import {translateSyncFeedback} from './sync-feedback-copy.js';
 // Translate UI chrome only. Authored content, titles, paths and version payloads are excluded.
 const words={'作品模式':'Work mode','三维关系图谱':'3D knowledge graph','知识图谱':'Knowledge graph','文档对话':'Document chat','白板生成':'Whiteboard generation','文本编辑工具栏':'Text formatting toolbar','文件列表':'File list','收藏':'Favorites',
+ '后台更新中 · 本地稿已保留':'Background update in progress · Local draft retained','保存暂未完成 · 点击重试':'Save pending · Click to retry','保存冲突 · 点击处理':'Conflicting edits · Click to resolve','保存冲突 · 本地稿已保留':'Conflicting edits · Local draft retained','同一内容有不同修改，本地稿已保留，请比较后处理。':'The same content has different edits. Your local draft is retained; compare the versions to resolve them.',
  '新建文档':'New document','已自动保存':'Autosaved','保存历史版本':'Save history version','恢复采用前的卡片':'Restore previous card','账号占用待清理':'Account slot needs clearing','已解除本地占用':'Local slot released',
  '豆包账号占用':'Doubao account blocker','豆包插件 / 账号占用':'Doubao plugin / Account blocker','放弃并解除本地占用':'Abandon and release local slot','旧任务仍占用豆包账号，可放弃并解除本地占用；不会重发原任务。':'An old task still holds this Doubao account. Abandon it to release the local slot; it will not be resubmitted.','已解除本地账号占用；原记录与结果保留。':'Local account slot released; original records and results retained.','已解除本地账号占用；远端已提交任务可能仍在运行，原记录与结果保留。':'Local account slot released. A submitted remote task may still be running; original records and results are retained.',
  '设置':'Settings','主题':'Themes','文件目录':'Files','搜索全部笔记':'Search all notes','新建白板':'New whiteboard','新建笔记':'New note','新建资料库':'New notebook','回收站':'Trash','搜索笔记和卡片':'Search notes and cards','我的文件':'My files','新建文件夹':'New folder','导入文件':'Import file','本地资料库':'Local notebook','新标签页':'New tab','关闭标签页':'Close tab','专注模式':'Focus mode','文档历史':'Document history','导出当前文件':'Export file','查找与替换（Ctrl+F）':'Find and replace','已保存到本地':'Saved locally','待保存':'Unsaved changes','正在保存…':'Saving…','白板':'Whiteboard','阅读':'Read','富文本':'Rich text','本地笔记':'Local notes',
@@ -78,6 +79,16 @@ Object.assign(words,{
 Object.assign(words,{
  '正在新建并保存，请稍候':'Creating and saving; please wait',
  '正在新建白板…':'Creating whiteboard…','正在新建文档…':'Creating document…','新建未完成 · 请重试':'Creation did not finish · Retry',
+ '正在创建副本，请稍候':'Creating a copy, please wait',
+ '未创建副本：卡片编辑尚未保存，请点击顶部保存状态处理后重试。':'Copy not created: card edits are not saved. Click the save status at the top, then retry.',
+ '未创建副本：当前内容尚未保存，请点击顶部保存状态处理后重试。':'Copy not created: current changes are not saved. Click the save status at the top, then retry.',
+ '副本已创建并保存':'Copy created and saved',
+ '保存期间内容已更新，新草稿已保留，请再次保存':'Content changed while saving. The new draft is preserved; save again.',
+ '当前文件副本已保存，其他冲突稿仍保留，请继续处理保存冲突。':'The current file copy is saved. Other conflicting drafts are preserved; resolve the remaining conflicts.',
+ '当前文件副本已保存，其他文档的编辑已保留。':'The current file copy is saved. Edits in other documents are preserved.',
+ '卡片已变化，请重新选择后复制':'The cards changed. Select them again before copying.',
+ '当前卡片已不存在，生成栏已关闭':'The card no longer exists. The generation panel has closed.',
+ '副本已创建，暂未保存；请点击顶部保存状态继续保存，无需再次创建。':'Copy created but not yet saved. Click the save status at the top to save; do not create another copy.',
  '请切换到编辑模式后导入文件':'Switch to edit mode before importing files',
  '系统剪贴板不可用，请重试复制卡片':'The system clipboard is unavailable. Retry copying the cards.',
  '卡片属于另一个笔记本，请使用文档移动或导入以保留附件':'These cards belong to another notebook. Move or import the document to preserve attachments.',

@@ -1,0 +1,253 @@
+import {nodeRuntimeExecutable} from './node-runtime.mjs';
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { execFile, spawn } from "node:child_process";
+import { appDataRoot } from "./app-data.mjs";
+import { generationRuntimeCredentialsSnapshot } from "./generation-runtime-store.mjs";
+import {
+  getGenerationJob,
+  updateMediaGenerationJob,
+  listDreaminaQueueJobs,
+  deferDreaminaQueueForStartup,
+  resumeDeferredDreaminaQueue,
+} from "./generation-job-store.mjs";
+import { isDreaminaQueueReorderable, dreaminaReadYieldsToDispatch } from "../dreamina-task-queue.js";
+import { createMediaWorkerContinuation, dreaminaWorkerNeedsContinuation } from "./media-worker-continuation.mjs";
+
+const workerPath = resolve(dirname(fileURLToPath(import.meta.url)), "media-generation-worker.mjs");
+
+// A watchdog tick can arrive while the previous recovery worker is still
+// polling a long-running provider task. File locks protect correctness, but
+// spawning another Node process still creates avoidable CPU, memory and disk
+// pressure. Keep one live worker per target and let different jobs continue to
+// run concurrently.
+const activeWorkers = new Map();
+
+const workerKey = ({ jobId = "", scanMode = "" } = {}) => jobId
+  ? `job:${String(jobId)}`
+  : scanMode === "credential-rebind" ? "recovery-scan:credential-rebind" : "recovery-scan";
+
+const processIsAlive = (pid) => {
+  const value = Number(pid);
+  if (!Number.isInteger(value) || value <= 0) return false;
+  try {
+    process.kill(value, 0);
+    return true;
+  } catch (error) {
+    return error?.code !== "ESRCH";
+  }
+};
+
+const liveWorker = (key) => {
+  const worker = activeWorkers.get(key);
+  if (!worker || worker.exitCode !== null || worker.signalCode !== null) {
+    if (worker) activeWorkers.delete(key);
+    return null;
+  }
+  // Detached workers may exit without delivering the child `exit` event to a
+  // long-running Electron server (especially after the provider CLI closes
+  // its broker process).  Never let an in-memory ChildProcess object block the
+  // watchdog forever: the persisted PID is the authoritative liveness check.
+  if (!processIsAlive(worker.pid)) {
+    activeWorkers.delete(key);
+    return null;
+  }
+  return worker;
+};
+
+let queueSnapshotPromise = null;
+let queueSnapshotAt = 0;
+const canContinueDreaminaJob = async (job) => {
+  if (!isDreaminaQueueReorderable(job) && !(job.providerTaskId && ['running','polling'].includes(job.status))) return true;
+  if (!queueSnapshotPromise || Date.now() - queueSnapshotAt > 250) {
+    queueSnapshotAt = Date.now();
+    queueSnapshotPromise = listDreaminaQueueJobs().catch((error) => { queueSnapshotPromise = null; throw error; });
+  }
+  const jobs = await queueSnapshotPromise;
+  if (dreaminaReadYieldsToDispatch(job,jobs)) return false;
+  if (!isDreaminaQueueReorderable(job)) return true;
+  if (jobs.some((item) => item.request?.settings?.dreaminaCanvasMode!=='canvas' && item.request?.settings?.cliPath!=='shensi-dreamina-canvas' && item.queueStage === '准备提交' && !item.providerTaskId)) return false;
+  return jobs.find((item) => item.queuePosition === 1)?.id === job.id;
+};
+const continuation = createMediaWorkerContinuation({
+  readJob: (jobId) => getGenerationJob({ jobId }),
+  isRunning: (jobId) => Boolean(liveWorker(`job:${jobId}`)),
+  launch: (options) => launchMediaGenerationWorker(options),
+  canLaunch: canContinueDreaminaJob,
+});
+
+let queueRestore = null;
+const restoreDreaminaQueue = (options) => {
+  if (queueRestore) return queueRestore;
+  queueRestore = resumeDeferredDreaminaQueue().then(() => listDreaminaQueueJobs()).then(async (jobs) => {
+    for (const job of jobs) {
+      if (job.dreaminaQueuePolicy !== 'command-lease-v1' || !dreaminaWorkerNeedsContinuation(job)) continue;
+      if (!continuation.has(job.id)) continuation.track(job.id, { ...options, jobId: job.id, scanMode: '' });
+    }
+    await continuation.sweep();
+  }).catch(() => { /* Retry a local read on the existing watchdog; never submit from a failed read. */ })
+    .finally(() => { queueRestore = null; });
+  return queueRestore;
+};
+
+// Historical Dreamina jobs are restored automatically after the startup
+// boundary has been fenced.  The queue panel remains observation-only; it
+// never needs a manual "continue" action to resume persisted work.
+export const resumeDreaminaQueue = ({ appRoot, credentials, spawnImpl = spawn } = {}) =>
+  restoreDreaminaQueue({ appRoot, credentials, spawnImpl });
+
+// Startup only fences old unsubmitted queue records.  It deliberately does
+// not launch workers or acquire the Dreamina provider lease; a user's first
+// new submission can therefore claim the local queue turn immediately.
+export const deferDreaminaQueueAtStartup = ({ before = new Date().toISOString() } = {}) => deferDreaminaQueueForStartup({ before });
+
+const readWindowsCommandLine = (pid) => new Promise((resolveCommandLine,reject) => {
+  if (process.platform !== "win32") return resolveCommandLine("");
+  const powershell = `${process.env.SystemRoot || "C:\\Windows"}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`;
+  execFile(powershell, [
+    "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+    `$ErrorActionPreference='Stop'; (Get-CimInstance Win32_Process -Filter 'ProcessId=${Number(pid)}').CommandLine`,
+  ], { windowsHide: true, timeout: 5_000, maxBuffer: 64 * 1024 }, (error, stdout) => {
+    if(error)return reject(Object.assign(Error('无法核验本地执行器身份'),{code:'WORKER_INSPECTION_FAILED'}));
+    resolveCommandLine(String(stdout || "").trim());
+  });
+});
+
+const workerProcessMatchesJob = async (pid, jobId) => {
+  const value = Number(pid);
+  if (!Number.isInteger(value) || value <= 0 || !processIsAlive(value)) return false;
+  const key = `job:${String(jobId || "")}`;
+  const active = liveWorker(key);
+  if (active && Number(active.pid) === value) return true;
+  if (process.platform !== "win32") return false;
+  const commandLine = await readWindowsCommandLine(value);
+  if(!commandLine&&processIsAlive(value))throw Object.assign(Error('活动执行器的身份不可读取'),{code:'WORKER_INSPECTION_FAILED'});
+  return /media-generation-worker\.mjs/i.test(commandLine)
+    && new RegExp(`(?:^|[\\s"'])--job(?:=|[\\s]+)${String(jobId || "").replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}(?:$|[\\s"'])`, "i").test(commandLine);
+};
+
+export const findWindowsWorkerPids = (jobId,{execFileImpl=execFile}={}) => new Promise((resolvePids,reject) => {
+  if (process.platform !== "win32") return resolvePids([]);
+  if(!/^generation-[a-z0-9-]{20,}$/i.test(String(jobId || "")))return reject(Object.assign(Error('执行器任务编号无效'),{code:'WORKER_INSPECTION_FAILED'}));
+  const powershell = `${process.env.SystemRoot || "C:\\Windows"}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`;
+  const safeJobId = String(jobId);
+  // Packaged Electron workers are launched with the app executable rather
+  // than node.exe. Match the worker script and exact job argument across all
+  // process names so a service restart can still find the detached worker.
+  const command = `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*media-generation-worker.mjs*' -and $_.CommandLine -like '*--job*' -and $_.CommandLine -like '*${safeJobId}*' } | Select-Object -ExpandProperty ProcessId`;
+  execFileImpl(powershell, ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command], { windowsHide: true, timeout: 5_000, maxBuffer: 16 * 1024 }, (error, stdout) => {
+    if(error)return reject(Object.assign(Error('无法枚举本地执行器，停止状态尚未确认'),{code:'WORKER_INSPECTION_FAILED'}));
+    const rows=String(stdout||'').trim().split(/\s+/).filter(Boolean),pids=rows.map(Number);
+    if(pids.some(pid=>!Number.isInteger(pid)||pid<=0))return reject(Object.assign(Error('本地执行器查询返回无效结果'),{code:'WORKER_INSPECTION_FAILED'}));
+    resolvePids([...new Set(pids)]);
+  });
+});
+
+const terminateProcessTree = (pid) => new Promise((resolveTermination) => {
+  const value = Number(pid);
+  if (!Number.isInteger(value) || value <= 0) return resolveTermination(false);
+  if (process.platform !== "win32") {
+    try { process.kill(value, "SIGKILL"); } catch (error) { if (error?.code !== "ESRCH") return resolveTermination(false); }
+    return resolveTermination(true);
+  }
+  execFile("taskkill.exe", ["/PID", String(value), "/T", "/F"], { windowsHide: true, timeout: 15_000 }, (error) => resolveTermination(!error));
+});
+
+const waitForProcessExit = async (pid, timeoutMs = 5_000) => {
+  const deadline = Date.now() + Math.max(0, Number(timeoutMs) || 0);
+  while (processIsAlive(pid) && Date.now() < deadline) await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+  return !processIsAlive(pid);
+};
+
+export const mediaWorkerCredentialSnapshot = ({ jobId = "", credentials = null } = {}) => (
+  credentials && typeof credentials === "object"
+    ? credentials
+    : !jobId
+      ? generationRuntimeCredentialsSnapshot({ channels: ["image", "video", "audio"] })
+      : {}
+);
+
+export const launchMediaGenerationWorker = ({ appRoot, jobId = "", settings = null, credentials = null, scanMode = "", spawnImpl = spawn } = {}) => {
+  // A worker performs one durable observation, then exits. The watchdog's
+  // historical-task exclusion must not also exclude this session's new jobs.
+  if (!jobId && scanMode === "watchdog") void continuation.sweep();
+  const key = workerKey({ jobId, scanMode });
+  const existing = liveWorker(key);
+  if (existing) return { pid: existing.pid, jobId: String(jobId || ""), reused: true };
+  const args = [workerPath, "--app-root", resolve(appRoot || process.cwd())];
+  if (jobId) args.push("--job", String(jobId));
+  if (!jobId && scanMode) args.push("--scan-mode", String(scanMode));
+  const env = {
+    ...process.env,
+    SHENSI_DATA_ROOT: appDataRoot(),
+    ...(settings?.apiKey
+      ? { SHENSI_MEDIA_WORKER_SETTINGS: Buffer.from(JSON.stringify({ apiKey: String(settings.apiKey) }), "utf8").toString("base64url") }
+      : {}),
+  };
+  const credentialSnapshot = mediaWorkerCredentialSnapshot({ jobId, credentials });
+  if (Object.keys(credentialSnapshot || {}).length) {
+    env.SHENSI_MEDIA_WORKER_CREDENTIALS = Buffer.from(
+      JSON.stringify(credentialSnapshot),
+      "utf8",
+    ).toString("base64url");
+  }
+  const child = spawnImpl(nodeRuntimeExecutable(), args, {
+    cwd: resolve(appRoot || process.cwd()),
+    env,
+    shell: false,
+    windowsHide: true,
+    detached: true,
+    stdio: "ignore",
+  });
+  activeWorkers.set(key, child);
+  if (jobId) continuation.track(String(jobId), { appRoot, jobId, settings, credentials, scanMode, spawnImpl });
+  if (jobId && child.pid && /^generation-[a-z0-9-]{20,}$/i.test(String(jobId))) {
+    void updateMediaGenerationJob({
+      jobId: String(jobId),
+      patch: { workerPid: Number(child.pid), workerStartedAt: new Date().toISOString() },
+    }).catch(() => {});
+  }
+  child.once("exit", () => {
+    if (activeWorkers.get(key) === child) activeWorkers.delete(key);
+    if (jobId) void continuation.continueJob(String(jobId));
+  });
+  child.once("error", () => {
+    if (activeWorkers.get(key) === child) activeWorkers.delete(key);
+  });
+  child.unref();
+  return { pid: child.pid, jobId: String(jobId || ""), reused: false };
+};
+
+export const terminateMediaGenerationWorker = async ({ jobId = "", pid = 0 } = {}) => {
+  const normalizedJobId = String(jobId || "");
+  continuation.forget(normalizedJobId);
+  const active = normalizedJobId ? liveWorker(`job:${normalizedJobId}`) : null;
+  if (!normalizedJobId) return { terminated: false, verified: false, exited:false, pid: 0 };
+
+  // The server can restart while a detached worker continues running. In that
+  // case the persisted PID may be stale or may belong to a different process;
+  // always verify it and fall back to a fresh command-line scan before giving
+  // up. This keeps force-release usable after restart without ever killing an
+  // unrelated process that happens to reuse the old PID.
+  const candidates = [];
+  const addCandidate = (value) => {
+    const candidate = Number(value);
+    if (Number.isInteger(candidate) && candidate > 0 && !candidates.includes(candidate)) candidates.push(candidate);
+  };
+  addCandidate(active?.pid);
+  addCandidate(pid);
+  let inspectionFailed=false,terminatedAny=false,exitPending=false;
+  try{if(process.platform==='win32')for(const candidate of await findWindowsWorkerPids(normalizedJobId))addCandidate(candidate);}catch{inspectionFailed=true;}
+  for (const candidatePid of candidates) {
+    let matches;try{matches=await workerProcessMatchesJob(candidatePid, normalizedJobId);}catch{inspectionFailed=true;continue;}
+    if (!matches) continue;
+    const terminated = await terminateProcessTree(candidatePid);
+    const exited = terminated ? await waitForProcessExit(candidatePid) : false;
+    if (terminated && active && activeWorkers.get(`job:${normalizedJobId}`) === active) activeWorkers.delete(`job:${normalizedJobId}`);
+    terminatedAny||=terminated;exitPending||=!exited;
+  }
+  // An empty successful query proves absence; a denied/timed-out query does not.
+  // Recheck after termination so multiple/restarted workers cannot be missed.
+  try{if(process.platform==='win32')for(const candidatePid of await findWindowsWorkerPids(normalizedJobId))if(await workerProcessMatchesJob(candidatePid,normalizedJobId))exitPending=true;}catch{inspectionFailed=true;}
+  return {terminated:terminatedAny,verified:!inspectionFailed,exited:!inspectionFailed&&!exitPending,inspectionFailed,pid:candidates.at(-1)||0};
+};

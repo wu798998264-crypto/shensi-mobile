@@ -21,6 +21,7 @@ import {createConsoleService} from '../../packages/core/src/whiteboard-content.m
 import {configureBundledMedia} from './runtime-paths.mjs';
 import {exportDocuments} from '../../packages/core/src/document-export.mjs';
 import {documentImageAction} from './image-files.mjs';
+import {copyBoardCards} from './card-clipboard.mjs';
 import {nativeExtensionRuntime,nativeExtensionBytes} from '../../packages/core/src/native-extensions.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const uiRoot=join(root,'packages/ui');
@@ -144,7 +145,7 @@ export async function startServer({port=0,dataRoot,configFile,desktop={},officia
         if(p==='/api/skills/read'&&req.method==='POST')return send(res,200,await service.skills.read(body));
         if(p==='/api/settings/skills'&&req.method==='POST')return send(res,200,await service.skills.configure(body));
         if(p==='/api/references' && req.method==='GET')return send(res,200,await service.referenceIndex());
-        if(p==='/api/state' && req.method==='GET')return send(res,200,await service.load(id));
+        if(p==='/api/state' && req.method==='GET')return send(res,200,await service.load(id,{editing:res.editingView}));
         if(p==='/api/state' && req.method==='POST')return send(res,200,await service.save(id,body));
         if(p==='/api/state/resolve-local' && req.method==='POST')return send(res,200,await service.resolveLocalDraft(id,body));
         if(p==='/api/documents/export'&&req.method==='POST'){
@@ -175,6 +176,8 @@ export async function startServer({port=0,dataRoot,configFile,desktop={},officia
         if(p==='/api/markdown' && req.method==='POST')return send(res,200,{html:service.markdown(String(body.markdown??''))});
         if(p==='/api/attachment' && req.method==='POST')return send(res,200,await service.asset(id,body));
         if(p==='/api/document-image' && req.method==='POST')return send(res,200,await documentImageAction({service,desktop,body}));
+        if(p==='/api/board/copy' && req.method==='POST')return send(res,200,await copyBoardCards({service,desktop,body}));
+        if(p==='/api/board/clipboard' && req.method==='POST')return send(res,200,desktop.readCardClipboard?.()||{token:''});
         if(['/api/asset','/api/recycle/asset','/api/official/chat/music-audio'].includes(p) && req.method==='GET'){
           const info=p==='/api/official/chat/music-audio'?await official.handle('/chat/music-audio',Object.fromEntries(url.searchParams)):p==='/api/recycle/asset'?await official.handle('/recycle/media',{trashId:url.searchParams.get('trashId'),fileId:url.searchParams.get('fileId')}):await service.assetInfo(id,url.searchParams.get('path'),url.searchParams.get('documentId'));
           const fileStat=await stat(info.absolutePath,{bigint:true});
