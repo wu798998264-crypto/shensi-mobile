@@ -71,7 +71,7 @@ paths.volume='M11 5 6 9H3v6h3l5 4zM15 8q6 4 0 8M18 4q10 8 0 16';
 paths.book='M12 5v16 M12 5C8 2 4 3 2 4v15c4-1 7-1 10 2 3-3 6-3 10-2V4c-2-1-6-2-10 1';
 paths.theme=paths.settings;paths.settings='M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0';
 const icon=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[name]||paths.file}"/></svg>`;
-const noteIcon=glyph=>icon(({'\uE7A7':'undo','\uE7A6':'redo','\uE76D':'paint','\uE75C':'clear','\uE8FD':'list','\uE9D5':'checklist','\uE8E4':'alignLeft','\uE8E3':'alignCenter','\uE8E2':'alignRight','\uE71B':'link','\uF0E2':'table','\uE91B':'image','\uE848':'quote'})[glyph]||'file');
+const noteIcon=glyph=>['\uE76D','\uE75C'].includes(glyph)?uiGlyph(glyph):icon(({'\uE7A7':'undo','\uE7A6':'redo','\uE8FD':'list','\uE9D5':'checklist','\uE8E4':'alignLeft','\uE8E3':'alignCenter','\uE8E2':'alignRight','\uE71B':'link','\uF0E2':'table','\uE91B':'image','\uE848':'quote'})[glyph]||'file');
 paths.checklist='M4 6l2 2 3-4M12 6h8M4 15l2 2 3-4M12 15h8';paths.quote='M4 5h6v7H5c0 3-1 5-3 6M14 5h6v7h-5c0 3-1 5-3 6';
 const btn=(act,label,symbol='',extra='')=>`<button data-action="${act}" title="${label}" aria-label="${label}" ${extra}>${symbol?icon(symbol):h(label)}</button>`;
 const token=$('meta[name=shensi-session]').content;
@@ -94,7 +94,7 @@ const directoryHistory=createDirectoryHistory({api,modal,toast,libraryId:()=>lib
 const aboutPage=createAboutPage({api,libraryId:()=>libraryId,flush:save,updates:appUpdates});
 const documentOutline=createDocumentOutline();
 const settingAtlas=createSettingAtlas();
-const selectionEditor=createSelectionEditor({api,modal,toast,readerEnabled:()=>official.enabled('thirdparty.text-reader'),readSelection:()=>official.action('official-reader-selection'),enabled:()=>official.enabled('document-chat'),mode:()=>mode,current:()=>current()?{...current(),id:state.activeDocument}:null,libraryId:()=>libraryId,stamp:()=>stamp,shortcuts:()=>ui.shortcuts,flush:save,upload:()=>chooseAttachment(),settleModelSelection:()=>official.settleModelSelection(),applyResult:result=>{state=preserveWindowView(result.state,state);stamp=result.stateStamp;persistedState=structuredClone(result.state);dirty=false;render();}});
+const selectionEditor=createSelectionEditor({format:runRichCommand,api,modal,toast,readerEnabled:()=>official.enabled('thirdparty.text-reader'),readSelection:()=>official.action('official-reader-selection'),enabled:()=>official.enabled('document-chat'),mode:()=>mode,current:()=>current()?{...current(),id:state.activeDocument}:null,libraryId:()=>libraryId,stamp:()=>stamp,shortcuts:()=>ui.shortcuts,flush:save,upload:()=>chooseAttachment(),settleModelSelection:()=>official.settleModelSelection(),applyResult:result=>{state=preserveWindowView(result.state,state);stamp=result.stateStamp;persistedState=structuredClone(result.state);dirty=false;render();}});
 const windowControls=createWindowControls({flush:async()=>(await prepareWindowClose()).saved,toast});
 const workspaceSplits=createWorkspaceSplits({toast,restore:restoreDetachedTab,detach:(...args)=>detachedTabs.move(...args)});
 const detachedTabs=createDetachedTabs({restore:restoreDetachedTab,toast});
@@ -603,7 +603,18 @@ async function exportSelectedDocuments(documentIds,title){const id=libraryId;if(
 function exportNotebook(){return exportSelectedDocuments(Object.keys(state.documents),state.projectName||'我的笔记');}
 function exportOneDocument(id){if(!state.documents[id])return;return exportSelectedDocuments([id],state.documents[id].title);}
 function exportFolder(id){const folder=state.coreFolders.find(f=>f.id===id);if(!folder)return;const ids=new Set([id]),visit=f=>{for(const child of state.coreFolders.filter(v=>v.parentId===f.id&&!ids.has(v.id))){ids.add(child.id);visit(child);}};visit(folder);return exportSelectedDocuments(Object.entries(state.documents).filter(([,d])=>ids.has(d.coreFolderId)).map(([key])=>key),folder.name);}
-function runRichCommand(command,value){const editor=$('.editor');if(!editor)return;const batch=['undo','redo'].includes(command)&&richReplaceBatches.findLast(b=>editor.innerHTML===(command==='undo'?b.after:b.before));if(batch){const target=command==='undo'?batch.before:batch.after;for(let i=0;i<batch.count&&editor.innerHTML!==target;i++)if(!document.execCommand(command))break;}else document.execCommand(command,false,value);}
+function runRichCommand(command,value){
+ const editor=$('.editor');if(!editor)return;
+ const batch=['undo','redo'].includes(command)&&richReplaceBatches.findLast(b=>editor.innerHTML===(command==='undo'?b.after:b.before));
+ if(batch){const target=command==='undo'?batch.before:batch.after;for(let i=0;i<batch.count&&editor.innerHTML!==target;i++)if(!document.execCommand(command))break;}
+ else if(command==='removeFormat'){
+  // removeFormat alone leaves heading/code typography. Reset the paragraph too,
+  // using native edits so the existing undo/redo path can restore the entire action.
+  const before=editor.innerHTML;let count=0;
+  for(const [cmd,arg] of [['formatBlock','p'],['removeFormat'],['justifyLeft']])if(document.execCommand(cmd,false,arg))count++;
+  if(before!==editor.innerHTML)richReplaceBatches.push({before,after:editor.innerHTML,count});
+ }else document.execCommand(command,false,value);
+}
 function syncRichToolbar(){
   const toolbar=$('.note-rich-toolbar');if(!toolbar)return;const primary=toolbar.querySelector('.note-toolbar-primary'),more=toolbar.querySelector('.note-toolbar-more'),expand=toolbar.querySelector('.note-toolbar-expand'),right=toolbar.querySelector('.note-toolbar-right');
   if(!official.enabled('editor-toolbar')){primary.hidden=true;more.hidden=true;expand.hidden=true;return;}
@@ -631,6 +642,7 @@ function bindEditor(){
   bindExternalDrop($('.editor-scroll'));
   $$('.toolbar [data-command]').forEach(b=>{b.onmousedown=e=>e.preventDefault();b.onclick=()=>{if(mode!=='rich'){toast('请切换到编辑模式');return;}editor.focus();runRichCommand(b.dataset.command,b.dataset.formatValue);editor.oninput();};});
   editorColors.bind();
+  $('.toolbar [data-action=find]')?.addEventListener('mousedown',e=>e.preventDefault());
   $('#editor-mode').onchange=async e=>{try{await changeEditorMode(e.target.value);}catch(error){toast(error.message);e.target.value=mode;}};
   if(mode==='atlas')settingAtlas.mount({host:$('.editor-scroll'),doc:current(),context:settingContext(state,current(),official.enabled('works')),markdown:async text=>(await api('/api/markdown',{markdown:text})).html,assetUrl,outline:documentOutline,openDocument,openLink:async url=>{const result=await api('/api/open-link',{url});if(!result.opened)window.open(result.url,'_blank','noopener');},onError:error=>toast(error.message)});
   else documentOutline.mount();selectionEditor.mount();syncRichToolbar();toolbarResizeObserver=new ResizeObserver(syncRichToolbar);toolbarResizeObserver.observe($('.note-rich-toolbar'));
@@ -902,7 +914,7 @@ async function runAction(action){try{
   if(action==='close-panel'){if(panel==='trash'){panel='';render();return;}panel='';document.body.classList.remove('full-panel');renderPanel();return;}
   if(action==='close-trash'){panel='';render();return;}
   if(action==='trash'){if(!(await save()))return;panel='trash';document.body.classList.remove('full-panel');render();return;}
-  if(action==='find'){findOpen=!findOpen;render();$('#find-query')?.focus();return;}if(action==='close-find'){findOpen=false;render();return;}
+  if(action==='find'){const text=selectedDocumentText($('.editor'),$('.markdown-source'));findOpen=true;render();const input=$('#find-query');if(input){if(text){input.value=text;input.dispatchEvent(new Event('input'));}input.focus();input.select();}return;}if(action==='close-find'){findOpen=false;render();return;}
   if(action==='find-next'){const q=$('#find-query').value;if(current().canvas){const matches=current().canvas.nodes.filter(n=>q&&n.text?.toLowerCase().includes(q.toLowerCase()));const index=matches.findIndex(n=>selected.has(n.id));const node=matches[(index+1)%matches.length];if(node)openNode(node.id,'preview');else toast('没有匹配内容');}else if(!documentFinder.next())toast('没有匹配内容');return;}
   if(action==='replace-all'){const q=$('#find-query').value,r=$('#find-replacement').value;if(!q)return;const answer=await modal('替换全部匹配','<p>将在当前文档中替换。若需保留替换前的历史，请先点击“保存历史版本”。</p>');if(answer.value!=='ok')return;if(current().canvas){pushBoardUndo();for(const node of current().canvas.nodes)if(node.text)node.text=node.text.split(q).join(r);boardChanged();renderPanel();}else if(mode==='markdown'){$('.markdown-source').value=$('.markdown-source').value.split(q).join(r);$('.markdown-source').oninput();}else{const editor=$('.editor'),before=editor.innerHTML,count=replaceEditorText(editor,q,r);if(count)richReplaceBatches.push({before,after:editor.innerHTML,count});editor.oninput();}return;}
   if(action==='import'){$('#import-input').click();return;}if(action==='export')return exportDocument();
@@ -932,7 +944,7 @@ async function executeShortcut(id){
   const commands={selectionBold:['bold'],selectionItalic:['italic'],selectionParagraph:['formatBlock','p'],selectionHeading1:['formatBlock','h1'],selectionHeading2:['formatBlock','h2'],selectionHeading3:['formatBlock','h3'],selectionOrderedList:['insertOrderedList'],selectionBulletList:['insertUnorderedList'],clearDocumentFormatting:['removeFormat']};
   if(id==='selectAllDocument'){const range=document.createRange();range.selectNodeContents(editor);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);return;}
   if(id==='selectionChecklist'){document.execCommand('insertUnorderedList');const selection=window.getSelection();let list=selection.anchorNode?.parentElement?.closest('ul');if(list&&editor.contains(list)){list.dataset.checklist='true';}if(list&&editor.contains(list))for(const item of list.children)if(!item.textContent.startsWith('☐ '))item.prepend(document.createTextNode('☐ '));editor.oninput();return;}
-  if(commands[id]){document.execCommand(commands[id][0],false,commands[id][1]);editor.oninput();}
+  if(commands[id]){runRichCommand(commands[id][0],commands[id][1]);editor.oninput();}
 }
 document.addEventListener('keydown',e=>{
  if(libraryTransition&&!$('#dialog').open){e.preventDefault();return;}

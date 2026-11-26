@@ -58,7 +58,7 @@ export function createSelectionEditor(context){
  function format(button){
   if(!saved?.range||context.mode()!=='rich')return;const el=editor();el.focus({preventScroll:true});const selection=getSelection();selection.removeAllRanges();selection.addRange(saved.range);const command=button.dataset.localFormat;
   if(command==='checklist'){document.execCommand('insertUnorderedList');const list=selection.anchorNode?.parentElement?.closest('ul');if(list)for(const item of list.children)if(!/^[☐☑] /.test(item.textContent))item.prepend(document.createTextNode('☐ '));}
-  else document.execCommand(command,false,button.dataset.value||null);el.oninput();capture();
+  else context.format(command,button.dataset.value||null);el.oninput();capture();
  }
  async function submit(){
   const instruction=toolbar.querySelector('input').value.trim();if(!instruction||!saved||busy)return;const selection=saved;busy=true;toolbar.querySelector('button[type=submit]').disabled=true;

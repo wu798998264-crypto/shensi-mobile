@@ -1,5 +1,5 @@
-name: Build Shensi 0.0.53 for macOS
-run-name: Shensi 0.0.53 macOS packages
+name: Build Shensi 0.0.54 for macOS
+run-name: Shensi 0.0.54 macOS packages
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: shensi-macos-0.0.53
+  group: shensi-macos-0.0.54
   cancel-in-progress: false
 jobs:
   build:
@@ -80,9 +80,9 @@ jobs:
           set -euo pipefail
           app="$(find "$WORK/dist-$ARCH" -maxdepth 2 -name '*.app' -print -quit)"
           test -n "$app"
-          hdiutil verify "$WORK/dist-$ARCH/Shensi-0.0.53-$ARCH.dmg"
+          hdiutil verify "$WORK/dist-$ARCH/Shensi-0.0.54-$ARCH.dmg"
           node packaging/macos/after-sign.cjs "$app" "$ARCH"
-          (cd "$WORK/dist-$ARCH" && shasum -a 256 "Shensi-0.0.53-$ARCH.dmg" > SHA256SUMS)
+          (cd "$WORK/dist-$ARCH" && shasum -a 256 "Shensi-0.0.54-$ARCH.dmg" > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.arch }}

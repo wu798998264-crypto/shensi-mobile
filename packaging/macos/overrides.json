@@ -5,11 +5,11 @@
   },
   {
     "path": "packages/ui/ui-glyph.js",
-    "sha256": "c2868c4c5eaa4c84409d65d0912fdf5cb0122d5af4ddafca0dcf6dedbb8984ac"
+    "sha256": "b3a4fdab0019356625332ad782dc7919d9728d09f33826fe73effee543e3826b"
   },
   {
     "path": "packages/ui/app.js",
-    "sha256": "69a01b4a033226d1320492b10c71ab59c6195ee5686285b296cd8f38dbc33b74"
+    "sha256": "f40f6279285f0b3b19616d73bd6c18d6d3756936a3d1f761b1ef68c4a42a83f7"
   },
   {
     "path": "packages/ui/book-picker.js",
@@ -37,7 +37,7 @@
   },
   {
     "path": "packages/ui/selection-edit.js",
-    "sha256": "22f040029588f21bdbe49b29692887645339b029a1cbc471b44c5b9c5a658039"
+    "sha256": "072093e2786e449674cb5340cc91970e8ee492244b40a9e78d7c91b76b3fb3e5"
   },
   {
     "path": "packages/ui/writing-timer.js",
@@ -502,5 +502,9 @@
   {
     "path": "resources/skills/chushou/scripts/novel-source/quanben-book-source.mjs",
     "sha256": "8c1a02398425390ea2a8a865f5032d9498964e46f1ca3b5c935c262bf4e28103"
+  },
+  {
+    "path": "packages/ui/window-controls.js",
+    "sha256": "b536a8b03664a6941b094ca49a5717b282eb6057340962030f381c9c128b8240"
   }
 ]
