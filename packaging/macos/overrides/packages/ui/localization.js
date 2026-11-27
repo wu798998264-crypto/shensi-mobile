@@ -112,6 +112,8 @@ const updateRules=[[/^发现新版本 (.+)$/,'Version $1 is available'],[/^正�
 Object.assign(words,{'导出文本卡片':'Export text card','导出文档':'Export document','导出格式':'Export format','文件格式':'File format','已导出':'Exported','Word / WPS（.docx）':'Word / WPS (.docx)','PDF（.pdf）':'PDF (.pdf)','Markdown（.md）':'Markdown (.md)','纯文本（.txt）':'Plain text (.txt)','剧本格式（.docx）':'Screenplay (.docx)','电子书 EPUB（.epub）':'EPUB e-book (.epub)','HTML（保留富文本）':'HTML (preserve formatting)','导出已保存正文，不修改文档或历史。PDF 为原版基础文字排版；复杂富文本可使用 HTML。':'Export saved content without changing documents or history. PDF uses basic text layout; use HTML for complex formatting.'});
 export function translate(text,language){
  if(language!=='en-US')return text;if(words[text])return words[text];
+ const updateTime=text.match(/^(最近检查|下次自动检查)：(.+)$/);if(updateTime)return (updateTime[1]==='最近检查'?'Last checked: ':'Next automatic check: ')+updateTime[2];
+ const updateNetwork=text.match(/^无法连接更新服务，请检查网络或代理后重试（([\s\S]+)）$/);if(updateNetwork)return 'Unable to reach the update service. Check your network or proxy and retry ('+updateNetwork[1]+').';
  const updateMessage=text.match(/^(更新检查未完成|下载失败|设置加载失败|存储设置读取失败)：([\s\S]+)$/);
  if(updateMessage)return ({'更新检查未完成':'Update check failed','下载失败':'Download failed','设置加载失败':'Could not load settings','存储设置读取失败':'Could not load storage settings'})[updateMessage[1]]+': '+translate(updateMessage[2],language);
  

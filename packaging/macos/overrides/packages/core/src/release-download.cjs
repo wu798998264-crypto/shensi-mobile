@@ -39,7 +39,7 @@ function createElectronReleaseFetch(net, session) {
 
 const githubHosts = new Set(['github.com', 'release-assets.githubusercontent.com', 'objects.githubusercontent.com']);
 const retryable = error => error?.retryable === true || ['TimeoutError', 'TypeError'].includes(error?.name)
-  || /ECONNRESET|ETIMEDOUT|UND_ERR_|ERR_CONNECTION_|ERR_NETWORK_|ERR_INTERNET_|ERR_TIMED_OUT|ERR_CONTENT_LENGTH_MISMATCH|ERR_HTTP2_PROTOCOL_ERROR|socket hang up|terminated|network error/i.test([error?.code,error?.message].join(' '));
+  || /ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|UND_ERR_|ERR_CONNECTION_|ERR_NETWORK_|ERR_INTERNET_|ERR_NAME_NOT_RESOLVED|ERR_PROXY_CONNECTION_FAILED|ERR_TUNNEL_CONNECTION_FAILED|ERR_TIMED_OUT|ERR_CONTENT_LENGTH_MISMATCH|ERR_HTTP2_PROTOCOL_ERROR|socket hang up|terminated|network error/i.test([error?.code,error?.message].join(' '));
 const transient = message => Object.assign(new Error(message), {retryable:true});
 const badContent = message => Object.assign(new Error(message), {invalidContents:true});
 const missing = async file => { try { return await lstat(file); } catch (error) { if (error.code !== 'ENOENT') throw error; } };

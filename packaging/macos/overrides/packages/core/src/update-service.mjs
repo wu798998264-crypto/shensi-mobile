@@ -9,6 +9,7 @@ const macCatalog='https://raw.githubusercontent.com/'+NOTES_UPDATE_REPOSITORY+'/
 export const NOTES_PACKAGE_VERSION=JSON.parse(readFileSync(new URL('../../../package.json',import.meta.url),'utf8')).version;
 export const NOTES_UPDATE_INTERVAL_MS=60*60*1000;
 export const NOTES_UPDATE_MIN_CHECK_MS=60*1000;
+const retryDelay=failures=>Math.min(300000,30000*2**Math.min(failures-1,4));
 const packageVersion=NOTES_PACKAGE_VERSION;
 const versionParts=value=>typeof value==='string'&&/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/.exec(value);
 export function compareNotesVersions(left,right){
@@ -21,15 +22,18 @@ export function compareNotesVersions(left,right){
 // All windows share checks/downloads. Checking never downloads or runs an installer.
 export function createNotesUpdateService({dataRoot,now=Date.now,fetchImpl=fetch,...options}){
  const currentVersion=options.currentVersion||packageVersion,controller=new AbortController();
- let result={currentVersion,status:'unchecked',available:false,message:''},lastCheck=null,retryAt=0,checkFlight,downloadFlight,downloadState={status:'idle'},verifiedPath='';
- const snapshot=()=>({...result,available:result.status==='available',downloadState:{...downloadState},pollIntervalMs:NOTES_UPDATE_INTERVAL_MS});
+ let result={currentVersion,status:'unchecked',available:false,message:''},lastCheck=null,retryAt=0,nextCheckAt=0,failures=0,checkFlight,downloadFlight,downloadState={status:'idle'},verifiedPath='';
+ const snapshot=()=>({...result,available:result.status==='available',downloadState:{...downloadState},nextCheckAt:nextCheckAt?new Date(nextCheckAt).toISOString():undefined,pollIntervalMs:nextCheckAt?Math.max(1000,nextCheckAt-now()):NOTES_UPDATE_INTERVAL_MS});
  async function check({automatic=false}={}){
   if(checkFlight)return checkFlight;
   if(downloadFlight)return snapshot();
-  if(now()<retryAt||lastCheck!==null&&now()-lastCheck<(automatic?NOTES_UPDATE_INTERVAL_MS:NOTES_UPDATE_MIN_CHECK_MS))return snapshot();
+  // Explicit retry after failure is immediate; an upstream Retry-After remains binding.
+  if(now()<retryAt||automatic&&now()<nextCheckAt||!automatic&&!failures&&lastCheck!==null&&now()-lastCheck<NOTES_UPDATE_MIN_CHECK_MS)return snapshot();
   checkFlight=(async()=>{lastCheck=now();const next=await checkNotesUpdate({...options,currentVersion,fetchImpl,now});if(downloadFlight)return snapshot();retryAt=Date.parse(next.retryAt)||0;
+   failures=['error','unavailable'].includes(next.status)?failures+1:0;
+   nextCheckAt=retryAt>now()?retryAt:now()+(failures?retryDelay(failures):NOTES_UPDATE_INTERVAL_MS);
    // A transient outage cannot dismiss a known, verified newer release.
-   if(next.status==='error'&&result.status==='available')result={...result,checkedAt:next.checkedAt,message:next.message,code:next.code,retryAt:next.retryAt};
+   if(next.status==='error'&&result.status==='available')result={...result,checkedAt:next.checkedAt,message:next.message,code:next.code,retryAt:next.retryAt,lastCheckStatus:'error'};
    else{if(result.latestVersion!==next.latestVersion||next.status!=='available'){downloadState={status:'idle'};verifiedPath='';}result=next;}
    return snapshot();
   })().finally(()=>{checkFlight=null;});return checkFlight;
@@ -78,12 +82,14 @@ export async function checkNotesUpdate({currentVersion=packageVersion,feed=proce
    if(!validRepository(repository))throw Error('更新仓库无效');
    // GitHub's documented latest-asset link avoids the shared anonymous REST quota.
    // Resolve its fixed release tag before trusting the manifest or any CDN redirect.
-   const latest='https://github.com/'+repository+'/releases/latest/download/shensi-notes-update.json',prefix='/'+repository+'/releases/download/';
+   // Mac releases have their own immutable attachment, independently of the raw catalog.
+   const filename=platform==='darwin'?'shensi-notes-macos-update.json':'shensi-notes-update.json';
+   const latest='https://github.com/'+repository+'/releases/latest/download/'+filename,prefix='/'+repository+'/releases/download/';
    let url=latest;
    for(let i=0;i<5;i++){
     const parsed=new URL(url);if(parsed.protocol!=='https:'||parsed.username||parsed.password||parsed.port||!['github.com','release-assets.githubusercontent.com','objects.githubusercontent.com'].includes(parsed.hostname))throw Error('更新清单来源不可信');
     if(parsed.hostname==='github.com'){
-     if(i!==0||url!==latest){const match=parsed.pathname.startsWith(prefix)&&/^([^/]+)\/shensi-notes-update\.json$/.exec(parsed.pathname.slice(prefix.length)),parts=match&&versionParts(match[1].replace(/^v/,''));if(!parts||parts[4]||parsed.search||parsed.hash||tag&&tag!==match[1])throw Error('官方更新发布身份无效');tag=match[1];}
+     if(i!==0||url!==latest){const match=parsed.pathname.startsWith(prefix)&&new RegExp('^([^/]+)/'+filename.replaceAll('.','\\.')+'$').exec(parsed.pathname.slice(prefix.length)),parts=match&&versionParts(match[1].replace(/^v/,''));if(!parts||parts[4]||parsed.search||parsed.hash||tag&&tag!==match[1])throw Error('官方更新发布身份无效');tag=match[1];}
     }else if(!tag)throw Error('更新清单缺少官方固定版本');
     const response=await fetchImpl(url,{redirect:'manual',signal:AbortSignal.timeout(30000),headers:{Accept:'application/octet-stream','User-Agent':'Shensi-Notes-Updater'}});
     if([301,302,303,307,308].includes(response.status)){const next=response.headers.get('location');await response.body?.cancel();if(!next)throw Error('更新清单重定向无效');url=new URL(next,url).href;continue;}
@@ -106,6 +112,7 @@ export async function checkNotesUpdate({currentVersion=packageVersion,feed=proce
    const alternate=await checkNotesUpdate({currentVersion,feed:'',repository,platform,arch,fetchImpl,now});
    return {...alternate,usedReleaseManifestFallback:true};
   }
-  return {...base,status:'error',message:'更新检查未完成：'+error.message,...error.code==='UPDATE_RATE_LIMITED'?{code:error.code,retryAt:error.retryAt}:{}};
+  const reason=unavailable?'无法连接更新服务，请检查网络或代理后重试（'+error.message+'）':error.message;
+  return {...base,status:'error',message:'更新检查未完成：'+reason,...error.code==='UPDATE_RATE_LIMITED'?{code:error.code,retryAt:error.retryAt}:{}};
  }
 }

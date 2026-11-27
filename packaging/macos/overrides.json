@@ -273,15 +273,15 @@
   },
   {
     "path": "packages/ui/about-page.js",
-    "sha256": "3821de56158f6989605a58c3eaedcd13e5e63f986dc29dc2f1a1f1b0e1b5b6bc"
+    "sha256": "3c06a5ede9a204200fba44ef0e6bd578bcbd82c279e706cf9461830dad5e65e9"
   },
   {
     "path": "packages/ui/app-updates.js",
-    "sha256": "05ea94d86c6e20f148b2367b856207c7bbeb18947a3f5bf9fa94ec7713269302"
+    "sha256": "e70c9af0b5da5b2f1af1c9b39617371ccae8f6e0e585b2705761e8a3f6e39698"
   },
   {
     "path": "packages/ui/localization.js",
-    "sha256": "b20cbc9cfe9e74e433e54dc4966f0f0e7317927a2db7b1ca512924c1272ebea8"
+    "sha256": "6cce6db51928fbd566ffebb6f1ab75f5f79bc9942da3b0e07b34e7945b40e544"
   },
   {
     "path": "packages/ui/plugin-storage-settings.js",
@@ -297,11 +297,11 @@
   },
   {
     "path": "packages/core/src/release-download.cjs",
-    "sha256": "3b900fd3f0642a9768e7a134b86abbdb4f0cb2ca1ac87798a412da14030f3952"
+    "sha256": "40265c59ddd0857e9b44b640414f40bbeec3b6256e46b7f9ff9a984e3c1e5d4c"
   },
   {
     "path": "packages/core/src/update-service.mjs",
-    "sha256": "bc0dfb4f27bcccc5ea495040ae38a73e78b9da8a9e69f6e9e23970f74fbc1963"
+    "sha256": "98df3555e902460f64f503fa178cb2e9e482eb81342dc0adbf922be9a8161d3b"
   },
   {
     "path": "apps/desktop/doubao-driver.mjs",

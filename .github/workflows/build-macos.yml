@@ -1,5 +1,5 @@
-name: Build Shensi 0.0.55 for macOS
-run-name: Shensi 0.0.55 macOS packages
+name: Build Shensi 0.0.56 for macOS
+run-name: Shensi 0.0.56 macOS packages
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: shensi-macos-0.0.55
+  group: shensi-macos-0.0.56
   cancel-in-progress: false
 jobs:
   build:
@@ -80,9 +80,9 @@ jobs:
           set -euo pipefail
           app="$(find "$WORK/dist-$ARCH" -maxdepth 2 -name '*.app' -print -quit)"
           test -n "$app"
-          hdiutil verify "$WORK/dist-$ARCH/Shensi-0.0.55-$ARCH.dmg"
+          hdiutil verify "$WORK/dist-$ARCH/Shensi-0.0.56-$ARCH.dmg"
           node packaging/macos/after-sign.cjs "$app" "$ARCH"
-          (cd "$WORK/dist-$ARCH" && shasum -a 256 "Shensi-0.0.55-$ARCH.dmg" > SHA256SUMS)
+          (cd "$WORK/dist-$ARCH" && shasum -a 256 "Shensi-0.0.56-$ARCH.dmg" > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.arch }}
@@ -91,6 +91,17 @@ jobs:
             build/macos-release/dist-${{ matrix.arch }}/Shensi-*.dmg
             build/macos-release/dist-${{ matrix.arch }}/SHA256SUMS
           if-no-files-found: error
+      - name: Verify update recovery from the packaged application
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$(find "$WORK/dist-$ARCH" -maxdepth 2 -name '*.app' -print -quit)"
+          export SHENSI_TEST_PACKAGE_ROOT="$app/Contents/Resources/app"
+          export SHENSI_TEST_EVIDENCE_DIR="build/ui-$ARCH/update-recovery"
+          node scripts/test-notes-update.mjs
+          node scripts/test-app-update-notice.mjs
+          node scripts/test-release-download-resume.mjs
+          SHENSI_CORE_BUNDLED_PLUGINS=0 node scripts/test-app-update-notice-electron.mjs
       - name: Verify text card exports and novel references
         shell: bash
         run: |
