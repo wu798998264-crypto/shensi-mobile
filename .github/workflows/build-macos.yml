@@ -101,7 +101,7 @@ jobs:
           node scripts/test-notes-update.mjs
           node scripts/test-app-update-notice.mjs
           node scripts/test-release-download-resume.mjs
-          SHENSI_CORE_BUNDLED_PLUGINS=0 node scripts/test-app-update-notice-electron.mjs
+          ELECTRON_SKIP_BINARY_DOWNLOAD= SHENSI_CORE_BUNDLED_PLUGINS=0 npm exec --yes --package=electron@42.4.0 -- electron scripts/test-app-update-notice-electron.mjs
       - name: Verify text card exports and novel references
         shell: bash
         run: |
