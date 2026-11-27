@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {EventEmitter} from 'node:events';
+import {testPackageUrl} from './lib/test-package-path.mjs';
+const {spawnLocalCodexAppServer,codexLoopbackEnvironment}=await import(testPackageUrl('packages/official/legacy/cli/codex-launch.mjs'));
+const original={HTTP_PROXY:'http://127.0.0.1:7890',HTTPS_PROXY:'http://127.0.0.1:7890',ALL_PROXY:'socks5://127.0.0.1:7890',NO_PROXY:'intranet.example',no_proxy:'.local',SYNTHETIC:'retained'},snapshot={...original};
+let observed;
+await spawnLocalCodexAppServer({env:original,launchResolver:async()=>({executable:'synthetic-codex',prefixArgs:[]}),spawnProcess:(_exe,_args,options)=>{observed=options.env;const child=new EventEmitter();queueMicrotask(()=>child.emit('spawn'));return child;}});
+const expected={...snapshot,NO_PROXY:'intranet.example,.local,127.0.0.1,localhost,::1'};delete expected.no_proxy;
+assert.deepEqual(original,snapshot);assert.deepEqual(observed,expected);
+assert.equal(codexLoopbackEnvironment({NO_PROXY:'*'}).NO_PROXY,'*,127.0.0.1,localhost,::1');
+assert.equal(codexLoopbackEnvironment({}).NO_PROXY,'127.0.0.1,localhost,::1');
+console.log('PASS local provider bypass; remote proxy settings and caller environment unchanged');

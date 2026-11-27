@@ -554,5 +554,9 @@
   {
     "path": "packages/ui/attachment-preview.js",
     "sha256": "25d1c9a4e2f09f03f2f0f5e8fc2818b228464f4ee03fd07af141bf6bf08f9c3d"
+  },
+  {
+    "path": "packages/official/legacy/cli/codex-launch.mjs",
+    "sha256": "42f842a5680cc159ebdcd525beae8dd09132529f2764f0b07a12476a22121449"
   }
 ]

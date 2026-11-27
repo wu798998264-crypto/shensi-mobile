@@ -116,6 +116,7 @@ jobs:
           export SHENSI_TEST_PACKAGE_ROOT="$app/Contents/Resources/app"
           export SHENSI_TEST_EVIDENCE_DIR="build/ui-$ARCH/media-formats"
           node scripts/test-package-media-formats.mjs
+          node scripts/test-codex-loopback-proxy.mjs
       - name: Verify real short-drama download and whiteboard handoff
         shell: bash
         env:
