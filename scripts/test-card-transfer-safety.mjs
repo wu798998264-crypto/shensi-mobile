@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile} from 'node:fs/promises';
+import {mkdtemp,readFile,realpath} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const packageRoot=resolve(process.env.SHENSI_TEST_PACKAGE_ROOT||'.');
 const {startServer}=await import(pathToFileURL(join(packageRoot,'apps/desktop/server.mjs')));
 let clipboard;
-const host=await startServer({dataRoot:await mkdtemp(join(tmpdir(),'shensi-transfer-')),desktop:{copyCardFiles:async payload=>{clipboard=payload;return {copied:true};}}});
+const dataRoot=await mkdtemp(join(await realpath(tmpdir()),'shensi-transfer-'));
+const host=await startServer({dataRoot,desktop:{copyCardFiles:async payload=>{clipboard=payload;return {copied:true};}}});
 const svc=host.service;
 try{
  const [source]=await svc.list();const dest=await svc.create('目标笔记本');
