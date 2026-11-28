@@ -5,7 +5,7 @@
   },
   {
     "path": "resources/skills/chushou/bundle-manifest.json",
-    "sha256": "9f39ca479dc9db90feaf75f6b62b576f8ee3551773bca33de35d55f5ae12199c"
+    "sha256": "9c253a1c3920d9df1ec102052e0579cb09ca0de7ec5d1e494c43068b4a1dbd61"
   },
   {
     "path": "resources/skills/chushou/references/hongguo-download.md",
@@ -25,11 +25,11 @@
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_provider.py",
-    "sha256": "4c5d106a11f73d4b41498baef6c260ebd824e9c7b5bda4a794f2fec3884555f7"
+    "sha256": "62d3d2f4eed92daf9649ac539c51bd49c8b3c5ef1157210e1ba85a98218dc964"
   },
   {
     "path": "packages/shared/chushou-snapshot.js",
-    "sha256": "87138b07cbff8e96981a454e930ed87f31f29e027a91e0dc9b58654719f0a786"
+    "sha256": "0318512a8b04bd5799c54465fef8c415feff6bc3cd1db2a4a9aa97ef0e974ad8"
   },
   {
     "path": "resources/skills/chushou/scripts/hongguo_vendor/cli.cjs",

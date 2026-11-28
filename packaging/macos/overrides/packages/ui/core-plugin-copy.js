@@ -1,5 +1,13 @@
 // Interface copy only. Never use this dictionary to rewrite stored documents.
 export const corePluginCopy={
+ '请先登录神思账号，再购买算力积分套餐。可在账户页查看算力权益。':'Sign in to Shensi to buy compute credits. You can view your credit plan on the account page.',
+ '算力购买状态尚未联网核实，请刷新账号状态；不会使用缓存解锁官方模型。':'Refresh your account status to verify your purchase online and unlock official models.',
+ '请购买算力积分套餐后使用官方模型。购买开放状态及可用套餐请查看账户页。':'A compute credit plan is required to use official models. See the account page for purchase availability and plans.',
+ '算力套餐已到期或暂停，请核对套餐权益；已有积分与流水保留。':'Your compute plan has expired or is paused. Check your plan details. Your balance and transaction history are saved.',
+ '已购买算力套餐；官方模型供应暂未提供服务。':'Your compute plan is active. Official models are temporarily unavailable.',
+ '官方算力已解锁，使用真实供应目录；积分不足时不能生成。':'Official compute is unlocked. Available models are listed in the provider catalog. Generation requires sufficient credits.',
+ '请先核验账号权益':'Verify your account benefits first',
+ '算力套餐及当前购买状态可在「神思账户」查看。':'Open Shensi account to see credit plans and purchase availability.',
  '配置反重力生图':'Set up Antigravity image generation','输出能力与模型映射':'Output capabilities and models','新卡默认':'Default for new cards','设为新卡默认':'Use for new cards','关闭此卡自动展开':'Turn off auto-open for this card','收起':'Collapse','笔记同步':'Notebook sync','坚果云同步设置':'Nutstore sync settings','提交广场审核':'Submit for marketplace review','保存并提交广场审核':'Save and submit for marketplace review','批量复制':'Copy multiple files','复制文件链接':'Copy local file link','复制（本笔记本内）':'Copy within this notebook','复制所选文档（本笔记本内）':'Copy selected documents within this notebook','生成图片':'Generate images','当前未开放在线购买':'Online purchases are currently closed','购买状态待联网核验':'Purchase availability has not been verified','当前没有可购买的套餐':'No plans currently available','使用自己的坚果云账号同步':'Sync with your Nutstore account',
  '本机离线语音':'Offline voice on this device',
  '离线语音输入':'Offline voice input','离线朗读':'Offline read aloud','停止朗读':'Stop reading',

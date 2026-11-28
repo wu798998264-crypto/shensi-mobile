@@ -1,10 +1,10 @@
 {
   "schema": 2,
   "skill": "chushou",
-  "capturedAt": "2026-11-23",
+  "capturedAt": "2026-11-28",
   "source": "public execution-only skill; no personal creative rules or runtime data",
-  "mainSha256": "17570d87817998bba058d74b3a9c4f01dd1884504145994840dd01445be47055",
-  "revision": "d1dee7bdb4f1c2ff910965d10ea85575fe30f7a5c6b8f868f4f4e5c0497b9900",
+  "mainSha256": "bedd766ca19c2740aaa04822136315cda199c222bf65e34b91ff0dcec39eba8a",
+  "revision": "ccd205761a5ac1187fa48b8c0f3f10722cd34ef9c7a74e1d806ad655bad6c8f4",
   "files": [
     {
       "path": "LICENSE",
@@ -18,8 +18,8 @@
     },
     {
       "path": "SKILL.md",
-      "bytes": 7944,
-      "sha256": "17570d87817998bba058d74b3a9c4f01dd1884504145994840dd01445be47055"
+      "bytes": 8033,
+      "sha256": "bedd766ca19c2740aaa04822136315cda199c222bf65e34b91ff0dcec39eba8a"
     },
     {
       "path": "references/audio-transcription.md",
@@ -38,8 +38,8 @@
     },
     {
       "path": "references/hongguo-download.md",
-      "bytes": 2524,
-      "sha256": "fd03cba7eba19b0beeab49c51d70255a6e02f1a3c3f94c5441d2b65d876b4603"
+      "bytes": 2976,
+      "sha256": "e528534ea13c640dda7b5e652aea81073569904cffcc5de7bc6c0c0dbf239c2c"
     },
     {
       "path": "references/host-tools.md",
@@ -133,8 +133,8 @@
     },
     {
       "path": "scripts/download_drama.py",
-      "bytes": 12848,
-      "sha256": "6a6e270186d9b103a507c47b576c88d991ca857a53ebdbaa8e700db8be4975ad"
+      "bytes": 12891,
+      "sha256": "f0ca7458f209100db6d5092f4ef40273b0e751ae2cc2aa7c92b804344fc997f1"
     },
     {
       "path": "scripts/download_video.py",
@@ -143,8 +143,8 @@
     },
     {
       "path": "scripts/hongguo_provider.py",
-      "bytes": 5154,
-      "sha256": "f63c9edb1a356c710f2145c5a1d83e324280aebd11dc3494259a96a2d2f7b40a"
+      "bytes": 8161,
+      "sha256": "62d3d2f4eed92daf9649ac539c51bd49c8b3c5ef1157210e1ba85a98218dc964"
     },
     {
       "path": "scripts/hongguo_vendor/LICENSE",
@@ -153,33 +153,33 @@
     },
     {
       "path": "scripts/hongguo_vendor/UPSTREAM.json",
-      "bytes": 1658,
-      "sha256": "dcb533dd033f6852beab9aab7808d87e043ff43b85b9e87b6eb6417d3db9c3e7"
+      "bytes": 2394,
+      "sha256": "464a586184a2485d06b760b0e377e318301b7d20975c43395530bd6f7ed8bfaa"
     },
     {
       "path": "scripts/hongguo_vendor/cli.cjs",
-      "bytes": 2161,
-      "sha256": "b02565e1c8472cbcbf2f22082da19ff73e3454a5dd0a5c6a49eafda614fc185b"
+      "bytes": 2199,
+      "sha256": "c063b5156e122aa4e3a9537859d0b8b9086d20928681c57302ae383182d3bf86"
     },
     {
       "path": "scripts/hongguo_vendor/guoapp-host.cjs",
-      "bytes": 5970,
-      "sha256": "dae203bdb5ecc86b45b8638d2c91d262f4ba74b902cc5e2e74f5a2a0091b6e7f"
+      "bytes": 6149,
+      "sha256": "41c915719d515b344ff495488bc575e663bc2c09a130afc8a69e159b06fccc6b"
     },
     {
       "path": "scripts/hongguo_vendor/guoapp-http.cjs",
-      "bytes": 2425,
-      "sha256": "92a1d937482f3180bcd73cfe58bc3bf60dd7fb4cab05c3915edc280c243b7812"
+      "bytes": 2708,
+      "sha256": "95cea4b8cd38967afbbb20a5a7c5355e197d81e9943746464b2b5b0c19118638"
     },
     {
       "path": "scripts/hongguo_vendor/guoapp.js",
-      "bytes": 151362,
-      "sha256": "928a1c1863fa23283404aafcf36327d93b0565ce2601b35107f9493a30b9f9a1"
+      "bytes": 156468,
+      "sha256": "e88ad4e09832a056b4e498bfc52c884ed97eb3e90f0f72d9ccb154f47f15b646"
     },
     {
       "path": "scripts/hongguo_vendor/package.json",
       "bytes": 140,
-      "sha256": "18bcb0011be7a7f5b88f72481c3d431ead5129febf6b11703cc8a90cbb88f646"
+      "sha256": "6bad85aae0705e5f224e184d7bac371e1c8696d8fcd5ab3836ed8ef49c172392"
     },
     {
       "path": "scripts/hongguo_vendor/playback.cjs",
@@ -218,8 +218,8 @@
     },
     {
       "path": "scripts/novel-source/quanben-book-source.mjs",
-      "bytes": 26142,
-      "sha256": "c6cadce00899dce51eab528ea4c5ad0cd1d161bdb48aa59deb16b62ea9865056"
+      "bytes": 26114,
+      "sha256": "8c1a02398425390ea2a8a865f5032d9498964e46f1ca3b5c935c262bf4e28103"
     },
     {
       "path": "scripts/restore_video_result_drafts.py",

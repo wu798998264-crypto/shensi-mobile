@@ -39,6 +39,7 @@
   "packages/ui/card-interactions.css",
   "packages/ui/chat-layout.js",
   "packages/ui/core-plugin-copy.js",
+  "packages/ui/parity-round-two.css",
   "packages/ui/generation-sources.js",
   "packages/ui/media-ui.js",
   "packages/ui/membership-ui.js",

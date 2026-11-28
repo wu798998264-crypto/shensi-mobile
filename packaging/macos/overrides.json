@@ -69,7 +69,7 @@
   },
   {
     "path": "packages/ui/core-plugin-copy.js",
-    "sha256": "42b84aa4da002d8fcd5f21f343268d1fb3d97047f2ba1d046fd1ba8ebd5a2755"
+    "sha256": "8b06dc5419141914d97f5ce47a387b91e9884ffea34a2f8256d5a5b0200a7790"
   },
   {
     "path": "packages/official/catalog.mjs",
@@ -638,6 +638,10 @@
   {
     "path": "packages/ui/board-assets.js",
     "sha256": "7df0006a65084e3f55c5d3e58992803bfde1bbaad42aac8f0f32053ec5e3995e"
+  },
+  {
+    "path": "packages/ui/parity-round-two.css",
+    "sha256": "93897b1eec264b81c27382e444b2ac7d13df2fb431e60b5eea262e5dbc152bbf"
   },
   {
     "path": "packages/ui/plugin-marketplace.js",
