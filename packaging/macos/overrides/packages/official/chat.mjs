@@ -290,5 +290,5 @@ await db.update(state=>{const c=state.conversations.find(c=>c.id===conversation.
   for(const pluginId of CHAT_PLUGINS)if((await getStore({pluginId,id}).read()).conversations.some(c=>c.queue?.length&&!c.queuePaused))return true;
   return false;
  }
- return {handle,hasNotebookWork,abortAll:()=>{for(const r of running.values())r.controller.abort();},abortPlugin,abortProfiles};
+ return {handle,hasNotebookWork,activeForProfiles:ids=>[...running.values()].filter(r=>ids.includes(r.profileId)).map(r=>r.conversationId),abortAll:()=>{for(const r of running.values())r.controller.abort();},abortPlugin,abortProfiles};
 }

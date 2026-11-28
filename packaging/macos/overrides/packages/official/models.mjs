@@ -2,7 +2,7 @@ import {MODEL_CHANNELS,profileChannels,profileSupports,profileForChannel} from '
 import {join} from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
 import {jsonStore,failure,identity} from './store.mjs';
-import {PROVIDER_PRESETS,getProviderPreset,getProviderModelOptions,imageModelCapabilities,videoModelCapabilities} from './legacy/model-presets.js';
+import {PROVIDER_PRESETS,getProviderPreset,getProviderModelOptions,imageModelCapabilities,videoModelCapabilities,multimodalInputCapabilities} from './legacy/model-presets.js';
 import {createGenerationProfile} from './legacy/generation-profiles.js';
 import {publicGenerationModels} from './generation-models.mjs';
 import {localModelCatalog,fetchModelCatalog,cliModelCatalog} from './model-catalog.mjs';
@@ -29,6 +29,11 @@ export function createModelService({dataRoot,desktop={},consolidateLegacyAccount
  let browserAvailable=async()=>false,speechMetadata=async()=>null,browserPool=async()=>null;
  let canvasUpgrade;
  const aliases=s=>[...canvasProfileAliases(s),...mergedProfileAliases(s)];
+ // Card creation needs only channel membership, without querying providers or credentials.
+ async function storedChannelProfiles(){
+  const state=await store.read();
+  return [...state.profiles,...aliases(state)];
+ }
  const ensureCanvasAccounts=()=>canvasUpgrade??=(async()=>{const sources=await originalCanvasSources(dataRoot).catch(()=>[]);await store.update(async s=>{if(sources.length)mergeDreaminaAccounts(s,sources);if(consolidateLegacyAccounts&&await mergeLegacyMultimodalAccounts(s,{sameCredentials:async items=>{try{const values=await Promise.all(items.map(p=>secret('model.'+p.id)));return new Set(values).size===1&&(items[0].adapter!=='api'||!!values[0]);}catch{return false;}}}))await catalogs.update(cache=>carryMergedCatalogs(s,cache,catalogKey));return s;});})().catch(error=>{canvasUpgrade=null;throw error;});
  const profileById=async id=>{await ensureCanvasAccounts();const state=await store.read(),p=[...state.profiles,...aliases(state)].find(p=>p.id===id)||((await browserPool())?.id===id?await browserPool():null);return p&&unifiedCanvasProfile(p);};
  const sourceActive=async p=>!blockedProfiles.has(p.id)&&(p.adapter!=='browser'||await browserAvailable(p))&&(!p.memberRef||memberActive(p,await memberAccess()))&&(p.provider!=='本地 H3'||await activeSource('thirdparty.local-h3'))&&(!p.externalRef||!blockedProviders.has(p.externalRef.pluginId)&&await activeSource(p.externalRef.pluginId));
@@ -39,6 +44,7 @@ export function createModelService({dataRoot,desktop={},consolidateLegacyAccount
  const exactTextCatalog=(p,catalog)=>catalog?.complete===true&&(authoritativeFreeCatalog(p,catalog)||
   p.adapter==='api'&&['DeepSeek','OpenAI','自定义兼容接口'].includes(p.provider)&&catalog.source==='remote'||
   p.agentEngine==='workbuddy'&&catalog.source==='desktop-cache'||
+  p.agentEngine==='antigravity'&&catalog.source==='antigravity-cli'||
   p.adapter==='cli'&&p.provider==='OpenAI'&&['codex-local-catalog','codex-images-api'].includes(catalog.source)&&catalog.completeChannels?.includes('text')!==false);
  const textModelsFor=(p,catalog)=>{
   const known=localModelCatalog(p), presets=new Map(known.map(item=>[item.id,item]));
@@ -59,7 +65,7 @@ export function createModelService({dataRoot,desktop={},consolidateLegacyAccount
   p.adapter==='api'&&['OpenAI','自定义兼容接口'].includes(p.provider)&&catalog.source==='remote'||
   p.adapter==='cli'&&p.provider==='OpenAI'&&(catalog.source==='codex-images-api'||catalog.source==='codex-local-catalog'&&catalog.models.some(item=>gptCatalogChannels(item).includes('image')))
  );
- const publicProfile=async(p,snapshot)=>{p=unifiedCanvasProfile(p);const catalog=(snapshot?.catalogs||await catalogs.read())[catalogKey(p)],mediaModels=publicGenerationModels({...p,modelCatalogModels:catalog?.models,exactImageCatalog:exactImageCatalog(p,catalog)}),textModels=profileSupports(p,'text')?textModelsFor(p,catalog):[],speech=await speechMetadata(p);return {...p,enabled:p.enabled!==false&&await sourceActive(p),...(p.adapter==='browser'?{capabilities:{}}:p.channel==='image'?{capabilities:imageModelCapabilities(p.provider,p.model)}:p.channel==='video'?{capabilities:videoModelCapabilities(p.provider,p.model)}:{}),...(speech?{speechCapabilities:speech.capabilities}:{}),mediaModels,textModels,textModelCatalogExact:exactTextCatalog(p,catalog),modelCatalogStatus:catalog?{source:catalog.source,complete:catalog.complete,checkedAt:catalog.checkedAt}:{source:'preset',complete:false},hasSecret:p.memberRef?true:await hasSecret('model.'+p.id,snapshot?.vault)||!!p.mergedCredentialId&&await hasSecret('model.'+p.mergedCredentialId,snapshot?.vault),credentialStorage:secure?'encrypted':desktop.decryptSecret?'encrypted-readonly':'session'};};
+ const publicProfile=async(p,snapshot)=>{p=unifiedCanvasProfile(p);const catalog=(snapshot?.catalogs||await catalogs.read())[catalogKey(p)],mediaModels=publicGenerationModels({...p,modelCatalogModels:catalog?.models,exactImageCatalog:exactImageCatalog(p,catalog)}),textModels=profileSupports(p,'text')?textModelsFor(p,catalog):[],speech=await speechMetadata(p);return {...p,...(p.channel==='multimodal'&&profileSupports(p,'text')?{textImageInput:multimodalInputCapabilities(profileForChannel(p,'text'),catalog?.models||[]).imageInput}:{}),enabled:p.enabled!==false&&await sourceActive(p),...(p.adapter==='browser'?{capabilities:{}}:p.channel==='image'?{capabilities:imageModelCapabilities(p.provider,p.model)}:p.channel==='video'?{capabilities:videoModelCapabilities(p.provider,p.model)}:{}),...(speech?{speechCapabilities:speech.capabilities}:{}),mediaModels,textModels,textModelCatalogExact:exactTextCatalog(p,catalog),modelCatalogStatus:catalog?{source:catalog.source,complete:catalog.complete,checkedAt:catalog.checkedAt}:{source:'preset',complete:false},hasSecret:p.memberRef?true:await hasSecret('model.'+p.id,snapshot?.vault)||!!p.mergedCredentialId&&await hasSecret('model.'+p.mergedCredentialId,snapshot?.vault),credentialStorage:secure?'encrypted':desktop.decryptSecret?'encrypted-readonly':'session'};};
  const list=async({includeManagedBindings=false}={})=>{await ensureCanvasAccounts();const [state,pool,localH3Visible,access,catalogSnapshot,vaultSnapshot]=await Promise.all([store.read(),browserPool(),activeSource('thirdparty.local-h3'),memberAccess(),catalogs.read(),vault.read()]);const snapshot={catalogs:catalogSnapshot,vault:vaultSnapshot};const {canvasAccountMigration,multimodalAccountMigration,profileAliases,...visibleState}=state;return {...visibleState,officialConfiguration:Object.fromEntries(['id','name','status','locked','entitled','message','enabled','credit','creditUpdatedAt'].map(key=>[key,access[key]])),profiles:await Promise.all([...state.profiles,...aliases(state)].filter(p=>includeManagedBindings||!pool||p.externalRef?.pluginId!=='thirdparty.doubao').concat(pool?[pool]:[]).filter(p=>(p.provider!=='本地 H3'||localH3Visible)&&(!p.memberRef||access.enabled&&memberActive(p,access))).map(p=>publicProfile(p,snapshot))),credentialStorage:secure?'encrypted':desktop.decryptSecret?'encrypted-readonly':'session',providers:PROVIDER_PRESETS.filter(p=>p.id!=='本地 H3'||localH3Visible).map(p=>({id:p.id,label:p.label,api:p.api,cli:p.cli,models:getProviderModelOptions(p.id)}))};};
  let browserRuntime,browserProfileResolver=async()=>{throw failure('浏览器配置授权接口尚未接入','BROWSER_PROFILE_UNAVAILABLE');};
  const ready=p=>p.enabled!==false&&!!p.model&&(p.adapter==='tts'?p.externalRef?.pluginId==='thirdparty.text-reader'&&!!p.externalRef.sourceId:p.adapter==='browser'?p.externalRef?.pluginId==='thirdparty.doubao'&&(!!p.externalRef.accountId||p.externalRef.accountPool===true):p.adapter==='cli'?!!p.cliPath:!!p.baseUrl);
@@ -102,7 +108,12 @@ export function createModelService({dataRoot,desktop={},consolidateLegacyAccount
   if(channels.includes('text')){
    clean.agentEngine??=clean.adapter==='browser'?'doubao_browser':clean.adapter==='api'?'codex_api':'codex';
    clean.agentPermissionMode??='shensi_only';
-   if(!['codex_api','codex','opencode','deepseek_opencode','claude_code','workbuddy','custom','doubao_browser'].includes(clean.agentEngine)||!['shensi_only','approval_required','full_access'].includes(clean.agentPermissionMode))throw failure('运行器或权限模式无效');
+   if(!['codex_api','codex','opencode','deepseek_opencode','claude_code','workbuddy','antigravity','custom','doubao_browser'].includes(clean.agentEngine)||!['shensi_only','approval_required','full_access'].includes(clean.agentPermissionMode))throw failure('运行器或权限模式无效');
+   if(clean.agentEngine==='antigravity'){
+    if(channel!=='text'||clean.adapter!=='cli'||String(clean.cliArgs||'').trim())throw failure('Antigravity 使用文本 CLI 配置及内置参数协议');
+    if(!/^[a-z0-9][a-z0-9._:+/-]*$/i.test(clean.model)||clean.model.length>288)throw failure('请从 agy models 目录选择有效模型');
+    clean.credentialSource='runner_login';
+   }
    const deepSeekApi=clean.agentEngine==='deepseek_opencode'&&clean.adapter==='api';
    if(deepSeekApi&&(clean.provider!=='DeepSeek'||channel!=='text'||!isOfficialDeepSeekEndpoint(clean.baseUrl)||clean.protocol!=='chat_completions'))throw failure('OpenCode + DeepSeek 需要使用 DeepSeek 官方 API 地址和 Chat Completions 协议');
    if((clean.agentEngine==='doubao_browser')!==(clean.adapter==='browser')||(!deepSeekApi&&(clean.agentEngine==='codex_api')!==(clean.adapter==='api')))throw failure('运行器与连接类型不匹配');
@@ -113,6 +124,16 @@ export function createModelService({dataRoot,desktop={},consolidateLegacyAccount
   await store.update(async s=>{if(expectedRevision!==s.revision)throw failure('模型配置已在其他窗口修改，请重新打开','SETTINGS_CONFLICT');const old=s.profiles.find(p=>p.id===id);if(old&&old.channel!==channel)throw failure('已有配置不能改变类型');let next=profile;if(id.startsWith('member-')){if(!old?.memberRef||apiKey!==undefined||['channel','provider','adapter','protocol','baseUrl','model','agentEngine'].some(k=>input[k]!==undefined&&input[k]!==old[k]))throw failure('会员模型的接口、身份和密钥由账号服务管理');const controls=['name','enabled','reasoningEffort','speedMode','temperature','maxOutputTokens','timeoutMs','aspectRatio','resolution','durationSeconds','voice','agentPermissionMode','webSearchEnabled'];next={...old,...Object.fromEntries(controls.filter(k=>clean[k]!==undefined).map(k=>[k,clean[k]])),updatedAt:profile.updatedAt};}else {next=updateMergedChannelProfiles(old||{},{...old,...profile});if(old?.channelProfiles&&apiKey!==undefined)next.mergedCredentialId='';if(old?.channelProfiles&&old.adapter==='api'&&(next.baseUrl!==old.baseUrl||next.provider!==old.provider)&&apiKey===undefined)throw failure('变更合并配置的服务地址或提供商时，请明确填写对应密钥；不会转发原密钥','CREDENTIAL_ENDPOINT_CHANGED');if(apiKey!==undefined)await putSecret('model.'+id,apiKey);}s.profiles=s.profiles.filter(p=>p.id!==id);s.profiles.push(next);s.revision++;return s;});return list();
  }
  async function remove({profileId,expectedRevision,retire=false},externalOwner){let removed=[];await store.update(async s=>{if(expectedRevision!==s.revision)throw failure('模型配置已变化','SETTINGS_CONFLICT');const target=s.profileAliases?.[profileId]||profileId,p=s.profiles.find(p=>p.id===target);removed=[target,...Object.keys(s.profileAliases||{}).filter(id=>s.profileAliases[id]===target)];if(p?.externalRef&&p.externalRef.pluginId!==externalOwner)throw failure('插件算力配置由所属插件管理');if(p&&profileStopper){removed.forEach(id=>blockedProfiles.add(id));const stopped=await profileStopper(removed);if(stopped?.pending)throw failure('任务停止尚未确认，配置和凭据保留，请稍后重试','STOP_PENDING');}if(retire===true&&p&&!p.externalRef){s.retiredProfileIds=[...new Set([...(s.retiredProfileIds||[]),...removed])];}s.profiles=s.profiles.filter(p=>p.id!==target);for(const id of removed)if(s.profileAliases)delete s.profileAliases[id];s.revision++;return s;});for(const id of removed){await putSecret('model.'+identity(id),'');blockedProfiles.delete(id);}return list();}
+ async function detachChannel({profileId,channel,expectedRevision}){
+  await store.update(s=>{
+   if(s.revision!==expectedRevision)throw failure('模型配置已变化','SETTINGS_CONFLICT');
+   const profile=s.profiles.find(p=>p.id===profileId);
+   if(profile?.channel!=='multimodal'||profile.externalRef||profile.memberRef||!profile.channels.includes(channel)||profile.channels.length<2)throw failure('此用途不能单独移除');
+   profile.channels=profile.channels.filter(c=>c!==channel);
+   s.revision++;return s;
+  });
+  return list();
+ }
  async function assertAvailable(id){const p=await profileById(id);if(!p||p.enabled===false||!await sourceActive(p))throw failure(p?.memberRef?'会员账号所属的官方算力权益或密钥核验未通过':'模型配置或算力来源已停用或尚未启动','MODEL_SOURCE_DISABLED');}
  async function resolve(id,channel,context={}){
   const candidate=await profileById(id),p=candidate&&profileSupports(candidate,channel)?profileForChannel(candidate,channel):null;
@@ -197,5 +218,5 @@ export function createModelService({dataRoot,desktop={},consolidateLegacyAccount
   return receipts;
  }
 
- return {externalBrowsers,authorizationSources,setBrowserProfileResolver:fn=>{browserProfileResolver=fn;},setBrowserPool:fn=>{browserPool=fn;},setSpeechMetadata:fn=>{speechMetadata=fn;},setBrowserAvailability:fn=>{browserAvailable=fn;},setBrowserRuntime:fn=>{browserRuntime=fn;},browserText,setBuiltinSource:(id,resolve)=>builtinSources.set(id,resolve),importLegacy,list,bindBrowser,save,remove,resolve,text,test,catalog,recordPublicModelChecks,secret,putSecret,ready,installMemberProfiles,provide,assertAvailable,hasSecret,setProfileStopper:fn=>{profileStopper=fn;},setExternalStatus:fn=>{externalStatus=fn;},blockProvider:id=>blockedProviders.add(id),unblockProvider:id=>blockedProviders.delete(id),setMemberResolver:fn=>{memberResolver=fn;},setMemberAccess:fn=>{memberAccess=fn;}};
+ return {externalBrowsers,authorizationSources,setBrowserProfileResolver:fn=>{browserProfileResolver=fn;},setBrowserPool:fn=>{browserPool=fn;},setSpeechMetadata:fn=>{speechMetadata=fn;},setBrowserAvailability:fn=>{browserAvailable=fn;},setBrowserRuntime:fn=>{browserRuntime=fn;},browserText,setBuiltinSource:(id,resolve)=>builtinSources.set(id,resolve),importLegacy,list,storedChannelProfiles,bindBrowser,save,remove,detachChannel,resolve,text,test,catalog,recordPublicModelChecks,secret,putSecret,ready,installMemberProfiles,provide,assertAvailable,hasSecret,setProfileStopper:fn=>{profileStopper=fn;},setExternalStatus:fn=>{externalStatus=fn;},blockProvider:id=>blockedProviders.add(id),unblockProvider:id=>blockedProviders.delete(id),setMemberResolver:fn=>{memberResolver=fn;},setMemberAccess:fn=>{memberAccess=fn;}};
 }

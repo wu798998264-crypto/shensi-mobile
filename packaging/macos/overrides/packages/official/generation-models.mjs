@@ -7,8 +7,10 @@ import {strictMediaCatalog} from '../ui/media-model-policy.js';
 import {canvasModels,canonicalCanvasModel} from '../ui/dreamina-canvas-models.js';
 
 const catalogs={image:getProviderImageModelOptions,video:getProviderVideoModelOptions,audio:getProviderAudioModelOptions};
+export const isAntigravityImageProfile=p=>p?.channel==='image'&&p.adapter==='cli'&&/(?:^|[\\/])antigravity-image-cli\.mjs(?:["']|\s|$)/.test(String(p.cliArgs||''));
 export function generationModelOptions(profile,channel=profile.channel){
  const settings=profileForChannel(profile,channel),catalog=catalogs[channel];if(!catalog)return [];
+ if(isAntigravityImageProfile(settings))return [{slug:'nano-banana-2',label:'Nano Banana 2（反重力原生生图）',capabilities:{imageCounts:[1],aspectRatios:['1:1','16:9','9:16','4:3','3:4'],resolutions:[],outputResolutions:[],backgrounds:[],exact:true}}];
  if(settings.provider==='即梦'&&settings.adapter==='cli'&&settings.dreaminaCanvasMode==='canvas')return canvasModels(channel).filter(m=>!profile.modelCatalogModels||profile.modelCatalogModels.some(c=>c.id===m.slug&&c.available!==false&&c.selectable!==false)).map(m=>({...m,capabilities:{...m.capabilities,...(channel==='audio'?profile.modelCatalogModels?.find(c=>c.id===m.slug)?.audioCapabilities||{}:{})}}));
  if(settings.adapter==='browser')return settings.model?[{slug:settings.model,label:settings.model,capabilities:{}}]:[];
  const exact=channel==='image'&&profile.exactImageCatalog;

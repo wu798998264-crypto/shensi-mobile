@@ -10,7 +10,7 @@ export {textModelOptions} from './text-model-selection.js';
 
 export const chatIcon=uiGlyph;
 export const chatButton=(attribute,label,code,extra='')=>`<button type="button" class="chat-icon-button" ${attribute} title="${h(label)}" aria-label="${h(label)}" ${extra}>${chatIcon(code)}</button>`;
-export const engineLabel=id=>({codex_api:'神思运行器',codex:'Codex 本地 Agent',opencode:'OpenCode',deepseek_opencode:'OpenCode + DeepSeek',claude_code:'Claude Code',workbuddy:'WorkBuddy',custom:'自定义 Agent'})[id]||'神思运行器';
+export const engineLabel=id=>({codex_api:'神思运行器',codex:'Codex 本地 Agent',opencode:'OpenCode',deepseek_opencode:'OpenCode + DeepSeek',claude_code:'Claude Code',workbuddy:'WorkBuddy',antigravity:'Antigravity',custom:'自定义 Agent'})[id]||'神思运行器';
 const chatTime=(value,short=false)=>{if(!value)return '';const date=new Date(value);if(Number.isNaN(date.getTime()))return String(value);return short?date.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false}):date.toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});};
 
 const selectionLabel=(kind,value)=>({reasoning:{none:'关闭思考',minimal:'极低',low:'低',medium:'中',high:'高',xhigh:'很高',max:'最高',ultra:'Ultra'},speed:{default:'标准',fast:'快速',flex:'灵活',balanced:'均衡',quality:'高质量',slow:'精细'}}[kind]?.[value]||value);

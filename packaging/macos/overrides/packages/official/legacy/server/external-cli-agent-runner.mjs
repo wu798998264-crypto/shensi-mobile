@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, delimiter, dirname, isAbsolute, join } from "node:path";
 import { resolveRunnerLaunch } from "./agent-runner-launch.mjs";
+import { antigravityDiagnostic, antigravityInput, parseAntigravityOutput } from "./antigravity-cli-protocol.mjs";
 import { deepSeekAgentContextText } from "./deepseek-opencode-agent-runner.mjs";
 import { buildExecutionSourceReceiptFromContextBlocks } from "./execution-source-proof.mjs";
 import { normalizeAgentPermissionMode } from "../agent-permission-policy.js";
@@ -14,7 +15,7 @@ import { normalizeWorkBuddyStageOutput, workBuddyStageInstruction, workBuddyDeli
 const MAX_INPUT_BYTES = 8 * 1024 * 1024;
 const MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 1_800_000;
-const EXTERNAL_ENGINES = new Set(["workbuddy", "custom"]);
+const EXTERNAL_ENGINES = new Set(["workbuddy", "antigravity", "custom"]);
 
 const clean = (value = "") => String(value ?? "").replace(/\0/gu, "").trim();
 
@@ -181,7 +182,8 @@ const appendStructuredEventText = (current = "", incoming = "", kind = "") => {
   return uniqueAppend(current, text);
 };
 
-export const parseExternalCliOutput = (stdout = "", { outputFormat = "auto" } = {}) => {
+export const parseExternalCliOutput = (stdout = "", { outputFormat = "auto", engine = "", partial = false } = {}) => {
+  if (engine === "antigravity") return parseAntigravityOutput(stdout, { partial });
   const raw = String(stdout || "");
   const lines = raw.split(/\r?\n/gu).map((line) => line.trim()).filter(Boolean);
   const events = [];
@@ -218,10 +220,12 @@ export const parseExternalCliOutput = (stdout = "", { outputFormat = "auto" } = 
 
 const runnerLabel = (engine = "") => ({
   workbuddy: "WorkBuddy",
+  antigravity: "Antigravity",
   custom: "自定义运行器",
 }[engine] || "外置 Agent");
 
 const defaultCliPath = (engine = "") => engine === "workbuddy" ? "codebuddy"
+    : engine === "antigravity" ? "agy"
     : "";
 
 const defaultCliArgs = (engine = "") => engine === "workbuddy"
@@ -393,6 +397,7 @@ export const runExternalCliAgent = async ({
   resolveLaunch = resolveRunnerLaunch,
 } = {}) => {
   const runner = clean(engine);
+  if (runner === "antigravity" && signal?.aborted) throw Object.assign(errorForRunner(runner, "Antigravity 任务已停止", "EXTERNAL_CLI_ABORTED"), { name: "AbortError" });
   if (!EXTERNAL_ENGINES.has(runner)) throw errorForRunner(runner, "所选运行器未提供外置 CLI Agent 接口", "EXTERNAL_CLI_RUNNER_UNSUPPORTED");
   const task = clean(prompt);
   if (!task) throw errorForRunner(runner, `${runnerLabel(runner)} 没有收到任务指令`, "EXTERNAL_CLI_PROMPT_REQUIRED");
@@ -409,7 +414,9 @@ export const runExternalCliAgent = async ({
   let resolvedPrefixArgs = Array.isArray(prefixArgs) ? prefixArgs.map(clean).filter(Boolean).slice(0, 16) : [];
   const defaultCommand = defaultCliPath(runner);
   const executableName = basename(executable).replace(/\.(?:cmd|exe|ps1)$/iu, "").toLowerCase();
-  const needsResolution = runner !== "custom" && (!executable || executable === defaultCommand || executableName === defaultCommand.toLowerCase());
+  const needsResolution = runner === "antigravity"
+    ? !executable || /^agy(?:\.exe)?$/iu.test(executable)
+    : runner !== "custom" && (!executable || executable === defaultCommand || executableName === defaultCommand.toLowerCase());
   if (needsResolution) {
     try {
       const launch = await resolveLaunch({ runnerId: runner, environment, machineRoot: environment.SHENSI_MACHINE_DATA_ROOT || "" });
@@ -422,7 +429,8 @@ export const runExternalCliAgent = async ({
   if (!executable) throw errorForRunner(runner, "自定义运行器需要填写 CLI 程序路径", "EXTERNAL_CLI_PATH_REQUIRED");
   const rawTemplate = clean(cliArgs) || defaultCliArgs(runner);
   const template = runner === "workbuddy" ? normalizeWorkBuddyTemplate(rawTemplate) : rawTemplate;
-  if (!template) throw errorForRunner(runner, "自定义运行器需要填写 CLI 参数模板", "EXTERNAL_CLI_ARGS_REQUIRED");
+  if (runner === "antigravity" && clean(cliArgs)) throw errorForRunner(runner, "Antigravity 使用内置参数与 stdin 协议，请清空自定义参数模板", "ANTIGRAVITY_ARGS_MANAGED");
+  if (!template && runner !== "antigravity") throw errorForRunner(runner, "自定义运行器需要填写 CLI 参数模板", "EXTERNAL_CLI_ARGS_REQUIRED");
   const configuredAccessMode = normalizeAgentPermissionMode(agentPermissionMode);
   const contractAccessMode = normalizeAgentPermissionMode(permissionContract?.mode || configuredAccessMode);
   // The gateway equips Shensi-only tasks with a one-operation approval bridge
@@ -563,6 +571,31 @@ export const runExternalCliAgent = async ({
       }
       args = withoutMcp;
     }
+    let antigravityStdin;
+    if (runner === "antigravity") {
+      // Session-only settings and workspace MCP config: never edit the user's
+      // agy settings, credentials, global MCP servers or project configuration.
+      const serverName = `shensi_${basename(tempRoot).replace(/-/gu, "_")}`;
+      const configDir = join(isolatedWorkspace, ".agents");
+      await mkdir(configDir, { recursive: true });
+      await writeFile(join(configDir, "mcp_config.json"), JSON.stringify({ mcpServers: nativeHost?.url ? {
+        [serverName]: { serverUrl: nativeHost.url, headers: nativeHost.headers || {}, enabledTools: nativeHost.toolNames || [] },
+      } : {} }), "utf8");
+      const settingsFile = join(tempRoot, "agy-settings.json");
+      const restricted = accessMode !== "full_access" || lightweightGeneral === true;
+      await writeFile(settingsFile, JSON.stringify({
+        agentMode: "", toolPermission: restricted ? "request-review" : "always-proceed", useG1Credits: false,
+        title: { enabled: false }, statusLine: { enabled: false },
+        permissions: {
+          allow: nativeHost?.url ? [`mcp(${serverName}/*)`] : [],
+          ask: [],
+          deny: restricted ? ["read_file(*)", "write_file(*)", "command(*)", "read_url(*)", "execute_url(*)", ...(!nativeHost?.url ? ["mcp(*)"] : [])] : [],
+        },
+      }), "utf8");
+      const invocation = antigravityInput({ prompt: finalPrompt, model: clean(model), workspace, settingsFile });
+      args = [...resolvedPrefixArgs, ...invocation.args];
+      antigravityStdin = invocation.input;
+    }
     const usesPrompt = runner === "workbuddy" ? false : /\{prompt(?:File)?\}/u.test(template);
     // Templates without a prompt placeholder receive the same prompt through stdin.
     const sendPromptToStdin = !usesPrompt;
@@ -592,7 +625,7 @@ export const runExternalCliAgent = async ({
     }
     return await new Promise((resolveRun, rejectRun) => {
       const child = spawnProcess(executable, args, {
-        cwd: workspace,
+        cwd: runner === "antigravity" ? isolatedWorkspace : workspace,
         env: externalEnvironment({ environment, nativeHost: { ...nativeHost, runnerExecutable: executable }, mcpConfigFile, provider, model, baseUrl, apiKey, permissionMode: accessMode }),
         shell: false,
         windowsHide: true,
@@ -620,7 +653,8 @@ export const runExternalCliAgent = async ({
       };
       const emitDeltas = () => {
         if (runner === "workbuddy" && stage) return; // Internal stage output is never a visible partial answer.
-        const parsed = parseExternalCliOutput(stdout);
+        const parsed = parseExternalCliOutput(stdout, { engine: runner, partial: runner === "antigravity" });
+        if (runner === "antigravity" && parsed.error) return;
         if (runner === "workbuddy") {
           workBuddyInternalStreamDetected ||= hasWorkBuddyInternalConversationMarker(parsed.text);
           // Once WorkBuddy has started printing a route/schema/thought preface,
@@ -673,10 +707,16 @@ export const runExternalCliAgent = async ({
           finish(Object.assign(errorForRunner(runner, `${runnerLabel(runner)} 任务已停止`, "EXTERNAL_CLI_ABORTED"), { name: "AbortError" }));
           return;
         }
-        const parsed = parseExternalCliOutput(stdout);
+        const parsed = parseExternalCliOutput(stdout, { engine: runner });
+        if (runner === "antigravity" && (Number(code) !== 0 || parsed.error || !parsed.terminal)) {
+          const detail = redactAgentError(parsed.error || stderr || "缺少 result 终态回执", [apiKey]);
+          const diagnostic = antigravityDiagnostic(detail, parsed.terminal ? `Antigravity 执行失败（${parsed.status || code}）` : "Antigravity 未返回完整终态回执，请检查 CLI 状态后重试");
+          finish(errorForRunner(runner, diagnostic.message, !parsed.terminal && Number(code) === 0 ? "ANTIGRAVITY_RESULT_MISSING" : diagnostic.code, { detail, retryable: diagnostic.retryable }));
+          return;
+        }
         emitDeltas();
         let text;
-        try { text = sanitizeExternalOutput(parsed.text || emittedText); }
+        try { text = sanitizeExternalOutput(runner === "antigravity" ? parsed.text : parsed.text || emittedText); }
         catch (error) { finish(errorForRunner(runner, error.message, error.code)); return; }
         const workBuddyFailure = runner === "workbuddy"
           ? workBuddyTerminalFailure(text, parsed.error, stderr)
@@ -753,7 +793,7 @@ export const runExternalCliAgent = async ({
           finish(errorForRunner(runner, `${runnerLabel(runner)} ${suffix}（${Math.round(activeTimeoutMs / 1000)} 秒）`, "EXTERNAL_CLI_TIMEOUT"));
         },
       });
-      child.stdin?.end(sendPromptToStdin ? finalPrompt : undefined);
+      child.stdin?.end(runner === "antigravity" ? antigravityStdin : sendPromptToStdin ? finalPrompt : undefined);
     });
   } finally {
     await rm(tempRoot, { recursive: true, force: true }).catch(() => {});

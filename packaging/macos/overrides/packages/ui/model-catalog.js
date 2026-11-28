@@ -23,7 +23,7 @@ export function mountModelCatalog(form,{profile,call}){
     const models=currentGptModels(result.models.filter(item=>item.available!==false&&item.selectable!==false&&(!key||item.channels?.includes(key)||!item.channels?.length&&profile.channel!=='multimodal')),connection);
     const unavailable=result.models.find(item=>item.id===current&&(item.available===false||item.selectable===false));
     const selected=findTextModel(connection,models,current)?.id||current;
-    const absent=current&&!models.some(item=>item.id===selected),strict=strictMediaCatalog(connection),confirmedDirectory=['remote','dreamina-canvas','libtv-cli-directory','desktop-cache','codex-local-catalog','codex-images-api'].includes(result.source)&&result.complete===true;
+    const absent=current&&!models.some(item=>item.id===selected),strict=strictMediaCatalog(connection),confirmedDirectory=['remote','dreamina-canvas','libtv-cli-directory','desktop-cache','antigravity-cli','codex-local-catalog','codex-images-api'].includes(result.source)&&result.complete===true;
     if(isRetired){retired.add(current);select.dataset.retiredModel=current;}
     else if(absent){if(strict||confirmedDirectory||unavailable)missing.add(current);if(strict)select.dataset.unavailableModel=current;else models.unshift({id:current,label:current+(unavailable?'（暂不可用）':confirmedDirectory?'（当前配置，目录未返回）':'（当前配置）'),disabled:!!unavailable});}
     if(!absent)delete select.dataset.unavailableModel;

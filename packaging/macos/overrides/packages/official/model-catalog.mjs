@@ -13,6 +13,8 @@ import {strictMediaCatalog,canvasAccountId} from '../ui/media-model-policy.js';
 import {canvasModels} from '../ui/dreamina-canvas-models.js';
 import {canvasClient} from './dreamina-canvas-driver.mjs';
 import {readCanvasVoices} from './dreamina-canvas-audio.mjs';
+import {testAntigravityModelAdapter} from './legacy/server/antigravity-model-adapter.mjs';
+import {isAntigravityImageProfile,generationModelOptions} from './generation-models.mjs';
 
 export async function readCodexModelCatalog({home=process.env.CODEX_HOME||join(homedir(),'.codex')}={}){
  const files=[];try{const config=await readFile(join(home,'config.toml'),'utf8'),top=config.split(/^\s*\[/m)[0],value=top.match(/^\s*model_catalog_json\s*=\s*["']([^"']+)["']/m)?.[1];if(value)files.push(resolve(home,value));}catch(error){if(error.code!=='ENOENT')throw error;}
@@ -22,6 +24,10 @@ export async function readCodexModelCatalog({home=process.env.CODEX_HOME||join(h
 }
 
 export async function cliModelCatalog(profile){
+ if(profile.agentEngine==='antigravity'){
+  const result=await testAntigravityModelAdapter({settings:{...profile,model:'',agentModelId:'',connectionProbeOnly:true}});
+  return {models:result.models.map(id=>({id,label:result.modelLabels[id]||id,channels:['text']})),source:'antigravity-cli',complete:true,checkedAt:new Date().toISOString(),version:result.version,message:'Antigravity 当前账号实时模型目录；真实推理可用性需单独测试。'};
+ }
  if(profile.provider==='即梦'&&profile.dreaminaCanvasMode==='canvas'){
   const c=canvasClient(profile),models=[];
   for(const channel of ['image','video','audio']){
@@ -53,6 +59,8 @@ export async function cliModelCatalog(profile){
 }
 
 export function localModelCatalog(profile){
+ if(isAntigravityImageProfile(profile))return generationModelOptions(profile,'image').map(m=>({id:m.slug,label:m.label,channels:['image'],reasoningLevels:[],speedModes:[]}));
+ if(profile.agentEngine==='antigravity')return profile.model?[{id:profile.model,label:profile.model,channels:['text'],reasoningLevels:[],speedModes:[]}]:[];
  if(profile.provider==='即梦'&&profile.dreaminaCanvasMode==='canvas')return ['image','video','audio'].flatMap(c=>canvasModels(c).map(m=>({id:m.slug,label:m.label,channels:[c]})));
  if(profile.adapter==='browser')return profile.model?[{id:profile.model,label:profile.model,channels:[profile.channel],reasoningLevels:[],speedModes:[]}]:[];
  const items=new Map();

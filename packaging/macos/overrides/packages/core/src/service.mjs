@@ -1,6 +1,7 @@
 import {validateWorkWrites} from './work-paths.mjs';
 import {editAgentBoard} from './agent-board-edit.mjs';
 import {createDocumentMover,copyAssets,verifyAssets} from './document-move.mjs';
+import {createCardTransfer} from './card-transfer.mjs';
 import {createLocalSkills} from './local-skills.mjs';
 import {hasDecodedParserMedia} from './parser-media-receipts.mjs';
 import {createSkillDocumentation} from './skill-documentation.mjs';
@@ -737,6 +738,7 @@ const directoryMetadata=fileProjection(state=>({name:state.projectName,knowledge
   const notebookRecycle=createNotebookRecycle({engine,dataRoot,notesRoot,appRoot:join(projectRoot,'apps/desktop'),serial,load,notify:event=>{for(const listener of listeners)listener(event);}});
   const cloudNotebooks=createCoreCloudNotebookStorage({load,list:()=>barrier.then(()=>list()),commit,serial,engine,options,blank:createBlankNotebookState,sanitize:sanitizeDocumentHtml,media:createCoreCloudMedia(dataRoot)});
   const service={dataRoot,skills,setCardDefaultResolver:fn=>{cardDefaultResolver=fn;},moveDocuments,cloudNotebooks,notebookRecycle,setAssetTrash,deleteHistory,cleanupHistory,directoryCatalog:()=>barrier.then(()=>directoryCatalog()),list:()=>barrier.then(()=>list()),recycleIndex:()=>barrier.then(()=>recycleIndex()),referenceIndex:()=>barrier.then(()=>referenceIndex()),create:name=>serial('catalog',()=>create(name)),load:(id,view)=>barrier.then(()=>load(id,view)),stateStamp:id=>barrier.then(()=>engine.getWorkspaceStateStamp(options(id))).then(({stateStamp})=>({stateStamp})),graphLoad:id=>barrier.then(()=>graphLoad(id)),save,resolveLocalDraft,saveMergedDocuments,createDocument,saveVersion,replaceCard,saveDirectoryVersion,restoreDirectoryVersion,applyTextEdit,appendAiCard,saveMediaRecall,applyGeneratedTextResult,applyMediaResult,applyBoardPatch,draft,restore,exclusive,markdown:engine.markdownToHtml,subscribe:listener=>{listeners.add(listener);return ()=>listeners.delete(listener);},
+    transferCards:createCardTransfer({exclusive,load,commit,options}),
     assetLoad:id=>barrier.then(()=>assetLoad(id)),recycleDirectory,stageMapMedia,stageVideoPreview,editMedia,editBoard,appendMediaNodes,importBoardMedia,bindBoardDraft,applyDocumentMediaResult,asset:(id,payload)=>serial(id,()=>engine.saveWorkspaceAttachment({...options(id),...payload})),
     // Internal host capability for account-browser results. The existing stream
     // validator checks signatures, complete images and playable video frames.

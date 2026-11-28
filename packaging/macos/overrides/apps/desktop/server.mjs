@@ -165,6 +165,15 @@ export async function startServer({port=0,dataRoot,configFile,desktop={},officia
         if(p==='/api/history/cleanup' && req.method==='POST')return send(res,200,await cleanupHistory());
         if(p==='/api/board/media/edit' && req.method==='POST')return send(res,200,await service.editMedia(id,body));
         if(p==='/api/board/assets' && req.method==='GET')return send(res,200,await assets.list());
+        if(p==='/api/board/assets/copy' && req.method==='POST'){
+          if(!desktop.copyCardFiles)throw Error('当前预览无法写入系统文件剪贴板，请使用桌面版或下载资产');
+          const entries=await assets.clipboardEntries(body.sourceIds);
+          return send(res,200,await desktop.copyCardFiles({entries,text:entries.map(e=>e.text).filter(Boolean).join('\n\n'),html:''}));
+        }
+        if(p==='/api/board/assets/file-link' && req.method==='POST'){
+          const [entry]=await assets.clipboardEntries([body.sourceId]);if(!entry.path)throw Error('纯文本资产没有文件链接');
+          return send(res,200,{url:(await import('node:url')).pathToFileURL(entry.path).href});
+        }
         if(p==='/api/board/assets/import' && req.method==='POST')return send(res,200,await assets.importAsset(body));
         if(p==='/api/board/assets/replace' && req.method==='POST')return send(res,200,await assets.replace(body));
         if(p==='/api/board/assets/remove' && req.method==='POST')return send(res,200,await assets.remove(body));
@@ -177,6 +186,7 @@ export async function startServer({port=0,dataRoot,configFile,desktop={},officia
         if(p==='/api/attachment' && req.method==='POST')return send(res,200,await service.asset(id,body));
         if(p==='/api/document-image' && req.method==='POST')return send(res,200,await documentImageAction({service,desktop,body}));
         if(p==='/api/board/copy' && req.method==='POST')return send(res,200,await copyBoardCards({service,desktop,body}));
+        if(p==='/api/board/transfer' && req.method==='POST')return send(res,200,await service.transferCards(body));
         if(p==='/api/board/clipboard' && req.method==='POST')return send(res,200,desktop.readCardClipboard?.()||{token:''});
         if(['/api/asset','/api/recycle/asset','/api/official/chat/music-audio'].includes(p) && req.method==='GET'){
           const info=p==='/api/official/chat/music-audio'?await official.handle('/chat/music-audio',Object.fromEntries(url.searchParams)):p==='/api/recycle/asset'?await official.handle('/recycle/media',{trashId:url.searchParams.get('trashId'),fileId:url.searchParams.get('fileId')}):await service.assetInfo(id,url.searchParams.get('path'),url.searchParams.get('documentId'));

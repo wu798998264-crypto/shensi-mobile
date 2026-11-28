@@ -16,6 +16,7 @@ import { secureMediaDownload } from "./media-provider-drivers.mjs";
 import { dreaminaCliEnvironment } from "./dreamina-cli-profile.mjs";
 import { testOpenCodeAgentConnection } from "./opencode-agent-runner.mjs";
 import { runClaudeCodeAgentTurn } from "./claude-code-agent-runner.mjs";
+import { testAntigravityModelAdapter } from "./antigravity-model-adapter.mjs";
 import { fetchProvider, providerNetworkRoute } from "./network-proxy.mjs";
 import {
   isUpstreamStreamInterruptedBeforeCompletion,
@@ -1840,6 +1841,7 @@ export const generateVideoWithAdapter = async ({ referenceMedia, referenceImages
 
 export const testModelAdapter = async ({ settings, cwd }) => {
   if (settings.adapter === "cli") {
+    if (settings.agentEngine === "antigravity") return testAntigravityModelAdapter({ settings, cwd });
     if (settings.connectionProbeOnly === true) {
       const executable = await validateExecutable(settings.cliPath);
       const preset = getProviderPreset(settings.provider);

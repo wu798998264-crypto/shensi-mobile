@@ -1,6 +1,7 @@
 @import url('./attachment-preview.css');
 /* Original selected outline stays visible around borderless media cards. */
 .board .card.selected{z-index:6;outline:2px solid var(--muted);outline-offset:3px}
+.board .card.pending-cut{outline:2px dashed var(--muted);outline-offset:3px}
 .board .image-output-count{position:absolute;z-index:3;top:8px;right:8px;min-width:26px;height:26px;padding:0 7px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);box-shadow:0 2px 7px #0003;font-size:12px;font-weight:600;cursor:pointer}
 .board .image-output-count:hover,.board .image-output-count:focus-visible{background:var(--accent);color:var(--bg);outline:2px solid var(--accent);outline-offset:2px}
 /* Card editing and edge layers follow the original Shensi whiteboard. */

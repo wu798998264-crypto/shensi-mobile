@@ -49,5 +49,5 @@ export function createSelectionEdits({service,agent,chat,models,requirePlugin,do
   await db.update(value=>{Object.assign(value.jobs.find(j=>j.id===job.id),{status:'applied',appliedAt:new Date().toISOString()});return value;});return result;
  }
  async function stop(predicate){const tasks=[];for(const entry of running.values())if(predicate(entry)){entry.controller.abort();tasks.push(entry.task);}await Promise.allSettled(tasks);}
- return {handle,stopAll:()=>stop(()=>true),abortProfiles:ids=>stop(entry=>ids.includes(entry.profileId))};
+ return {handle,activeForProfiles:ids=>[...running].filter(([,v])=>ids.includes(v.profileId)).map(([key])=>key),stopAll:()=>stop(()=>true),abortProfiles:ids=>stop(entry=>ids.includes(entry.profileId))};
 }

@@ -52,7 +52,7 @@ export function createMembershipService({dataRoot,models,accountBaseUrl=process.
   const auth=await login(),saved=await state(),authenticated=!!auth?.token&&auth.issuer===issuer,verified=authenticated&&saved.memberId===auth.user.id&&verifiedComputeSession===auth.token;
   const compute=verified?saved.compute:null,entitled=compute?.entitled===true&&(!compute.expiresAt||compute.expiresAt>Date.now());
   const status=!authenticated?'login_required':!verified?'unverified':!entitled?compute?.purchased?'inactive':'purchase_required':!saved.catalogEnabled?'service_unavailable':'available';
-  const message={login_required:'请先登录神思账号，再购买算力积分套餐。神思会员仅提供云存储与增值服务。',unverified:'算力购买状态尚未联网核实，请刷新账号状态；不会使用缓存解锁官方模型。',purchase_required:'请购买算力积分套餐后使用官方模型。神思会员不含 AI 算力；在线购买暂未提供服务。',inactive:'算力套餐已到期或暂停，请核对套餐权益；已有积分与流水保留。',service_unavailable:'已购买算力套餐；官方模型供应暂未提供服务。',available:'官方算力已解锁，使用真实供应目录；积分不足时不能生成。'}[status];
+  const message={login_required:'请先登录神思账号，再购买算力积分套餐。可在账户页查看算力权益。',unverified:'算力购买状态尚未联网核实，请刷新账号状态；不会使用缓存解锁官方模型。',purchase_required:'请购买算力积分套餐后使用官方模型。购买开放状态及可用套餐请查看账户页。',inactive:'算力套餐已到期或暂停，请核对套餐权益；已有积分与流水保留。',service_unavailable:'已购买算力套餐；官方模型供应暂未提供服务。',available:'官方算力已解锁，使用真实供应目录；积分不足时不能生成。'}[status];
   return {id:'official-compute',name:'官方算力',status,locked:!entitled,entitled,message,issuer,memberId:authenticated?auth.user.id:'',enabled:entitled&&saved.catalogEnabled===true,
    ...(verified&&entitled&&saved.catalogEnabled&&Number.isSafeInteger(saved.quota?.available)?{credit:saved.quota.available,creditUpdatedAt:saved.checkedAt}:{}),activeKeys:verified?(saved.remoteKeys||[]).filter(k=>k.status==='active'&&k.expiresAt>Date.now()).map(k=>k.id):[]};
  }

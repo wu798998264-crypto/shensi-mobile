@@ -3,6 +3,7 @@ import {tmpdir} from 'node:os';
 import {join,basename,extname} from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
+import {cardSelectionHash} from '../../packages/core/src/card-transfer.mjs';
 const run=promisify(execFile);
 const escape=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');
 
@@ -11,19 +12,20 @@ export const readCardClipboard=clipboard=>({token:/data-shensi-cards="([a-z0-9-]
 
 // Resolve saved card ids, never caller-supplied absolute file paths.
 export async function copyBoardCards({service,desktop,body}){
- if(!desktop.copyCardFiles)return {unsupported:true};
  const {state,stateStamp}=await service.load(body.id);
  if(stateStamp!==body.expectedStateStamp)throw Error('卡片内容已变化，请重新复制');
  const canvas=state.documents[body.documentId]?.canvas,ids=body.nodeIds;
  if(!canvas||!Array.isArray(ids)||!ids.length||ids.length>500||new Set(ids).size!==ids.length||!/^[a-z0-9-]{10,80}$/i.test(body.token||''))throw Error('复制卡片参数无效');
  const nodes=ids.map(id=>canvas.nodes.find(n=>n.id===id));if(nodes.some(n=>!n))throw Error('原卡片已不存在');
+ const sourceHash=cardSelectionHash(state.documents[body.documentId],ids);
+ if(!desktop.copyCardFiles)return {unsupported:true,sourceHash};
  const entries=[];
  for(const node of nodes){
   if(node.file){const info=await service.assetInfo(body.id,node.file,body.documentId);entries.push({path:info.absolutePath,name:node.name||basename(info.absolutePath),mimeType:info.mimeType});}
   else entries.push({name:(node.name||'文本')+'.md',text:String(node.text||'')});
  }
  const text=nodes.map(n=>n.text||(!n.file?n.name:'')||'').filter(Boolean).join('\n\n');
- return desktop.copyCardFiles({entries,text,html:'<span data-shensi-cards="'+body.token+'">'+escape(text)+'</span>'});
+ return {...await desktop.copyCardFiles({entries,text,html:'<span data-shensi-cards="'+body.token+'">'+escape(text)+'</span>'}),sourceHash};
 }
 
 function windowsHtml(html){

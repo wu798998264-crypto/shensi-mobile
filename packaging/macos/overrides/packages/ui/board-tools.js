@@ -79,7 +79,7 @@ export function createBoardTools(c){
    if(!await c.flush())return;const scope=c.libraryId()+':'+c.current().id,active=()=>{if(scope!==c.libraryId()+':'+c.current().id)throw Error('白板已切换');return canvas();};
    let catalog=[];const refreshCatalog=async()=>{catalog=(await c.api('/api/board/assets')).assets;};await refreshCatalog();active();
    const sourceUrl=(path,asset)=>c.assetUrl(path,asset.sourceDocumentId,asset.sourceNotebookId);
-   return openBoardAssets({canvas:active,catalog:()=>catalog,refreshCatalog,assetUrl:sourceUrl,toast:c.toast,changed:()=>c.changed(false),flush:c.flush,
+   return openBoardAssets({api:c.api,canvas:active,catalog:()=>catalog,refreshCatalog,assetUrl:sourceUrl,toast:c.toast,changed:()=>c.changed(false),flush:c.flush,
     reveal:asset=>c.api('/api/settings/open-folder',{id:asset.sourceNotebookId,kind:asset.coreNodeSnapshot?.file?'attachment':'item',documentId:asset.sourceDocumentId,relativePath:asset.coreNodeSnapshot?.file}),
     remove:async asset=>{const result=await c.api('/api/board/assets/remove',{sourceId:asset.id,expectedStateStamp:asset.sourceStateStamp});if(result.id===c.libraryId())c.apply(result);},
     transform:async asset=>{const answer=await chooseStorageLocation({api:c.api,notebookId:c.libraryId(),title:asset.nodeName||'资产笔记'});if(!answer)return;const target=await c.api('/api/state?id='+encodeURIComponent(answer.id));await refreshCatalog();const live=catalog.find(a=>a.id===asset.id);if(!live)throw Error('原资产已变化');const result=await c.api('/api/board/assets/land',{...answer,sourceId:live.id,expectedSourceStateStamp:live.sourceStateStamp,expectedStateStamp:target.stateStamp});if(answer.id===c.libraryId())c.apply(result);c.toast('已保存为文档，原资产保留');},
@@ -109,7 +109,6 @@ export function createBoardTools(c){
     catch(error){c.toast?.('副本已创建，暂未保存；请点击顶部保存状态继续保存，无需再次创建。');}
    }finally{duplicating=false;}return;
   }
-  if(value==='cut-cards'){const scope=c.libraryId()+':'+c.current().id,ids=[...c.selected()].sort().join('\0');const copied=await c.run('copy-cards');if(copied?.copied&&scope===c.libraryId()+':'+c.current()?.id&&ids===[...c.selected()].sort().join('\0'))await c.run('delete-cards');return;}
   if(value==='reveal'){
    const id=c.libraryId(),documentId=c.current().id,nodeId=node?.id;if(!await c.flush())return;
    if(id!==c.libraryId()||documentId!==c.current()?.id)throw Error('白板已切换，未打开文件夹');

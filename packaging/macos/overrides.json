@@ -9,7 +9,7 @@
   },
   {
     "path": "packages/ui/app.js",
-    "sha256": "d1218595502ad73a8f6a2a64e95d6e73f75fbd7b879ae050a1b716625dd47f17"
+    "sha256": "b33dee90dfac3d38ede98a14584795749014159c1977b4d5bc5b89ebfa28c50c"
   },
   {
     "path": "packages/ui/book-picker.js",
@@ -29,11 +29,11 @@
   },
   {
     "path": "packages/ui/media-ui.js",
-    "sha256": "23828afb2a1d42a5792e8b24933fc6892c45cd7924ca3bd81f56f69169c1e634"
+    "sha256": "13d06cd1e694865d7ad8de2ff80557a7fa0bb327a61c0a7586205e351339bf11"
   },
   {
     "path": "packages/ui/chat-layout.js",
-    "sha256": "af72d67b38ec12a1b77e9e0a55e3d5736308e24eb32e36b128e09c8e4b010056"
+    "sha256": "6aa1143a57e733d0282c80ebbbebc30ff49166089ecec6ec8cf41b990f165398"
   },
   {
     "path": "packages/ui/selection-edit.js",
@@ -69,7 +69,7 @@
   },
   {
     "path": "packages/ui/core-plugin-copy.js",
-    "sha256": "83f2b5feb20a9e7dc0e46b668667bceb9631586e89742ff2ce2f634a4b4951ad"
+    "sha256": "42b84aa4da002d8fcd5f21f343268d1fb3d97047f2ba1d046fd1ba8ebd5a2755"
   },
   {
     "path": "packages/official/catalog.mjs",
@@ -77,11 +77,11 @@
   },
   {
     "path": "packages/official/host.mjs",
-    "sha256": "b8bb1f304a09a002b015759849ef0b6a49626ee88c80490ba5861e4f02c00778"
+    "sha256": "9b5d274364b04cd5b2c83dcd773ee45aa3f0b227de018c5ec02c585af96dfb3c"
   },
   {
     "path": "packages/official/selection-edits.mjs",
-    "sha256": "9a2db9daa246ed9a776a8562f3f92d2abb29e680b60bdf374ae6aa917814fe0f"
+    "sha256": "9b2ceddc463a74a9784800b9413993d8df5c3c4c55e9460391cc4ed144ecb580"
   },
   {
     "path": "packages/ui/plugin-presentation.js",
@@ -89,7 +89,7 @@
   },
   {
     "path": "packages/ui/settings.js",
-    "sha256": "950d1a10f9084e789de048b291a2f2e138dc360f9859468caface4ffbd386ebd"
+    "sha256": "dff1af272e3a0eeb523bfec89a9e765b402dda437a747f9d6fe9a8d7dcbaf8a2"
   },
   {
     "path": "packages/ui/extensions.js",
@@ -97,27 +97,27 @@
   },
   {
     "path": "packages/ui/official-ui.js",
-    "sha256": "c7fb01606fda5e2ed35601e0a2a152fa1d404722f13514bb9ebbcc7f90602fca"
+    "sha256": "46f7f3a813db588945ab34527a2b530c146a4baeb6b566c95b3fa31bc8ae384a"
   },
   {
     "path": "packages/ui/tutorial.js",
-    "sha256": "a92fa631760116f3ab80f8c68844388a8b7b481a8fd80ca229fa7fc09fa19ba0"
+    "sha256": "b4ac06e9926ce4e76203bdb5290d429e57ec8aca7feb566e4b3145dd7c79dead"
   },
   {
     "path": "packages/official/model-defaults.mjs",
-    "sha256": "b5e31474cf2c70f19d7f7f07a3b56aa103735dce713b92e070e5d993689b568c"
+    "sha256": "03e06f6344529f6553fb9d14d81eb4ebb94ddc2be172fe6c3aced70d359d5be7"
   },
   {
     "path": "packages/official/chat.mjs",
-    "sha256": "89ad7c41ad06a3b3c1fa88dfa0a30d1f126eb269ba87ec5006964657c8ed6112"
+    "sha256": "c3644e0fa52f524f567aa6579fbbd80c41ff8896f56efbe25c5997b7799360bd"
   },
   {
     "path": "packages/official/agent.mjs",
-    "sha256": "d5a9c00bc73660902aeaa64c90f880d8db28d40a3883240909d72e00419ea3e1"
+    "sha256": "bc59f1245238769d040a20d5813fa36da2cbc4745327d955f23cf6f1dcf56d2b"
   },
   {
     "path": "packages/core/src/service.mjs",
-    "sha256": "70a83426f94b4e50a42a09ee3006c3b84f32a1e588df90646ead6e6e002ec82e"
+    "sha256": "0500e46507822be37ffe0ae3db22ffca77847993a7a6a3291bda6e5266fdfe66"
   },
   {
     "path": "packages/ui/card-model-defaults.js",
@@ -133,15 +133,15 @@
   },
   {
     "path": "packages/ui/generation-sources.js",
-    "sha256": "b537fd5424dfa0ac95b99cdec675a919533691d4a66ccf6fc31f82a8ad900082"
+    "sha256": "1eb6e9fbd24c088f9614b874938d11ed837006fce5b13760c98500800352a451"
   },
   {
     "path": "packages/ui/model-authorization-source.js",
-    "sha256": "0b745995ebfa2ae1987c065bde33e96f2886fcdeea0ffe36ec1ee820db954457"
+    "sha256": "156e22af999dca054ab9715ffa11fc2cbd36377df30f0751b35e21cd7a1d683a"
   },
   {
     "path": "packages/ui/models-ui.js",
-    "sha256": "f164a4004ee8d076726f078bad8292009e60225f0389ac8f46950c307545d3b8"
+    "sha256": "2f191867c7915bc1e409babb6139496623fccb1cea44134b3164c36dd37112e1"
   },
   {
     "path": "packages/ui/model-verification.js",
@@ -149,7 +149,7 @@
   },
   {
     "path": "packages/official/models.mjs",
-    "sha256": "20cf61ccdf29a3bd6fb02ccd532dd98796e36e52cd4c7eabc33b7cd49a4ffb74"
+    "sha256": "bada4cdb48f8f089abcf163392981fba0cf1d0bd84762a2865307b5e725c7a9c"
   },
   {
     "path": "packages/official/model-verification.mjs",
@@ -209,7 +209,7 @@
   },
   {
     "path": "packages/ui/model-external-browser.js",
-    "sha256": "7f9ad725816fb60339a117c9d0f5232d181676dd0e184a7f1825e774f267fdf4"
+    "sha256": "ae74c6c97f0fc252daa958f8e5fa8bd58c93d6d31b0d17b1374a27065e3ec9fe"
   },
   {
     "path": "packages/ui/gpt-model-policy.js",
@@ -217,11 +217,11 @@
   },
   {
     "path": "packages/ui/model-catalog.js",
-    "sha256": "15a3d229d1b1649f25163548ec91f9b8d2bba5975449e58ca2d28bc337b9ff64"
+    "sha256": "cfd6fdf834b874f972102fc7e9da46c24c1c9946fdbddcc6ef9c99de59b4fe96"
   },
   {
     "path": "packages/official/model-catalog.mjs",
-    "sha256": "ef30000d6484f1069cc5733bf515e5a454f1bb62d8edb7662c702ce70e8aa8ab"
+    "sha256": "c352a8b587a830634ad896986a78ba24ee4872ee8da9787ad0e05335c0e91709"
   },
   {
     "path": "packages/official/legacy/server/opencode-agent-runner.mjs",
@@ -293,7 +293,7 @@
   },
   {
     "path": "packages/ui/membership-ui.js",
-    "sha256": "8460c76c0ae8f1bb7d067b148f180a62fc31225d5e828a343e976f97f0c63fad"
+    "sha256": "04f1a114f819c859b774078cfe48a744c0e44b218f6da1dfed262995057992b6"
   },
   {
     "path": "packages/core/src/release-download.cjs",
@@ -329,7 +329,7 @@
   },
   {
     "path": "packages/official/legacy/server/external-cli-agent-runner.mjs",
-    "sha256": "f9b8681f017f28bc4bf5f948daed66eab19fb171df432bcb1bce3120747ffd26"
+    "sha256": "90ecf6f6893c708911da48c8f63679df6bf498f7a40a875242c2a12848053f1c"
   },
   {
     "path": "apps/desktop/parser-browser.mjs",
@@ -421,7 +421,7 @@
   },
   {
     "path": "packages/ui/card-interactions.css",
-    "sha256": "348c529cd92e5f5fd56e49ef5e367212169441c1a1e8c7c898decb2c623fe9e7"
+    "sha256": "abced765c4779d9fe206bf04d52dd985d44429581c9752596a21e08cef227a49"
   },
   {
     "path": "packages/ui/media-card-time.js",
@@ -437,15 +437,15 @@
   },
   {
     "path": "packages/official/generation-models.mjs",
-    "sha256": "c837097eaec4242cf6bde3c068e0c51ece8049a287d826dd452d82b2fda69366"
+    "sha256": "c110e55bd07b78c8faa74ccde52be7afc5fc4376ac958dcce5663f9832d805c1"
   },
   {
     "path": "packages/official/media.mjs",
-    "sha256": "c6e540436371b7e9a421d0487efa59e58b11faf1514576007717e874629a7b4c"
+    "sha256": "58bf6d8bd9ce656ad6fd7cd22fca9343b0797fe5e463b11b23ea4b926e162e35"
   },
   {
     "path": "packages/official/membership.mjs",
-    "sha256": "a7d9c479736f8e2ca134fd1dbb0a0c4ec205adb2510e8ab94929c02b2cb499a1"
+    "sha256": "1cdc6ed68fb6c66814c0eeb9e4d3787d25c84cee2a39dcabd0bad7a3e388acc2"
   },
   {
     "path": "packages/official/legacy/dreamina-image-options.js",
@@ -477,7 +477,7 @@
   },
   {
     "path": "apps/desktop/server.mjs",
-    "sha256": "ffb075777e207292fc0e5abc00c574419463159d276d87e1b56a6fbce453741c"
+    "sha256": "b7a04cf53466c1282d4fd7a8fdf14056ade8bb127ef2ffe0652817f0411c5a15"
   },
   {
     "path": "apps/desktop/export-files.mjs",
@@ -489,7 +489,7 @@
   },
   {
     "path": "packages/ui/board-tools.js",
-    "sha256": "c95428258a82d0d151ba568ac002ed620ce0dc52a1e0945e0cb4ab3ea96eecbe"
+    "sha256": "6a4c5915c99aa45b1b5764081929f101a828d6c81d45313ad3fbe2499b4122d3"
   },
   {
     "path": "packages/ui/document-export.js",
@@ -509,7 +509,7 @@
   },
   {
     "path": "apps/desktop/card-clipboard.mjs",
-    "sha256": "32ba4527af8f7dd21dd08dd77c0c4a5d73072c790713780420a4c231e8147306"
+    "sha256": "247e7820c52581a966fca57cdf0d0591c645096f2e65f1447bb69d7cb1fe743f"
   },
   {
     "path": "packages/official/legacy/dreamina-task-queue.js",
@@ -521,7 +521,7 @@
   },
   {
     "path": "packages/official/legacy/server/adapters.mjs",
-    "sha256": "59bbe2c468d4daccfb5d669e7cdbd136fc9f77e42b50d6e7babbf05812957488"
+    "sha256": "e68e1f36c91f18bfbf38d4c6093e397d43d6461bbe0c138f6dd717c1487e685f"
   },
   {
     "path": "packages/official/legacy/server/media-submission-recovery.mjs",
@@ -558,5 +558,89 @@
   {
     "path": "packages/official/legacy/cli/codex-launch.mjs",
     "sha256": "42f842a5680cc159ebdcd525beae8dd09132529f2764f0b07a12476a22121449"
+  },
+  {
+    "path": "packages/core/legacy/agent-engine-registry.js",
+    "sha256": "a9f088b7a9ed5a1d88c61c5baf47845e6520635bc37c22921f6ec36dc43adf49"
+  },
+  {
+    "path": "packages/core/legacy/generation-profiles.js",
+    "sha256": "1da606761b14bca12ec24ff4f3160c717ef3bece79386b24e65e0b716c67959b"
+  },
+  {
+    "path": "packages/core/src/asset-catalog.mjs",
+    "sha256": "e2574d946f8783530663e2fef14e4d58f0cf99e7180552db40937d7e4d4dec14"
+  },
+  {
+    "path": "packages/core/src/card-transfer.mjs",
+    "sha256": "4638dc5650b43e69a6250ad72024da6678928fa898424deb262ab648ba3493cc"
+  },
+  {
+    "path": "packages/official/antigravity-image-cli.mjs",
+    "sha256": "c64c3ab31ae30c5659e614e202a2048c209d61e74fe5e73a495c3151cbd04422"
+  },
+  {
+    "path": "packages/official/antigravity-image-setup.mjs",
+    "sha256": "9964413f0925d8d3861829d84c73a2cc6ff593b76ee1aabb86da0e8a99a1c106"
+  },
+  {
+    "path": "packages/official/antigravity-tool-transport.mjs",
+    "sha256": "5ce438f7e83450af6b3492fad425b0d197d37988cdb41bc8be7687e01ee13a22"
+  },
+  {
+    "path": "packages/official/character-parlor.mjs",
+    "sha256": "5e8198507e4312e11ab9ca2651fb2a1860738bd6c05a5db0266c0963cced6a8c"
+  },
+  {
+    "path": "packages/official/legacy/agent-engine-registry.js",
+    "sha256": "a9f088b7a9ed5a1d88c61c5baf47845e6520635bc37c22921f6ec36dc43adf49"
+  },
+  {
+    "path": "packages/official/legacy/effective-runtime-contract.js",
+    "sha256": "1d389ca666d96cb254e19142efda77c94ca55baf514eb96757ec6869121653e4"
+  },
+  {
+    "path": "packages/official/legacy/generation-profiles.js",
+    "sha256": "1da606761b14bca12ec24ff4f3160c717ef3bece79386b24e65e0b716c67959b"
+  },
+  {
+    "path": "packages/official/legacy/server/agent-runner-launch.mjs",
+    "sha256": "edaaa72eca630a270e2fed10a561252000cf4aa4ce1ee8470ae28621e51a8938"
+  },
+  {
+    "path": "packages/official/legacy/server/antigravity-cli-protocol.mjs",
+    "sha256": "992d29256524de5382c3cce81575c8ac6655fc7a0641fbc07aff1ec526b3c56a"
+  },
+  {
+    "path": "packages/official/legacy/server/antigravity-model-adapter.mjs",
+    "sha256": "07efe9567ccdb74f9264dd15dbad801afe348ad880b3a58f464e1fad6a6c4deb"
+  },
+  {
+    "path": "packages/official/legacy/server/antigravity-probe.mjs",
+    "sha256": "3acfca452e53c9f62cf6a005f963957e9f1e9b5722676f3afdf9b47560a72896"
+  },
+  {
+    "path": "packages/official/legacy/server/generation-runtime-store.mjs",
+    "sha256": "7b60502697a8a03368de93b08caaa2e19d208641556260a1a22dcc71c5bcd6b6"
+  },
+  {
+    "path": "packages/official/work-tools.mjs",
+    "sha256": "5593869ffec6601321db6af365dad04c5f467973e03d9dea31d076051c8ba108"
+  },
+  {
+    "path": "packages/thirdparty/text-reader.mjs",
+    "sha256": "174b8c246dd38e69adf983aee205d606ea6f2bd054ed2df3641a1fb2bfddbb3b"
+  },
+  {
+    "path": "packages/ui/account-credit-view.js",
+    "sha256": "c354ff1e041409f5ba056fd8e45dd65ff7afab58752a7573da326817cd291815"
+  },
+  {
+    "path": "packages/ui/board-assets.js",
+    "sha256": "7df0006a65084e3f55c5d3e58992803bfde1bbaad42aac8f0f32053ec5e3995e"
+  },
+  {
+    "path": "packages/ui/plugin-marketplace.js",
+    "sha256": "9beaebd2986ebabfdd9baedebc1a8ddb893a6cdfe7203f6be5584889b7ebe418"
   }
 ]

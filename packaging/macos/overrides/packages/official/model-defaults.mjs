@@ -21,7 +21,14 @@ export function createModelDefaults({dataRoot,models,legacySettings}){
    })().finally(()=>{initializing=null;});
    await initializing;state=await store.read();
   }
-  return {defaultsRevision:state.revision,defaultProfiles:state.defaultProfiles,legacyDefaultProfiles:state.legacyDefaultProfiles};
+  const profiles=catalog?.profiles??await models.storedChannelProfiles();
+  const byId=new Map(profiles.map(profile=>[profile.id,profile]));
+  const defaultProfiles={...state.defaultProfiles};
+  for(const [channel,id] of Object.entries(defaultProfiles)){
+   const profile=byId.get(id),shared=byId.get(profile?.aliasFor)||profile;
+   if(shared?.channel==='multimodal'&&!profileSupports(shared,channel))defaultProfiles[channel]='';
+  }
+  return {defaultsRevision:state.revision,defaultProfiles,legacyDefaultProfiles:state.legacyDefaultProfiles};
  }
  async function set({channel,profileId,expectedRevision}){
   if(!MODEL_CHANNELS.includes(channel)||typeof profileId!=='string')throw failure('请选择有效的模型类型与配置');
@@ -29,7 +36,7 @@ export function createModelDefaults({dataRoot,models,legacySettings}){
   const selected=catalog.profiles.find(p=>p.id===profileId),id=selected?.aliasFor||profileId;
   if(profileId&&(!selected||selected.enabled===false||!profileSupports(selected,channel)))throw failure('配置不存在、未启用或不支持此类型');
   await store.update(s=>{if(s.revision!==expectedRevision)throw failure('默认配置已在其他窗口修改，请刷新后重试','SETTINGS_CONFLICT');s.defaultProfiles[channel]=id;s.revision++;return s;});
-  return {...catalog,...await read()};
+  return {...catalog,...await read(catalog)};
  }
  return {read,set};
 }

@@ -1,4 +1,5 @@
 import {createBookService} from './books.mjs';
+import {setupAntigravityImage,antigravityCardVerification} from './antigravity-image-setup.mjs';
 import {createBrowserService} from '../thirdparty/browser/service.mjs';
 import {createBrowserProfiles} from '../thirdparty/browser/profiles.mjs';
 import {createConversationControl} from './conversation-control.mjs';
@@ -144,7 +145,23 @@ export function createOfficialHost({service,desktop={},syncOptions={},mediaOptio
   if(path.startsWith('/membership/'))return membership.action(path.slice('/membership/'.length),body);
   if(path.startsWith('/models/credentials/'))return modelVerification.run(path.slice('/models/credentials/'.length),body);
   if(path==='/models/authorization-sources')return models.authorizationSources();
+  if(path==='/models/remove-impact'){
+   const catalog=await models.list(),ids=catalog.profiles.filter(p=>p.id===body.profileId||p.aliasFor===body.profileId).map(p=>p.id);
+   if(!ids.length)throw failure('配置已变化，请刷新');
+   const tasks=[];
+   for(const [source,label] of [[chat,'对话'],[selectionEdits,'局部生成'],[workTools,'作品工具'],[characters,'人物会客室'],[reader,'语音任务']]){
+    for(const id of await source.activeForProfiles(ids))tasks.push({id,label});
+   }
+   for(const pluginId of ['official.whiteboard-generation','official.document-chat']){
+    const plugin=(await list()).find(p=>p.id===pluginId);if(!plugin?.enabled)continue;
+    try{const jobs=(await media.list({pluginId})).jobs;for(const j of jobs)if(ids.includes(j.profileId||j.request?.profileId)&&!j.appliedAt&&!['complete','failed','stopped','cancelled','interrupted','superseded'].includes(j.status))tasks.push({id:j.id,label:'生成任务'});}catch(e){if(e.code!=='PLUGIN_DISABLED')throw e;}
+   }
+   return {tasks};
+  }
+  if(path==='/models/detach-channel')return models.detachChannel(body);
   if(path==='/models/default')return modelDefaults.set(body);
+  if(path==='/models/antigravity-image')return setupAntigravityImage({models,dataRoot:service.dataRoot,expectedRevision:body.expectedRevision});
+  if(path==='/models/antigravity-image/status')return antigravityCardVerification({models,dataRoot:service.dataRoot,profileId:body.profileId});
   if(path==='/models'){const catalog=await models.list();return {...catalog,...await modelDefaults.read(catalog)};}
   if(path.startsWith('/models/external-browsers/'))return models.externalBrowsers.handle(path.slice('/models/external-browsers/'.length),body);
   if(path==='/knowledge')return knowledge.list();

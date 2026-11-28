@@ -24,7 +24,7 @@ export function mountExternalBrowser(form,{profile,sources,call,toast}){
   section.querySelector('[data-external-browser-test]').disabled=!entry;
   status.textContent=entry?.profileError||(!entry?.available&&entry?'未找到程序，可点“设置”重新选择路径。':'');
  }
- function visible(){const active=form.querySelector('[name=adapter]').value==='cli'&&binding.value===EXTERNAL_BROWSER;section.hidden=!active;select.required=active;select.disabled=!active;profiles.disabled=!active;}
+ function visible(){const active=form.querySelector('[name=agentEngine]')?.value!=='antigravity'&&form.querySelector('[name=adapter]').value==='cli'&&binding.value===EXTERNAL_BROWSER;section.hidden=!active;select.required=active;select.disabled=!active;profiles.disabled=!active;}
  async function refresh(){state={...state,...await call('/authorization-sources')};render();}
  async function configure(entry){
   const body=mediaDialog(entry?'设置外部浏览器':'添加自定义浏览器'),dialog=body.closest('dialog');dialog.style.width='560px';
